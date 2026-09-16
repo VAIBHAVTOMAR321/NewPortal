@@ -54,28 +54,6 @@ body {
   margin: 0;
 }
 
-.main-content {
-  padding-top: 70px;
-}
-
-@media (max-width: 991px) {
-  .main-content {
-    padding-top: 65px;
-  }
-}
-
-@media (max-width: 767px) {
-  .main-content {
-    padding-top: 60px;
-  }
-}
-
-@media (max-width: 575px) {
-  .main-content {
-    padding-top: 58px;
-  }
-}
-
 #root {
   /* width: 1126px; */
   max-width: 100%;
