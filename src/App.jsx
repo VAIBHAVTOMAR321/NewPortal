@@ -46,9 +46,7 @@ const AppContent = () => {
 
 function App() {
   return (
-    <LanguageProvider>
       <AppContent />
-    </LanguageProvider>
   );
 }
 
