@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const AuthContext = createContext(null);
 
-const API_BASE_URL = 'https://mahadevaaya.com/dhokotdwarproject2/dhokotdwarproject2_backend/api';
+const API_BASE_URL = '/api';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -17,9 +17,9 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await fetch(`${API_BASE_URL}/refresh-token/`, {
         method: 'POST',
-        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRFToken': getCSRFToken(),
         },
       });
 
@@ -43,7 +43,6 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await fetch(`${API_BASE_URL}/login/`, {
         method: 'POST',
-        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -74,9 +73,9 @@ export const AuthProvider = ({ children }) => {
     try {
       await fetch(`${API_BASE_URL}/logout/`, {
         method: 'POST',
-        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRFToken': getCSRFToken(),
         },
       });
     } catch (err) {
