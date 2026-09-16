@@ -9,6 +9,7 @@ import Home from "./components/home/Home";
 import NavBar from "./components/nav_bar/NavBar";
 import MushroomForm from "./components/MushroomForm/MushroomForm";
 import BaagwaniMission from "./components/BaagwaniMission/BaagwaniMission";
+import PMKSY from "./components/PMKSY/PMKSY";
 const AppContent = () => {
   const location = useLocation();
 
@@ -23,6 +24,7 @@ const AppContent = () => {
           <Route path="/" element={<Home />} />
           <Route path="/MushroomForm" element={<MushroomForm />} />
           <Route path="/BaagwaniMission" element={<BaagwaniMission />} />
+          <Route path="/PMKSY" element={<PMKSY />} />
           
 
         </Routes>
