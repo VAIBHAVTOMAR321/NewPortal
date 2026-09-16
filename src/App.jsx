@@ -8,6 +8,7 @@ import Footer from "./components/footer/Footer";
 import Home from "./components/home/Home";
 import NavBar from "./components/nav_bar/NavBar";
 import MushroomForm from "./components/MushroomForm/MushroomForm";
+import BaagwaniMission from "./components/BaagwaniMission/BaagwaniMission";
 const AppContent = () => {
   const location = useLocation();
 
@@ -21,6 +22,8 @@ const AppContent = () => {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/MushroomForm" element={<MushroomForm />} />
+          <Route path="/BaagwaniMission" element={<BaagwaniMission />} />
+          
 
         </Routes>
       </div>
