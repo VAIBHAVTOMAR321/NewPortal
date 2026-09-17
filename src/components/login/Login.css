@@ -8,17 +8,15 @@
   --primary: #2563eb;
   --primary-dark: #1d4ed8;
   --primary-light: #eff6ff;
-
-  --text: #172033;
+  
+  --text: #0f172a;
   --text-light: #64748b;
   --border: #e2e8f0;
 
   --white: #ffffff;
-  --background: #f5f7fb;
+  --background: #f8fafc;
 
   --danger: #dc2626;
-
-  --radius: 14px;
 }
 
 .login-page {
@@ -29,14 +27,7 @@
   align-items: center;
   justify-content: center;
   padding: 30px;
-  font-family:
-    Inter,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    Arial,
-    sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
   position: relative;
   overflow: hidden;
 }
@@ -45,23 +36,24 @@
   position: absolute;
   border-radius: 50%;
   pointer-events: none;
-  opacity: 0.6;
+  filter: blur(80px);
+  z-index: 1;
 }
 
 .shape-one {
   width: 500px;
   height: 500px;
-  background: #dbeafe;
-  top: -280px;
-  right: -180px;
+  background: rgba(37, 99, 235, 0.15);
+  top: -200px;
+  right: -150px;
 }
 
 .shape-two {
   width: 400px;
   height: 400px;
-  background: #e0e7ff;
-  bottom: -250px;
-  left: -180px;
+  background: rgba(14, 165, 233, 0.1);
+  bottom: -200px;
+  left: -150px;
 }
 
 .login-wrapper {
@@ -75,97 +67,108 @@
   overflow: hidden;
   position: relative;
   z-index: 2;
-  box-shadow:
-    0 20px 50px rgba(15, 23, 42, 0.08),
-    0 4px 15px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.1);
 }
 
 /* =========================
-   BRAND SECTION
+   BRAND SECTION (Left Side)
 ========================= */
 
 .login-brand {
-  background: linear-gradient(145deg,
-      #1d4ed8 0%,
-      #2563eb 55%,
-      #0ea5e9 100%);
-  color: white;
-  padding: 55px;
+  background: linear-gradient(145deg, #1e3a8a 0%, #2563eb 50%, #3b82f6 100%);
+  color: var(--white);
+  padding: 55px 45px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   position: relative;
   overflow: hidden;
+  text-align: center; /* Centers logo, heading, and text */
 }
 
 .login-brand::after {
   content: "";
   position: absolute;
-  width: 300px;
-  height: 300px;
-  border: 60px solid rgba(255, 255, 255, 0.06);
+  width: 350px;
+  height: 350px;
+  border: 50px solid rgba(255, 255, 255, 0.05);
   border-radius: 50%;
-  right: -180px;
-  bottom: -150px;
+  right: -150px;
+  bottom: -100px;
 }
 
 .brand-content {
   position: relative;
   z-index: 2;
-  max-width: 370px;
+  max-width: 400px;
+  margin: 0 auto;
+  width: 100%;
 }
 
+/* DK Logo Centered & White */
 .brand-logo {
-  width: 62px;
-  height: 62px;
+  width: 70px;
+  height: 70px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 28px;
+  margin: 0 auto 28px auto; /* Centers the logo */
   backdrop-filter: blur(10px);
 }
 
 .brand-logo span {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 800;
   letter-spacing: -1px;
+  color: var(--white); /* Explicitly White */
 }
 
+/* Heading */
 .login-brand h1 {
-  font-size: 38px;
-  line-height: 1.1;
-  font-weight: 750;
+  font-size: 36px;
+  line-height: 1.2;
+  font-weight: 800;
   letter-spacing: -1px;
-  margin-bottom: 8px;
+  margin-bottom: 15px;
+  color: var(--white);
 }
 
-.brand-subtitle {
-  font-size: 17px;
-  opacity: 0.85;
-}
-
+/* Centered Border Bottom under Heading */
 .brand-line {
-  width: 50px;
+  width: 60px;
   height: 3px;
-  background: rgba(255, 255, 255, 0.7);
-  margin: 30px 0;
+  background: rgba(255, 255, 255, 0.8);
+  margin: 0 auto 20px auto; /* Centers the line */
   border-radius: 10px;
 }
 
+.brand-subtitle {
+  font-size: 16px;
+  opacity: 0.9;
+  font-weight: 500;
+  margin-bottom: 25px;
+  color: var(--white);
+}
+
+/* Justified Paragraph */
 .brand-description {
   font-size: 15px;
   line-height: 1.75;
-  opacity: 0.88;
+  opacity: 0.9;
+  color: var(--white);
+  text-align: justify; /* JUSTIFIED TEXT */
+  letter-spacing: 0.2px;
 }
 
 .brand-features {
   margin-top: 35px;
-  display: flex;
+  display: inline-flex; /* Keeps features centered as a block */
   flex-direction: column;
   gap: 15px;
+  text-align: left; /* Keeps checkmarks aligned internally */
 }
 
 .brand-features div {
@@ -174,6 +177,8 @@
   gap: 12px;
   font-size: 14px;
   opacity: 0.95;
+  font-weight: 500;
+  color: var(--white);
 }
 
 .feature-dot {
@@ -185,25 +190,28 @@
   align-items: center;
   justify-content: center;
   font-size: 12px;
+  font-weight: bold;
+  color: var(--white);
 }
 
 .brand-footer {
   position: relative;
   z-index: 2;
-  font-size: 12px;
-  opacity: 0.65;
+  font-size: 13px;
+  opacity: 0.7;
+  text-align: center;
 }
 
 /* =========================
-   LOGIN SECTION
+   LOGIN SECTION (Right Side)
 ========================= */
 
 .login-section {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 55px;
-  background: #ffffff;
+  padding: 60px 55px;
+  background: var(--white);
 }
 
 .login-card {
@@ -216,11 +224,11 @@
 }
 
 .login-header {
-  margin-bottom: 32px;
+  margin-bottom: 35px;
 }
 
 .login-header h2 {
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 700;
   color: var(--text);
   letter-spacing: -0.7px;
@@ -228,14 +236,11 @@
 }
 
 .login-header p {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-light);
 }
 
-/* =========================
-   ERROR
-========================= */
-
+/* Error Box */
 .login-error {
   display: flex;
   align-items: center;
@@ -246,67 +251,75 @@
   background: #fef2f2;
   border: 1px solid #fecaca;
   color: var(--danger);
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .error-symbol {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: #fee2e2;
+  background: var(--danger);
+  color: var(--white);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
+  flex-shrink: 0;
+  font-size: 14px;
 }
 
-/* =========================
-   FORM
-========================= */
-
-.login-form,
+/* Form Inputs */
 form {
   width: 100%;
 }
 
 .form-group {
-  margin-bottom: 21px;
+  margin-bottom: 22px;
 }
 
-.form-group>label {
+.form-group > label {
   display: block;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
-  color: #334155;
+  color: var(--text);
   margin-bottom: 8px;
 }
 
 .input-box {
   width: 100%;
-  height: 52px;
+  height: 54px;
   display: flex;
   align-items: center;
   border: 1px solid var(--border);
-  border-radius: 11px;
-  background: white;
+  border-radius: 12px;
+  background: var(--background);
   transition: 0.2s ease;
 }
 
 .input-box:focus-within {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.09);
+  background: var(--white);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
 }
 
 .input-box.input-error {
   border-color: var(--danger);
+  background: #fef2f2;
 }
 
 .input-symbol {
-  width: 45px;
+  width: 50px;
   text-align: center;
-  color: #94a3b8;
-  font-size: 15px;
+  color: var(--text-light);
   flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.input-box:focus-within .input-symbol {
+  color: var(--primary);
 }
 
 .input-box input {
@@ -316,23 +329,27 @@ form {
   outline: none;
   background: transparent;
   color: var(--text);
-  font-size: 14px;
+  font-size: 15px;
   padding: 0 10px 0 0;
+  font-weight: 500;
 }
 
 .input-box input::placeholder {
-  color: #a1aab8;
+  color: #94a3b8;
+  font-weight: 400;
 }
 
 .password-button {
   border: none;
   background: transparent;
   color: var(--primary);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
-  margin-right: 14px;
+  margin-right: 15px;
   padding: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .password-button:hover {
@@ -342,29 +359,27 @@ form {
 .field-error {
   display: block;
   margin-top: 6px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--danger);
+  font-weight: 500;
 }
 
-/* =========================
-   ROLE
-========================= */
-
+/* Role Selector */
 .role-selector {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 12px;
 }
 
 .role-button {
-  min-height: 68px;
+  min-height: 70px;
   padding: 10px 12px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   border: 1px solid var(--border);
-  border-radius: 11px;
-  background: white;
+  border-radius: 12px;
+  background: var(--background);
   cursor: pointer;
   text-align: left;
   transition: 0.2s ease;
@@ -372,7 +387,7 @@ form {
 
 .role-button:hover {
   border-color: #bfdbfe;
-  background: #f8fbff;
+  background: #f0f7ff;
 }
 
 .role-button.active {
@@ -382,54 +397,52 @@ form {
 }
 
 .role-icon {
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
   border-radius: 9px;
-  background: #f1f5f9;
+  background: #e2e8f0;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #64748b;
-  font-size: 13px;
-  font-weight: 700;
+  color: var(--text-light);
+  font-size: 15px;
+  font-weight: 800;
   flex-shrink: 0;
+  transition: 0.2s ease;
 }
 
 .role-button.active .role-icon {
   background: var(--primary);
-  color: white;
+  color: var(--white);
 }
 
 .role-button strong {
   display: block;
-  color: #334155;
-  font-size: 13px;
+  color: var(--text);
+  font-size: 14px;
   margin-bottom: 3px;
 }
 
 .role-button small {
   display: block;
-  color: #94a3b8;
-  font-size: 10px;
+  color: var(--text-light);
+  font-size: 11px;
 }
 
 .role-button.active strong {
-  color: var(--primary);
+  color: var(--primary-dark);
 }
 
-/* =========================
-   BUTTON
-========================= */
-
+/* Main Submit Button */
 .login-button {
   width: 100%;
-  height: 52px;
-  margin-top: 5px;
+  height: 54px;
+  margin-top: 10px;
   border: none;
-  border-radius: 11px;
+  border-radius: 12px;
   background: var(--primary);
-  color: white;
-  font-size: 14px;
+  color: var(--white);
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   display: flex;
@@ -437,13 +450,13 @@ form {
   justify-content: center;
   gap: 10px;
   transition: 0.2s ease;
-  box-shadow: 0 5px 12px rgba(37, 99, 235, 0.18);
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25);
 }
 
 .login-button:hover:not(:disabled) {
   background: var(--primary-dark);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
 }
 
 .login-button:active:not(:disabled) {
@@ -456,42 +469,37 @@ form {
 }
 
 .arrow {
-  font-size: 19px;
+  font-size: 20px;
   line-height: 1;
 }
 
 .spinner {
-  width: 17px;
-  height: 17px;
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  border-top-color: white;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: var(--white);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
 
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
-
-/* =========================
-   FOOTER
-========================= */
 
 .secure-note {
   margin-top: 25px;
   text-align: center;
-  color: #94a3b8;
-  font-size: 11px;
+  color: var(--text-light);
+  font-size: 13px;
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 6px;
+  font-weight: 500;
 }
 
 /* =========================
-   TABLET
+   RESPONSIVE DESIGN
 ========================= */
 
 @media (max-width: 850px) {
@@ -523,13 +531,12 @@ form {
     margin: 0;
     background: var(--primary-light);
     border: 1px solid #bfdbfe;
+  }
+
+  .mobile-logo .brand-logo span {
     color: var(--primary);
   }
 }
-
-/* =========================
-   MOBILE
-========================= */
 
 @media (max-width: 500px) {
   .login-page {
@@ -550,37 +557,13 @@ form {
     margin-bottom: 26px;
   }
 
-  .login-header h2 {
-    font-size: 25px;
-  }
-
-  .login-header p {
-    font-size: 13px;
-  }
-
   .role-selector {
     grid-template-columns: 1fr;
-  }
-
-  .role-button {
-    min-height: 62px;
-  }
-
-  .input-box {
-    height: 50px;
-  }
-
-  .login-button {
-    height: 50px;
   }
 }
 
 @media (max-width: 350px) {
   .login-section {
     padding: 28px 16px;
-  }
-
-  .login-header h2 {
-    font-size: 23px;
   }
 }
