@@ -62,7 +62,7 @@ const AppContent = () => {
   const location = useLocation();
 
   // Hide global NavBar on MushroomForm
-  const hideNavBar = location.pathname === "/MushroomForm";
+  const hideNavBar = location.pathname === "/MushroomForm" || location.pathname === "/BaagwaniMission" || location.pathname === "/PMKSY";
 
   // Show NavBar on all pages except MushroomForm
   const showNavBar = !hideNavBar;
