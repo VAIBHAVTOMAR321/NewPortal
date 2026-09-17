@@ -12,17 +12,37 @@ import BaagwaniMission from "./components/BaagwaniMission/BaagwaniMission";
 import PMKSY from "./components/PMKSY/PMKSY";
 import Login from "./components/login/Login";
 import { AuthProvider, useAuth } from "./components/login/AuthContext";
+import AdminHeader from "./components/admin_dashboard/AdminHeader";
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
-  
+
   if (loading) {
     return (
       <div className="loading-screen" role="status" aria-label="Loading">
         <div className="loading-spinner">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeDasharray="31.4 31.4">
-              <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"/>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeDasharray="31.4 31.4"
+            >
+              <animateTransform
+                attributeName="transform"
+                type="rotate"
+                from="0 12 12"
+                to="360 12 12"
+                dur="1s"
+                repeatCount="indefinite"
+              />
             </circle>
           </svg>
         </div>
@@ -30,41 +50,79 @@ const ProtectedRoute = ({ children }) => {
       </div>
     );
   }
-  
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
-  
+
   return children;
 };
 
 const AppContent = () => {
   const location = useLocation();
 
-  const isDisRoute = location.pathname === "/" || location.pathname === "/login";
+  // Hide global NavBar on MushroomForm
+  const hideNavBar = location.pathname === "/MushroomForm";
+
+  // Show NavBar on all pages except MushroomForm
+  const showNavBar = !hideNavBar;
+
+  // Protected/Admin routes where Footer should NOT be shown
+  const hideFooterRoutes = [
+    "/MushroomForm",
+    "/BaagwaniMission",
+    "/PMKSY",
+  ];
+
+  // Check current route
+  const hideFooter = hideFooterRoutes.includes(location.pathname);
+
+  // Show Footer only when route is not in hideFooterRoutes
+  const showFooter = !hideFooter;
 
   return (
     <>
+      {/* Global NavBar */}
+      {showNavBar && <NavBar />}
+
       <Routes>
+        {/* Public Routes */}
         <Route path="/" element={<Home />} />
+
         <Route path="/login" element={<Login />} />
+
+        {/* Protected Routes */}
         <Route
           path="/*"
           element={
             <ProtectedRoute>
-              <NavBar />
+              <AdminHeader />
+
               <div className="main-content">
                 <Routes>
-                  <Route path="/MushroomForm" element={<MushroomForm />} />
-                  <Route path="/BaagwaniMission" element={<BaagwaniMission />} />
-                  <Route path="/PMKSY" element={<PMKSY />} />
+                  <Route
+                    path="/MushroomForm"
+                    element={<MushroomForm />}
+                  />
+
+                  <Route
+                    path="/BaagwaniMission"
+                    element={<BaagwaniMission />}
+                  />
+
+                  <Route
+                    path="/PMKSY"
+                    element={<PMKSY />}
+                  />
                 </Routes>
               </div>
-              <Footer />
             </ProtectedRoute>
           }
         />
       </Routes>
+
+      {/* Footer */}
+      {showFooter && <Footer />}
     </>
   );
 };
