@@ -1,0 +1,28 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --dark-blue: #0d2b5e;
+  --light-text: #cbd5e1; /* Soft light gray/blue for readability */
+}
+
+.simple-footer {
+  background-color: var(--dark-blue);
+  padding: 1.5rem 0;
+  width: 100%;
+  margin-top: auto; /* Helps push the footer to the bottom of the page */
+}
+
+.simple-footer-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  text-align: center;
+  font-family: 'Inter', sans-serif;
+}
+
+.simple-footer-container p {
+  color: var(--light-text);
+  font-size: 0.9rem;
+  margin: 0;
+  letter-spacing: 0.5px;
+}

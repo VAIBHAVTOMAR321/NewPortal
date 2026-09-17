@@ -1,0 +1,60 @@
+/* Import professional font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --primary-blue: #0a58ca;
+  --dark-blue: #0d2b5e;
+  --white: #ffffff;
+}
+
+/* Apply font to bootstrap navbar */
+.custom-navbar {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--white) !important;
+  padding: 0.5rem 0;
+}
+
+/* Logo Styling */
+.nav-logo {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--dark-blue) !important;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+}
+
+.nav-logo span {
+  color: var(--primary-blue);
+  margin-left: 4px;
+}
+
+/* Style the Nav.Link to look like a professional button */
+.nav-btn-primary {
+  background-color: var(--primary-blue) !important;
+  color: var(--white) !important;
+  padding: 0.5rem 1.5rem !important;
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+  margin-left: 1rem; /* Space from edge or other links */
+  transition: all 0.3s ease;
+  border: 2px solid var(--primary-blue);
+  text-align: center;
+}
+
+.nav-btn-primary:hover {
+  background-color: #084bb0 !important;
+  border-color: #084bb0;
+  transform: translateY(-2px);
+}
+
+/* Custom styling for the Bootstrap Hamburger icon */
+.custom-navbar .navbar-toggler {
+  border: none;
+  padding: 0.25rem 0.5rem;
+}
+
+.custom-navbar .navbar-toggler:focus {
+  box-shadow: none;
+}
