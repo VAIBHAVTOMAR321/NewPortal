@@ -11,6 +11,11 @@ export default defineConfig({
         secure: false,
         rewrite: (path) => path.replace(/^\/api/, '/dhokotdwarproject2/dhokotdwarproject2_backend/api'),
       },
+      '/media': {
+        target: 'https://mahadevaaya.com',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
   plugins: [
