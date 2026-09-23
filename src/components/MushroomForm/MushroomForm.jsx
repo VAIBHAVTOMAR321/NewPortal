@@ -112,6 +112,16 @@ export default function MushroomForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState({ text: "", type: "" });
   const [currentKendra, setCurrentKendra] = useState("");
+  const [selectedMtype, setSelectedMtype] = useState("");
+
+  useEffect(() => {
+    window.setSelectedMtype = (t) => setSelectedMtype(t || "");
+  }, []);
+
+  // Fetch records on mount so the tab badge count is accurate immediately
+  useEffect(() => {
+    fetchRecords();
+  }, []);
 
   useEffect(() => {
     if (activeTab === "form" && window.render && !currentFormId) {
@@ -136,6 +146,10 @@ export default function MushroomForm() {
   const [editedRows, setEditedRows] = useState({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [selectedRowIds, setSelectedRowIds] = useState([]);
+  const [modalSearchTerm, setModalSearchTerm] = useState("");
+  const [modalMtypeFilter, setModalMtypeFilter] = useState("all");
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   const fetchRecords = async () => {
     setIsLoading(true);
@@ -242,6 +256,8 @@ export default function MushroomForm() {
     setCurrentFormId(formId);
     const kendraName = apiData.center_name || "";
     setCurrentKendra(kendraName);
+    const mtype = apiData.mushroom_type?.toLowerCase().includes("oyster") || apiData.mushroom_type?.toLowerCase().includes("oy") || apiData.mushroom_type?.includes("ऑय") ? "oyster" : "button";
+    setSelectedMtype(mtype);
     setActiveTab("form");
     setFeedbackMsg({ text: "रिकॉर्ड एडिट मोड में खुल रहा है...", type: "info" });
 
@@ -255,7 +271,7 @@ export default function MushroomForm() {
       const officeDistrict = apiData.office_district || apiData.office || "";
 
       const internalFormat = {
-        mtype: apiData.mushroom_type?.includes("Oyster") ? "oyster" : "button",
+        mtype: mtype,
         fields: {
           i_rate: apiData.full_rate_per_bag || "",
           i_kg: apiData.bag_weight || "",
@@ -330,6 +346,7 @@ export default function MushroomForm() {
     if (window.newEntry) window.newEntry();
     setCurrentFormId(null);
     setCurrentKendra("");
+    setSelectedMtype("");
     setFeedbackMsg({ text: "", type: "" });
   };
 
@@ -519,7 +536,53 @@ export default function MushroomForm() {
     }
   };
 
-  const fetchAndAutoFillForm = async () => {
+  const parseMushroomType = (val) => {
+    const s = String(val || "").trim().toLowerCase();
+    if (s.includes("oy") || s.includes("ऑय") || s.includes("oister")) return "oyster";
+    return "button";
+  };
+
+  const handleMtypeSelect = async (type) => {
+    setSelectedMtype(type);
+    if (window.pickType) {
+      window.pickType(type);
+    }
+
+    let records = fetchedRecords;
+    if (records.length === 0) {
+      await fetchAndAutoFillForm(type);
+    } else {
+      const matchingRecs = records.filter(r => r.data.mtype === type);
+      if (matchingRecs.length > 0) {
+        const firstMatch = matchingRecs[0];
+        setCurrentKendra(firstMatch.data.fields.i_kendra);
+        if (window.applyData) {
+          window.applyData(firstMatch.data);
+        }
+        if (window.putRecs && window.renderRecords) {
+          window.putRecs(matchingRecs);
+          window.renderRecords();
+        }
+        setUploadMsg({
+          text: `✔ ${matchingRecs.length} ${type === "button" ? "बटन" : "ऑयस्टर"} केन्द्र प्राप्त हुए। पहला केन्द्र (${firstMatch.data.fields.i_kendra}) लोड हो गया है।`,
+          type: "success"
+        });
+      } else {
+        setCurrentKendra("");
+        if (window.putRecs && window.renderRecords) {
+          window.putRecs([]);
+          window.renderRecords();
+        }
+        setUploadMsg({
+          text: `⚠️ ${type === "button" ? "बटन" : "ऑयस्टर"} मशरूम के लिए कोई केन्द्र डेटा नहीं मिला।`,
+          type: "error"
+        });
+      }
+    }
+  };
+
+  const fetchAndAutoFillForm = async (targetMtype = null) => {
+    const effectiveMtype = targetMtype || selectedMtype;
     setIsFetching(true);
     setUploadMsg({ text: "बैकएंड से डेटा प्राप्त किया जा रहा है...", type: "info" });
     try {
@@ -569,9 +632,9 @@ export default function MushroomForm() {
         const farmers = farmersByKendra[kn] || [];
         if (!farmers.length) { skipped.push(kn); return; }
 
-        const mtypeRaw = String(r.mushroom_type || "").trim().toLowerCase();
-        const mtype = mtypeRaw.indexOf("oy") === 0 ? "oyster" : "button";
+        const mtype = parseMushroomType(r.mushroom_type);
         const rate = r.rate_per_bag ? String(r.rate_per_bag) : (mtype === "oyster" ? "90" : "126");
+        const kg = mtype === "oyster" ? "5" : "10";
         const vehicles = Array.isArray(r.vehicle_numbers) ? r.vehicle_numbers : [];
 
         const officeDistrict = r.office_district || r.office || r.district || commonFields.i_office;
@@ -612,6 +675,7 @@ export default function MushroomForm() {
               i_date: billDateIso,
               i_supply: supplyDisplay,
               i_rate: rate,
+              i_kg: kg,
             }),
             farmers: farmers,
             vehicles: vehicles,
@@ -620,35 +684,248 @@ export default function MushroomForm() {
         });
       });
 
+      setFetchedRecords(newRecs);
+
       if (newRecs.length === 0) {
         setUploadMsg({ text: "बैकएंड पर कोई संबंधित डेटा नहीं मिला। कृपया पहले अपलोड करें।", type: "error" });
-        return;
+        return [];
       }
 
-      setFetchedRecords(newRecs);
+      const matchingRecs = effectiveMtype 
+        ? newRecs.filter(r => r.data.mtype === effectiveMtype)
+        : newRecs;
+
+      const recToLoad = matchingRecs.length > 0 ? matchingRecs[0] : newRecs[0];
+      const activeType = effectiveMtype || recToLoad.data.mtype;
+
+      if (activeType) {
+        setSelectedMtype(activeType);
+        if (window.pickTypeQuiet) window.pickTypeQuiet(activeType);
+      }
 
       const checkInterval = setInterval(() => {
         if (window.applyData) {
           clearInterval(checkInterval);
-          window.applyData(newRecs[0].data);
-          setCurrentKendra(newRecs[0].data.fields.i_kendra);
+          window.applyData(recToLoad.data);
+          setCurrentKendra(recToLoad.data.fields.i_kendra);
           if (window.putRecs && window.renderRecords) {
-            window.putRecs(newRecs);
+            window.putRecs(matchingRecs.length > 0 ? matchingRecs : newRecs);
             window.renderRecords();
           }
-          let msg = `✔ ${newRecs.length} केन्द्र सफलतापूर्वक लाए गए। पहला केन्द्र (${newRecs[0].data.fields.i_kendra}) लोड हो गया है।`;
+          let msg = `✔ ${matchingRecs.length} ${activeType ? (activeType === "button" ? "बटन" : "ऑयस्टर") : ""} केन्द्र सफलतापूर्वक लाए गए। पहला केन्द्र (${recToLoad.data.fields.i_kendra}) लोड हो गया है।`;
           if (skipped.length) msg += ` (छोड़े गए: ${skipped.join(", ")})`;
           setUploadMsg({ text: msg, type: "success" });
           window.scrollTo({ top: 0, behavior: "smooth" });
         }
       }, 100);
 
+      return newRecs;
     } catch (err) {
       console.error("Fetch and auto-fill error:", err);
       setUploadMsg({ text: err.message || "डेटा प्राप्त नहीं हो सका।", type: "error" });
+      return [];
     } finally {
       setIsFetching(false);
     }
+  };
+
+  const getRowId = (row, idx) => {
+    if (row && row.id !== undefined && row.id !== null && String(row.id) !== "") {
+      return String(row.id);
+    }
+    return "row_" + idx;
+  };
+
+  const handleSelectRow = (rowId) => {
+    setSelectedRowIds((prev) =>
+      prev.includes(rowId) ? prev.filter((id) => id !== rowId) : [...prev, rowId]
+    );
+  };
+
+  const handleSelectAll = (visibleRows) => {
+    const visibleIds = visibleRows.map((r, i) => getRowId(r, i));
+    const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedRowIds.includes(id));
+    if (allSelected) {
+      setSelectedRowIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+    } else {
+      setSelectedRowIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+    }
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedRowIds([]);
+  };
+
+  const handleBulkDeleteSelected = async () => {
+    if (selectedRowIds.length === 0) {
+      alert("कृपया पहले एक या अधिक पंक्तियाँ चुनें।");
+      return;
+    }
+    const count = selectedRowIds.length;
+    if (!window.confirm(`क्या आप वाकई चुनी गई ${count} प्रविष्टियों को डिलीट करना चाहते हैं?`)) {
+      return;
+    }
+
+    setIsBulkDeleting(true);
+    setUploadMsg({ text: `डिलीट किया जा रहा है... (0/${count})`, type: "info" });
+    const baseApiUrl = modalData.type === "kendra" ? MUSHROOM_KENDRA_API_URL : MUSHROOM_FARMER_API_URL;
+    let successCount = 0;
+    let failedCount = 0;
+    const remainingData = [...modalData.data];
+
+    try {
+      for (let i = 0; i < selectedRowIds.length; i++) {
+        const rowId = selectedRowIds[i];
+        setUploadMsg({ text: `डिलीट किया जा रहा है... (${i + 1}/${count})`, type: "info" });
+        
+        if (!rowId.startsWith("row_") && !rowId.startsWith("temp_")) {
+          const cleanId = rowId.replace("backend_", "");
+          try {
+            const response = await mushroomExcelFetch(baseApiUrl + cleanId + "/", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+            });
+            if (response.ok) {
+              successCount++;
+            } else {
+              failedCount++;
+            }
+          } catch (e) {
+            console.error("Delete error for id", cleanId, e);
+            failedCount++;
+          }
+        } else {
+          successCount++;
+        }
+      }
+
+      const updatedData = remainingData.filter((r, idx) => !selectedRowIds.includes(getRowId(r, idx)));
+      setModalData((prev) => ({ ...prev, data: updatedData }));
+
+      if (modalData.type === "kendra") {
+        setFetchedKendraData(updatedData);
+      } else {
+        setFetchedFarmerData(updatedData);
+      }
+
+      setSelectedRowIds([]);
+      setUploadMsg({
+        text: `✔ ${successCount} प्रविष्टियाँ सफलतापूर्वक डिलीट की गईं${failedCount > 0 ? `, ${failedCount} विफल` : ""}`,
+        type: successCount > 0 ? "success" : "error",
+      });
+    } catch (err) {
+      console.error("Bulk delete error:", err);
+      setUploadMsg({ text: "डिलीट करने में त्रुटि: " + err.message, type: "error" });
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleExportSelected = () => {
+    const rowsToExport = modalData.data.filter((r, idx) => selectedRowIds.includes(getRowId(r, idx)));
+    if (rowsToExport.length === 0) {
+      alert("कृपया पहले निर्यात करने के लिए पंक्तियाँ चुनें।");
+      return;
+    }
+    const cleanRows = rowsToExport.map((r) => {
+      const copy = { ...r };
+      HIDDEN_COLUMNS.forEach((col) => delete copy[col]);
+      return copy;
+    });
+    const ws = XLSX.utils.json_to_sheet(cleanRows);
+    const wb = XLSX.utils.book_new();
+    const sheetName = modalData.type === "kendra" ? "केन्द्र विवरण" : "कृषक सूची";
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    XLSX.writeFile(wb, `${sheetName}_Selected_${rowsToExport.length}.xlsx`);
+  };
+
+  const handleUpdateSelected = async () => {
+    const editedIdsInSelection = selectedRowIds.filter((id) => editedRows[id] !== undefined);
+    if (editedIdsInSelection.length === 0) {
+      setUploadMsg({ text: "चयनित पंक्तियों में कोई असहेजा बदलाव नहीं है।", type: "info" });
+      return;
+    }
+    setIsUpdating(true);
+    setUploadMsg({ text: `चयनित पंक्तियों को अद्यतन किया जा रहा है... (0/${editedIdsInSelection.length})`, type: "info" });
+    const baseApiUrl = modalData.type === "kendra" ? MUSHROOM_KENDRA_API_URL : MUSHROOM_FARMER_API_URL;
+    const currentData = modalData.data;
+    let successCount = 0;
+    let failedRows = [];
+
+    try {
+      for (let i = 0; i < editedIdsInSelection.length; i++) {
+        const rowId = editedIdsInSelection[i].replace("backend_", "");
+        const originalRow = currentData.find((r, idx) => getRowId(r, idx) === editedIdsInSelection[i]);
+        if (!originalRow) { failedRows.push(rowId); continue; }
+        const editedFields = editedRows[editedIdsInSelection[i]];
+        const payload = { ...originalRow };
+        Object.keys(editedFields).forEach((k) => { payload[k] = editedFields[k]; });
+        HIDDEN_COLUMNS.forEach((col) => delete payload[col]);
+        setUploadMsg({ text: `अद्यतन किया जा रहा है... (${i + 1}/${editedIdsInSelection.length}) — ID: ${rowId}`, type: "info" });
+        const updateUrl = baseApiUrl + rowId + "/";
+        const response = await mushroomExcelFetch(updateUrl, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+          failedRows.push(rowId);
+        } else {
+          successCount++;
+        }
+      }
+
+      setEditedRows((prev) => {
+        const next = { ...prev };
+        editedIdsInSelection.forEach((id) => delete next[id]);
+        return next;
+      });
+
+      if (Object.keys(editedRows).length === editedIdsInSelection.length) {
+        setHasUnsavedChanges(false);
+      }
+
+      setUploadMsg({
+        text: `✔ चयनित ${successCount} प्रविष्टियाँ सफलतापूर्वक अद्यतन की गईं!`,
+        type: "success",
+      });
+    } catch (err) {
+      console.error("Update selected error:", err);
+      setUploadMsg({ text: err.message || "अद्यतन में त्रुटि।", type: "error" });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const getFilteredModalRows = () => {
+    if (!modalData.data) return [];
+    let list = modalData.data;
+
+    if (modalData.type === "kendra" && modalMtypeFilter !== "all") {
+      list = list.filter((r) => {
+        const mt = String(r.mushroom_type || r["मशरूम प्रकार (Oyster/Button)"] || "").toLowerCase();
+        if (modalMtypeFilter === "oyster") {
+          return mt.includes("oy") || mt.includes("ऑय") || mt.includes("oister");
+        }
+        if (modalMtypeFilter === "button") {
+          return mt.includes("button") || mt.includes("बटन");
+        }
+        return true;
+      });
+    }
+
+    if (modalSearchTerm.trim()) {
+      const query = modalSearchTerm.trim().toLowerCase();
+      list = list.filter((r, idx) => {
+        const rowId = getRowId(r, idx);
+        const rowData = { ...r, ...(editedRows[rowId] || {}) };
+        return Object.values(rowData).some((val) =>
+          String(val || "").toLowerCase().includes(query)
+        );
+      });
+    }
+
+    return list;
   };
 
   const handleCellEdit = (rowId, columnKey, newValue) => {
@@ -675,7 +952,7 @@ export default function MushroomForm() {
     try {
       for (let i = 0; i < editedIds.length; i++) {
         const rowId = editedIds[i].replace("backend_", "");
-        const originalRow = currentData.find((r) => String(r.id) === String(rowId));
+        const originalRow = currentData.find((r, idx) => getRowId(r, idx) === editedIds[i]);
         if (!originalRow) { failedRows.push(rowId); continue; }
         const editedFields = editedRows[editedIds[i]];
         const payload = { ...originalRow };
@@ -718,6 +995,9 @@ export default function MushroomForm() {
     }
     setEditedRows({});
     setHasUnsavedChanges(false);
+    setSelectedRowIds([]);
+    setModalSearchTerm("");
+    setModalMtypeFilter("all");
     setModalData({ ...modalData, open: false });
   };
 
@@ -860,12 +1140,14 @@ export default function MushroomForm() {
       const kgEl = document.getElementById('i_kg');
       if (rateEl && !rateEl.value) rateEl.value = PRESET[t].rate;
       if (kgEl && !kgEl.value) kgEl.value = PRESET[t].kg;
+      if (window.setSelectedMtype) window.setSelectedMtype(t);
       render();
     }
     function pickTypeQuiet(t) {
       mtype = t;
       document.querySelectorAll('.type').forEach(el => el.dataset.on = el.dataset.type === t ? '1' : '0');
       const r = document.getElementById('t_' + t); if (r) r.checked = true;
+      if (window.setSelectedMtype) window.setSelectedMtype(t);
     }
 
     function setTxt(id, txt) { const el = document.getElementById(id); if (el) el.innerText = txt; }
@@ -952,25 +1234,25 @@ export default function MushroomForm() {
           '<td style="padding:1px 4px"></td></tr>').join('');
         const office = val('i_office') || 'उद्यान विशेषज्ञ कोटद्वार गढ़वाल (पौड़ी गढ़वाल)';
         return '<div class="sheet vch-sheet"><h2 class="doc" style="margin:0 0 14px">समेकित पावती-पत्र (वितरण-सह-प्राप्ति)</h2>' +
-          '<p style="margin:0">सेवा में,<br>&nbsp;&nbsp;&nbsp;' + office + ',<br>&nbsp;&nbsp;द्वारा: प्रभारी, उद्यान सचल दल केन्द्र, <span class="dline dl-long">' + (kendra || '&nbsp;') + '</span></p>' +
-          '<p style="margin:10px 0 6px"><b>विषय: मैसर्स बडोला मशरूम फार्म, काशीपुर के बिल संख्या ' + (billNo || '—') + ' दिनांक ' + (dateTxt || '—') + ' पर देय राजसहायता के भुगतान हेतु प्रस्तुतीकरण।</b></p>' +
-          '<p style="margin:0;text-align:justify">महोदय,<br>&nbsp;&nbsp;&nbsp;&nbsp;निवेदन है कि उद्यान सचल दल केन्द्र, ' + (kendra || '—') + ' के अन्तर्गत निम्नानुसार कृषकों द्वारा मैसर्स बडोला मशरूम फार्म, काशीपुर, ऊधम सिंह नगर से जिला योजना वर्ष ' + (val('i_year') || '2026-27') + ' के अन्तर्गत ' + subPct + '% अनुदान पर विभागीय स्वीकृत दर ₹' + money(rate) + ' प्रति बैग के अनुसार कुल <b>' + bags + '</b> बैग ' + T.hi + ' मशरूम बिजाई युक्त कम्पोस्ट क्रय किए गए हैं। उक्त कम्पोस्ट बैग संबंधित कृषकों को सही एवं पूर्ण एवं उच्च गुणवत्ता अवस्था में प्राप्त हो चुके हैं। कृषकों द्वारा निर्धारित ' + farmPct + '% कृषक अंश ₹' + money(perFarm) + ' प्रति बैग के अनुसार कुल ₹' + money(farmShare) + ' की धनराशि उक्त फर्म को अदा कर दी गई है।</p>' +
-          '<p style="margin:8px 0 0;text-align:justify">फर्म द्वारा प्रस्तुत बिल संख्या ' + (billNo || '—') + ', जिसकी कुल देयक राशि ₹' + money(val_) + ' है, भुगतान हेतु प्रस्तुत किया जा रहा है। उक्त बिल के सापेक्ष कृषकों द्वारा ₹' + money(farmShare) + ' का कृषक अंश फर्म को जमा किए जाने के उपरान्त शेष ' + subPct + '% राजसहायता (अनुदान) की धनराशि ₹' + money(subAmt) + ' (' + (subAmt > 0 ? hiWords(subAmt) : '—') + ') देय है।</p>' +
-          '<p style="margin:8px 0 0;text-align:justify">अतः अनुरोध है कि हमारे आवेदन एवं प्राप्त स्वीकृति के क्रम में उक्त देयक संख्या ' + (billNo || '—') + ' दिनांक ' + (dateTxt || '—') + ' की देय राजसहायता की धनराशि ₹' + money(subAmt) + ' सीधे आपूर्तिकर्ता फर्म मैसर्स बडोला मशरूम फार्म, काशीपुर, ऊधम सिंह नगर को e-Payment के माध्यम से भुगतान करने की कृपा करें।</p>' +
-          '<p style="margin:8px 0 0;text-align:justify">उक्त आपूर्तिकर्ता फर्म शेष देय धनराशि का भुगतान विभाग में बजट उपलब्ध होने पर किए जाने हेतु सहमत है।</p>' +
-          '<p style="margin:12px 0 6px"><b>लाभार्थी कृषकों का विवरण एवं हस्ताक्षर निम्नानुसार हैं —</b></p>' +
+          '<p class="doc-lead">सेवा में,<br>&nbsp;&nbsp;&nbsp;' + office + ',<br>&nbsp;&nbsp;द्वारा: प्रभारी, उद्यान सचल दल केन्द्र, <span class="dline dl-long">' + (kendra || '&nbsp;') + '</span></p>' +
+          '<p class="doc-subject"><b>विषय: मैसर्स बडोला मशरूम फार्म, काशीपुर के बिल संख्या ' + (billNo || '—') + ' दिनांक ' + (dateTxt || '—') + ' पर देय राजसहायता के भुगतान हेतु प्रस्तुतीकरण।</b></p>' +
+          '<p class="doc-paragraph">महोदय,<br>&nbsp;&nbsp;&nbsp;&nbsp;निवेदन है कि उद्यान सचल दल केन्द्र, ' + (kendra || '—') + ' के अन्तर्गत निम्नानुसार कृषकों द्वारा मैसर्स बडोला मशरूम फार्म, काशीपुर, ऊधम सिंह नगर से जिला योजना वर्ष ' + (val('i_year') || '2026-27') + ' के अन्तर्गत ' + subPct + '% अनुदान पर विभागीय स्वीकृत दर ₹' + money(rate) + ' प्रति बैग के अनुसार कुल <b>' + bags + '</b> बैग ' + T.hi + ' मशरूम बिजाई युक्त कम्पोस्ट क्रय किए गए हैं। उक्त कम्पोस्ट बैग संबंधित कृषकों को सही एवं पूर्ण एवं उच्च गुणवत्ता अवस्था में प्राप्त हो चुके हैं। कृषकों द्वारा निर्धारित ' + farmPct + '% कृषक अंश ₹' + money(perFarm) + ' प्रति बैग के अनुसार कुल ₹' + money(farmShare) + ' की धनराशि उक्त फर्म को अदा कर दी गई है।</p>' +
+          '<p class="doc-paragraph">फर्म द्वारा प्रस्तुत बिल संख्या ' + (billNo || '—') + ', जिसकी कुल देयक राशि ₹' + money(val_) + ' है, भुगतान हेतु प्रस्तुत किया जा रहा है। उक्त बिल के सापेक्ष कृषकों द्वारा ₹' + money(farmShare) + ' का कृषक अंश फर्म को जमा किए जाने के उपरान्त शेष ' + subPct + '% राजसहायता (अनुदान) की धनराशि ₹' + money(subAmt) + ' (' + (subAmt > 0 ? hiWords(subAmt) : '—') + ') देय है।</p>' +
+          '<p class="doc-paragraph">अतः अनुरोध है कि हमारे आवेदन एवं प्राप्त स्वीकृति के क्रम में उक्त देयक संख्या ' + (billNo || '—') + ' दिनांक ' + (dateTxt || '—') + ' की देय राजसहायता की धनराशि ₹' + money(subAmt) + ' सीधे आपूर्तिकर्ता फर्म मैसर्स बडोला मशरूम फार्म, काशीपुर, ऊधम सिंह नगर को e-Payment के माध्यम से भुगतान करने की कृपा करें।</p>' +
+          '<p class="doc-paragraph">उक्त आपूर्तिकर्ता फर्म शेष देय धनराशि का भुगतान विभाग में बजट उपलब्ध होने पर किए जाने हेतु सहमत है।</p>' +
+          '<p class="doc-subject"><b>लाभार्थी कृषकों का विवरण एवं हस्ताक्षर निम्नानुसार हैं —</b></p>' +
           '<table class="doc roster"><thead><tr><th style="width:30px">क्र०सं०</th><th style="width:190px">किसान का पूरा नाम</th><th style="width:95px">ग्राम / पंचायत</th><th style="width:44px">बैग</th><th style="width:88px">' + farmPct + '% किसान अंश</th><th style="width:92px">' + subPct + '% राजसहायता</th><th style="width:130px">हस्ताक्षर</th></tr></thead><tbody>' + rowsHTML + '</tbody><tfoot><tr><td colspan="3" class="r"><b>कुल</b></td><td class="c"><b>' + bags + '</b></td><td class="r"><b>₹ ' + money(farmShare) + '</b></td><td class="r"><b>₹ ' + money(subAmt) + '</b></td><td></td></tr></tfoot></table></div>';
       }
 
       function buildVendorHTML(bin, billNo) {
         const bags = bin.bags, val_ = bin.value, farmShare = bags * perFarm, subAmt = bags * perSub;
-        return '<div class="sheet vendor-sheet" style="font-family:\'Courier Prime\',\'Martel\',monospace"><div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:16px"><div><div style="font-weight:800;font-size:21px;letter-spacing:.3px">BADOLA MUSHROOMS FARM</div><div style="font-weight:700;font-size:12.5px">(COMPOST UNIT)</div><div style="font-size:11px;margin-top:3px">H.O.-Dhanori Patti, D.P.S. Road, Kashipur (U.S. Nagar) U.K.</div><div style="font-size:11px">Compost Unit-Vill. Pratappur, Near Pickle Factory, Kashipur (U.S. Nagar)</div><div style="font-size:11px;margin-top:3px">GSTIN No.: 05CHXPS3134D1Z5 &nbsp;|&nbsp; Mob.: 9899935600, 6398264916</div></div><div style="text-align:right;font-size:11px;white-space:nowrap;padding-top:2px"><div style="text-decoration:underline;font-weight:700;margin-bottom:4px">CERTIFICATE</div>Ref. Bill No. : ' + (billNo || '—') + '<br>Date : ' + (dateTxt || '—') + '</div></div><div style="text-align:center;font-weight:700;font-size:14px;text-decoration:underline;margin-bottom:14px">विक्रेता का प्रमाण-पत्र (Supplier\'s Certificate)</div><p style="margin:0;text-align:justify;font-size:12.5px;line-height:1.7">मैं, मैसर्स बडोला मशरूम फार्म, काशीपुर, ऊधम सिंह नगर, प्रमाणित करता हूँ कि उद्यान सचल दल केन्द्र, <b>' + (kendra || '—') + '</b> के अंतर्गत बिल संख्या <b>' + (billNo || '—') + '</b> दिनांक <b>' + (dateTxt || '—') + '</b> के अनुसार उपरोक्त कृषकों को कुल <b>' + bags + '</b> बैग ' + T.hi + ' मशरूम बिजाई युक्त कम्पोस्ट सही एवं पूर्ण अवस्था में वितरित कर दिए हैं, जो कृषकों को दिनांक <b>' + (supplyTxt || '—') + '</b> (Date of Supply) को प्राप्त हो चुके हैं, जिनका कुल मूल्य रुपये <b>' + money(val_) + '</b> है, तथा कृषकों से निर्धारित कृषक अंश (' + farmPct + '%) की धनराशि रुपये <b>' + money(farmShare) + '</b> प्राप्त कर ली गई है।</p><p style="margin:12px 0 0;text-align:justify;font-size:12.5px;line-height:1.7"><b>अतः शेष ' + subPct + '% राजसहायता (अनुदान) की धनराशि रुपये ' + money(subAmt) + ' (' + (subAmt > 0 ? hiWords(subAmt) : '—') + ') का भुगतान मुझे करने की कृपा कीजिएगा।</b></p><div style="margin-top:60px;text-align:right;font-size:12px"><div>For BADOLA MUSHROOMS FARM</div><div style="margin-top:34px;border-top:1px solid #000;padding-top:3px;display:inline-block;min-width:220px">Authorised Signatory / विक्रेता के हस्ताक्षर व मुहर</div></div></div>';
+        return '<div class="sheet vendor-sheet" style="font-family:\'Courier Prime\',\'Martel\',monospace"><div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:16px"><div><div style="font-weight:800;font-size:21px;letter-spacing:.3px">BADOLA MUSHROOMS FARM</div><div style="font-weight:700;font-size:12.5px">(COMPOST UNIT)</div><div style="font-size:11px;margin-top:3px">H.O.-Dhanori Patti, D.P.S. Road, Kashipur (U.S. Nagar) U.K.</div><div style="font-size:11px">Compost Unit-Vill. Pratappur, Near Pickle Factory, Kashipur (U.S. Nagar)</div><div style="font-size:11px;margin-top:3px">GSTIN No.: 05CHXPS3134D1Z5 &nbsp;|&nbsp; Mob.: 9899935600, 6398264916</div></div><div style="text-align:right;font-size:11px;white-space:nowrap;padding-top:2px"><div style="text-decoration:underline;font-weight:700;margin-bottom:4px">CERTIFICATE</div>Ref. Bill No. : ' + (billNo || '—') + '<br>Date : ' + (dateTxt || '—') + '</div></div><div style="text-align:center;font-weight:700;font-size:14px;text-decoration:underline;margin-bottom:14px">विक्रेता का प्रमाण-पत्र (Supplier\'s Certificate)</div><p class="doc-paragraph" style="font-size:12.5px">मैं, मैसर्स बडोला मशरूम फार्म, काशीपुर, ऊधम सिंह नगर, प्रमाणित करता हूँ कि उद्यान सचल दल केन्द्र, <b>' + (kendra || '—') + '</b> के अंतर्गत बिल संख्या <b>' + (billNo || '—') + '</b> दिनांक <b>' + (dateTxt || '—') + '</b> के अनुसार उपरोक्त कृषकों को कुल <b>' + bags + '</b> बैग ' + T.hi + ' मशरूम बिजाई युक्त कम्पोस्ट सही एवं पूर्ण अवस्था में वितरित कर दिए हैं, जो कृषकों को दिनांक <b>' + (supplyTxt || '—') + '</b> (Date of Supply) को प्राप्त हो चुके हैं, जिनका कुल मूल्य रुपये <b>' + money(val_) + '</b> है, तथा कृषकों से निर्धारित कृषक अंश (' + farmPct + '%) की धनराशि रुपये <b>' + money(farmShare) + '</b> प्राप्त कर ली गई है।</p><p class="doc-paragraph" style="font-size:12.5px"><b>अतः शेष ' + subPct + '% राजसहायता (अनुदान) की धनराशि रुपये ' + money(subAmt) + ' (' + (subAmt > 0 ? hiWords(subAmt) : '—') + ') का भुगतान मुझे करने की कृपा कीजिएगा।</b></p><div style="margin-top:60px;text-align:right;font-size:12px"><div>For BADOLA MUSHROOMS FARM</div><div style="margin-top:34px;border-top:1px solid #000;padding-top:3px;display:inline-block;min-width:220px">Authorised Signatory / विक्रेता के हस्ताक्षर व मुहर</div></div></div>';
       }
 
       function buildSatyapanHTML(bin, billNo) {
         const bags = bin.bags, val_ = bin.value, farmShare = bags * perFarm, subAmt = bags * perSub;
         const officeDistrict = val('i_office') || 'पौड़ी गढ़वाल';
-        return '<div class="sheet saty-sheet" style="font-family:\'Tiro Devanagari Hindi\',\'Martel\',serif"><div style="text-align:center;border-bottom:1.6px solid #000;padding-bottom:8px;margin-bottom:16px"><div style="font-weight:700;font-size:14px">कार्यालय प्रभारी, उद्यान सचल दल केन्द्र, ' + (kendra || '—') + '</div><div style="font-size:11.5px">जनपद ' + officeDistrict + ', उद्यान विभाग, उत्तराखण्ड</div><h2 class="doc" style="margin:10px 0 0;font-size:17px;text-decoration:underline">सत्यापन आख्या</h2></div><p style="margin:0;text-align:right;font-size:12px">सन्दर्भ : बिल संख्या <b>' + (billNo || '—') + '</b> · दिनांक <b>' + (dateTxt || '—') + '</b></p><p style="margin:10px 0 0;text-align:justify">प्रमाणित किया जाता है कि उपरोक्त देयक (बिल) संख्या <b>' + (billNo || '—') + '</b> दिनांक <b>' + (dateTxt || '—') + '</b>, मैसर्स बडोला मशरूम फार्म (कम्पोस्ट यूनिट), काशीपुर, ऊधम सिंह नगर से सम्बन्धित कृषकों द्वारा क्रय किए गए बिजाई युक्त ' + T.hi + ' मशरूम कम्पोस्ट बैग का मेरे द्वारा सत्यापन कर लिया गया है। वितरित बैगों की गुणवत्ता, मात्रा एवं विशिष्टताओं का भौतिक सत्यापन कर लिया गया है तथा बैग रोगमुक्त एवं बिजाई युक्त पाए गए हैं। उक्त बिल के अनुसार <b>' + bags + '</b> बिजाई युक्त ' + T.hi + ' मशरूम कम्पोस्ट बैग सम्बंधित कृषकों को दिनांक <b>' + (supplyTxt || '—') + '</b> (Date of Supply) को प्राप्त हो चुके हैं तथा कृषक अंश (' + farmPct + '%) की धनराशि रुपये <b>' + money(farmShare) + '</b> आपूर्तिकर्ता फर्म द्वारा कृषकों से प्राप्त कर ली गई है।</p><p style="margin:10px 0 0;text-align:justify">अतः बिल की कुल धनराशि रुपये <b>' + money(val_) + '</b> में से राजसहायता (अनुदान) की धनराशि रुपये <b>' + money(subAmt) + '</b> (' + (subAmt > 0 ? hiWords(subAmt) : '—') + ') जो कि बिल के कुल योग का ' + subPct + ' प्रतिशत है, <b>उक्त आपूर्तिकर्ता फर्म को भुगतान करने की कृपा कीजियेगा।</b></p><p style="margin:16px 0 0;text-align:justify"><b>संलग्न है:</b> समेकित पावती-पत्र, BADOLA MUSHROOMS FARM (COMPOST UNIT) का इनवॉइस।</p><div style="display:flex;justify-content:flex-end;margin-top:60px"><div class="center">प्रभारी,<br>उद्यान सचल दल केन्द्र, <span class="dline">' + (kendra || '&nbsp;') + '</span></div></div></div>';
+        return '<div class="sheet saty-sheet" style="font-family:\'Tiro Devanagari Hindi\',\'Martel\',serif"><div style="text-align:center;border-bottom:1.6px solid #000;padding-bottom:8px;margin-bottom:16px"><div style="font-weight:700;font-size:14px">कार्यालय प्रभारी, उद्यान सचल दल केन्द्र, ' + (kendra || '—') + '</div><div style="font-size:11.5px">जनपद ' + officeDistrict + ', उद्यान विभाग, उत्तराखण्ड</div><h2 class="doc" style="margin:10px 0 0;font-size:17px;text-decoration:underline">सत्यापन आख्या</h2></div><p class="doc-reference" style="font-size:12px">सन्दर्भ : बिल संख्या <b>' + (billNo || '—') + '</b> · दिनांक <b>' + (dateTxt || '—') + '</b></p><p class="doc-paragraph">प्रमाणित किया जाता है कि उपरोक्त देयक (बिल) संख्या <b>' + (billNo || '—') + '</b> दिनांक <b>' + (dateTxt || '—') + '</b>, मैसर्स बडोला मशरूम फार्म (कम्पोस्ट यूनिट), काशीपुर, ऊधम सिंह नगर से सम्बन्धित कृषकों द्वारा क्रय किए गए बिजाई युक्त ' + T.hi + ' मशरूम कम्पोस्ट बैग का मेरे द्वारा सत्यापन कर लिया गया है। वितरित बैगों की गुणवत्ता, मात्रा एवं विशिष्टताओं का भौतिक सत्यापन कर लिया गया है तथा बैग रोगमुक्त एवं बिजाई युक्त पाए गए हैं। उक्त बिल के अनुसार <b>' + bags + '</b> बिजाई युक्त ' + T.hi + ' मशरूम कम्पोस्ट बैग सम्बंधित कृषकों को दिनांक <b>' + (supplyTxt || '—') + '</b> (Date of Supply) को प्राप्त हो चुके हैं तथा कृषक अंश (' + farmPct + '%) की धनराशि रुपये <b>' + money(farmShare) + '</b> आपूर्तिकर्ता फर्म द्वारा कृषकों से प्राप्त कर ली गई है।</p><p class="doc-paragraph">अतः बिल की कुल धनराशि रुपये <b>' + money(val_) + '</b> में से राजसहायता (अनुदान) की धनराशि रुपये <b>' + money(subAmt) + '</b> (' + (subAmt > 0 ? hiWords(subAmt) : '—') + ') जो कि बिल के कुल योग का ' + subPct + ' प्रतिशत है, <b>उक्त आपूर्तिकर्ता फर्म को भुगतान करने की कृपा कीजियेगा।</b></p><p class="doc-paragraph"><b>संलग्न है:</b> समेकित पावती-पत्र, BADOLA MUSHROOMS FARM (COMPOST UNIT) का इनवॉइस।</p><div style="display:flex;justify-content:flex-end;margin-top:60px"><div class="center">प्रभारी,<br>उद्यान सचल दल केन्द्र, <span class="dline">' + (kendra || '&nbsp;') + '</span></div></div></div>';
       }
 
       function invRowHTML(bags, rate, val_) {
@@ -1166,7 +1448,10 @@ export default function MushroomForm() {
     }
     function openRecord(id) {
       const r = MEM_REC.find(x => x.id === id); if (!r) return;
-      curRec = id; applyData(r.data); renderRecords();
+      curRec = id; 
+      applyData(r.data); 
+      if (window.setSelectedMtype && r.data.mtype) window.setSelectedMtype(r.data.mtype);
+      renderRecords();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     function deleteRecord(id) {
@@ -1177,6 +1462,7 @@ export default function MushroomForm() {
     }
     function newEntry() {
       curRec = null; letterEdited = false; mtype = '';
+      if (window.setSelectedMtype) window.setSelectedMtype('');
       const letter = document.getElementById('d_letter'); if (letter) letter.innerHTML = LETTER_HTML;
       const body = document.getElementById('entry_body'); if (body) body.innerHTML = '';
       ['i_rate', 'i_kg', 'i_sub', 'i_gst', 'i_kendra', 'i_office', 'i_year', 'i_date', 'i_supply', 'i_invoice', 'i_rcptno', 'i_billto', 'i_billaddr'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
@@ -1263,228 +1549,255 @@ export default function MushroomForm() {
   }, []);
 
   const renderModalTable = () => {
+    const filteredRows = getFilteredModalRows();
     if (!modalData.data || modalData.data.length === 0) {
-      return (<p style={{ textAlign: "center", color: "#55524A", padding: "20px" }}>कोई डेटा उपलब्ध नहीं है।</p>);
+      return (
+        <div style={{ textAlign: "center", color: "#55524A", padding: "40px 20px" }}>
+          <p style={{ fontSize: "16px", fontWeight: "600", margin: "0 0 6px" }}>कोई डेटा उपलब्ध नहीं है</p>
+          <p style={{ fontSize: "13px", color: "var(--ink-soft)", margin: 0 }}>कृपया पहले एक्सेल फ़ाइल अपलोड करें या सर्वर से डेटा प्राप्त करें।</p>
+        </div>
+      );
     }
+
+    if (filteredRows.length === 0) {
+      return (
+        <div style={{ textAlign: "center", color: "#55524A", padding: "40px 20px" }}>
+          <p style={{ fontSize: "16px", fontWeight: "600", margin: "0 0 6px" }}>कोई परिणाम नहीं मिला</p>
+          <p style={{ fontSize: "13px", color: "var(--ink-soft)", margin: 0 }}>आपके खोज मानदंड "{modalSearchTerm}" से मेल खाता कोई रिकॉर्ड नहीं है।</p>
+          <button 
+            className="btn s" 
+            style={{ marginTop: "12px" }}
+            onClick={() => { setModalSearchTerm(""); setModalMtypeFilter("all"); }}
+          >
+            फ़िल्टर साफ़ करें (Clear Filter)
+          </button>
+        </div>
+      );
+    }
+
     const allKeys = Object.keys(modalData.data[0]);
     const visibleHeaders = allKeys.filter((key) => !HIDDEN_COLUMNS.includes(key));
+    const allVisibleSelected = filteredRows.length > 0 && filteredRows.every((r, i) => selectedRowIds.includes(getRowId(r, i)));
+
     return (
-      <div style={{ overflowX: "auto" }}>
-        <table className="data-view-table">
-          <thead><tr>{visibleHeaders.map((h, i) => (<th key={i}>{h}</th>))}</tr></thead>
-          <tbody>
-            {modalData.data.map((row, rIdx) => {
-              const rowId = row.id;
-              return (
-                <tr key={rIdx} style={{ background: editedRows[rowId] ? "#fff8e1" : "" }}>
-                  {visibleHeaders.map((h, cIdx) => {
-                    const editedValue = editedRows[rowId]?.[h];
-                    const currentValue = editedValue !== undefined ? editedValue : String(row[h] ?? "");
-                    const isEdited = editedRows[rowId]?.[h] !== undefined;
-                    return (
-                      <td key={cIdx} style={{ background: isEdited ? "#fff3cd" : "" }}>
-                        <input type="text" value={currentValue}
-                          onChange={(e) => handleCellEdit(rowId, h, e.target.value)}
-                          style={{ width: "100%", minWidth: "90px", border: "1px solid transparent", background: "transparent", padding: "4px 6px", fontSize: "12px", fontFamily: "inherit", color: "var(--ink)", borderRadius: "3px" }}
-                          onFocus={(e) => { e.target.style.border = "1px solid var(--leaf)"; e.target.style.background = "#fff"; }}
-                          onBlur={(e) => { e.target.style.border = "1px solid transparent"; e.target.style.background = "transparent"; }}
-                        />
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <table className="data-view-table">
+        <thead>
+          <tr>
+            <th style={{ width: "42px", textAlign: "center", position: "sticky", left: 0, zIndex: 12 }}>
+              <input
+                type="checkbox"
+                checked={allVisibleSelected}
+                onChange={() => handleSelectAll(filteredRows)}
+                title={allVisibleSelected ? "सभी का चयन हटाएं" : "सभी का चयन करें"}
+                style={{ cursor: "pointer", width: "16px", height: "16px", verticalAlign: "middle" }}
+              />
+            </th>
+            <th style={{ width: "45px", textAlign: "center" }}>क्र०</th>
+            {visibleHeaders.map((h, i) => (
+              <th key={i}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {filteredRows.map((row, rIdx) => {
+            const rowId = getRowId(row, rIdx);
+            const isSelected = selectedRowIds.includes(rowId);
+            const isRowEdited = editedRows[rowId] !== undefined;
+
+            return (
+              <tr 
+                key={rowId} 
+                className={`${isSelected ? "row-selected" : ""} ${isRowEdited ? "row-edited" : ""}`}
+              >
+                <td style={{ textAlign: "center", position: "sticky", left: 0, zIndex: 5, background: isSelected ? "#e6f4ea" : "#fff" }}>
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => handleSelectRow(rowId)}
+                    style={{ cursor: "pointer", width: "16px", height: "16px", verticalAlign: "middle" }}
+                  />
+                </td>
+                <td style={{ textAlign: "center", color: "#666", fontSize: "11px", fontWeight: "600" }}>
+                  {rIdx + 1}
+                </td>
+                {visibleHeaders.map((h, cIdx) => {
+                  const editedValue = editedRows[rowId]?.[h];
+                  const currentValue = editedValue !== undefined ? editedValue : String(row[h] ?? "");
+                  const isCellEdited = editedRows[rowId]?.[h] !== undefined;
+
+                  return (
+                    <td 
+                      key={cIdx} 
+                      style={{ 
+                        background: isCellEdited ? "#fff3cd" : undefined,
+                        outline: isCellEdited ? "1px dashed #f59e0b" : "none",
+                      }}
+                    >
+                      <input
+                        type="text"
+                        value={currentValue}
+                        onChange={(e) => handleCellEdit(rowId, h, e.target.value)}
+                        style={{
+                          width: "100%",
+                          minWidth: "100px",
+                          border: "1px solid transparent",
+                          background: "transparent",
+                          padding: "5px 7px",
+                          fontSize: "12.5px",
+                          fontFamily: "inherit",
+                          color: isCellEdited ? "#92400e" : "var(--ink)",
+                          fontWeight: isCellEdited ? "600" : "normal",
+                          borderRadius: "4px",
+                          transition: "all 0.15s ease",
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.border = "1px solid var(--leaf)";
+                          e.target.style.background = "#fff";
+                          e.target.style.boxShadow = "0 0 0 2px rgba(20, 85, 58, 0.15)";
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.border = "1px solid transparent";
+                          e.target.style.background = "transparent";
+                          e.target.style.boxShadow = "none";
+                        }}
+                      />
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     );
   };
 
   return (
     <div className="mushroom-form mushroom-form-fullscreen">
-      <style dangerouslySetInnerHTML={{ __html: `
-        @media print {
-          @page {
-            size: A4;
-            margin: 8mm;
-          }
-          * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            background: #fff !important;
-            font-display: block !important;
-          }
-          .no-print {
-            display: none !important;
-          }
-          .mushroom-form-fullscreen {
-            overflow: visible !important;
-            height: auto !important;
-            max-height: none !important;
-          }
-          .sheet {
-            display: block !important;
-            page-break-after: always;
-            page-break-inside: avoid;
-            margin: 0 !important;
-            box-shadow: none !important;
-            border: none !important;
-            background: #fff !important;
-          }
-          .sheet:last-child {
-            page-break-after: auto;
-          }
-          body[data-print="demand"] #voucher_zone,
-          body[data-print="demand"] #vendor_zone,
-          body[data-print="demand"] #satyapan_zone,
-          body[data-print="demand"] #invoice_zone,
-          body[data-print="demand"] #receipt_zone {
-            display: none !important;
-          }
-          body[data-print="voucher"] #doc-demand,
-          body[data-print="voucher"] #vendor_zone,
-          body[data-print="voucher"] #satyapan_zone,
-          body[data-print="voucher"] #invoice_zone,
-          body[data-print="voucher"] #receipt_zone {
-            display: none !important;
-          }
-          body[data-print="vendor"] #doc-demand,
-          body[data-print="vendor"] #voucher_zone,
-          body[data-print="vendor"] #satyapan_zone,
-          body[data-print="vendor"] #invoice_zone,
-          body[data-print="vendor"] #receipt_zone {
-            display: none !important;
-          }
-          body[data-print="satyapan"] #doc-demand,
-          body[data-print="satyapan"] #voucher_zone,
-          body[data-print="satyapan"] #vendor_zone,
-          body[data-print="satyapan"] #invoice_zone,
-          body[data-print="satyapan"] #receipt_zone {
-            display: none !important;
-          }
-          body[data-print="invoice"] #doc-demand,
-          body[data-print="invoice"] #voucher_zone,
-          body[data-print="invoice"] #vendor_zone,
-          body[data-print="invoice"] #satyapan_zone,
-          body[data-print="invoice"] #receipt_zone {
-            display: none !important;
-          }
-          body[data-print="receipts"] #doc-demand,
-          body[data-print="receipts"] #voucher_zone,
-          body[data-print="receipts"] #vendor_zone,
-          body[data-print="receipts"] #satyapan_zone,
-          body[data-print="receipts"] #invoice_zone {
-            display: none !important;
-          }
-          .rcpt .rcpt-card {
-            border: 1.5px solid #000 !important;
-            page-break-inside: avoid;
-          }
-          .doc, .doc * {
-            font-family: 'Tiro Devanagari Hindi', 'Noto Sans Devanagari', 'Mangal', 'Kohinoor Devanagari', sans-serif !important;
-          }
-          .inv-sheet, .inv-sheet * {
-            font-family: 'Martel', 'Noto Sans Devanagari', serif !important;
-          }
-          .vendor-sheet, .vendor-sheet * {
-            font-family: 'Courier Prime', 'Martel', monospace !important;
-          }
-          .saty-sheet, .saty-sheet * {
-            font-family: 'Tiro Devanagari Hindi', 'Martel', serif !important;
-          }
-          table.doc {
-            border-collapse: collapse !important;
-          }
-          table.doc th, table.doc td {
-            border: 1px solid #000 !important;
-          }
-        }
-      `}} />
-      
-      <div className="no-print" style={{ display: "flex", gap: "10px", marginBottom: "20px", borderBottom: "2px solid #ccc" }}>
-        <button 
-          onClick={() => setActiveTab("form")} 
-          style={{ padding: "10px 20px", cursor: "pointer", background: activeTab === "form" ? "#14553A" : "#fff", color: activeTab === "form" ? "#fff" : "#000", border: "1px solid #ccc", borderRadius: "4px 4px 0 0", borderBottom: "none", fontWeight: "bold" }}
-        >
-          📝 Fill Form {currentFormId && "(Editing)"}
-        </button>
-        <button 
-          onClick={() => { setActiveTab("list"); fetchRecords(); }} 
-          style={{ padding: "10px 20px", cursor: "pointer", background: activeTab === "list" ? "#14553A" : "#fff", color: activeTab === "list" ? "#fff" : "#000", border: "1px solid #ccc", borderRadius: "4px 4px 0 0", borderBottom: "none", fontWeight: "bold" }}
-        >
-          📋 View Records
-        </button>
-      </div>
-
-      {feedbackMsg.text && (
-        <div className="no-print" style={{ marginBottom: "15px", padding: "10px", background: feedbackMsg.type === "error" ? "#FDF3F2" : "#F1F8F3", border: `1px solid ${feedbackMsg.type === "error" ? "#E3B7B3" : "#BBD9C6"}`, color: feedbackMsg.type === "error" ? "#8E1F16" : "#14553A", borderRadius: "4px", fontWeight: "bold" }}>
-          {feedbackMsg.text}
+      <div className="wrap no-print">
+        {/* App Header & Navigation */}
+        <div className="app-header">
+          <div className="app-title-group">
+            <h1>🍄 मशरूम कम्पोस्ट प्रपत्र प्रणाली</h1>
+            <p>Mushroom Compost Bag Supply & Billing Automation Portal</p>
+          </div>
+          <div className="nav-tabs-group">
+            <button
+              className={`nav-tab-btn ${activeTab === "form" ? "active" : ""}`}
+              onClick={() => setActiveTab("form")}
+              type="button"
+            >
+              📝 फ़ॉर्म भरें {currentFormId && "(Edit Mode)"}
+            </button>
+            <button
+              className={`nav-tab-btn ${activeTab === "list" ? "active" : ""}`}
+              onClick={() => { setActiveTab("list"); fetchRecords(); }}
+              type="button"
+            >
+              📋 सहेजे गए रिकॉर्ड्स ({formRecords.length})
+            </button>
+          </div>
         </div>
-      )}
 
-      {activeTab === "form" && (
-        <div className="wrap no-print">
-          <div className="panel">
-            <h1>मशरूम कम्पोस्ट बैग — प्रपत्र प्रणाली</h1>
-            <p className="sub">एक बार विवरण भरें — मांग-पत्र, समेकित पावती-पत्र, टैक्स इनवॉइस और नकद रसीद अपने आप तैयार हो जाएँगे।</p>
+        {/* Global Feedback Messages */}
+        {feedbackMsg.text && (
+          <div className={`status-msg ${feedbackMsg.type || "info"}`}>
+            {feedbackMsg.type === "error" ? "⚠️" : feedbackMsg.type === "success" ? "✔" : "ℹ️"} {feedbackMsg.text}
+          </div>
+        )}
 
-            <div className="legend">0 · बैकएंड डेटा अपलोड करें और फ़ॉर्म भरें</div>
-            <div className="excel-import-box bulk-upload-container">
-              <div className="bulk-upload-box" style={{ background: "#F1F8F3", border: "1.6px solid #14553A", marginBottom: "15px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
-                <div>
-                  <p className="bulk-upload-title" style={{ margin: "0 0 4px" }}>बैकएंड से डेटा लाएँ और फ़ॉर्म अपने-आप भरें</p>
-                  <p style={{ margin: 0, fontSize: "12px", color: "var(--ink-soft)" }}>सर्वर पर अपलोड किए गए डेटा से केन्द्र, कृषक व वाहन विवरण नीचे फ़ॉर्म में अपने-आप भर जाएगा।</p>
+        {/* TAB 1: FORM ENTRY */}
+        {activeTab === "form" && (
+          <div>
+            {/* Step 0: Server Sync & Bulk Upload */}
+            <div className="form-section-card">
+              <div className="section-header">
+                <div className="section-title-wrap">
+                  <div className="section-step-num">0</div>
+                  <div className="section-title-text">
+                    <h2>बैकएंड डेटा एवं एक्सेल आयात (Data Import & Server Sync)</h2>
+                    <p>सर्वर से सीधा डेटा लाएँ अथवा एक्सेल शीट अपलोड करके स्वचालित रूप से भरें</p>
+                  </div>
                 </div>
-                <button className="btn p" type="button" onClick={fetchAndAutoFillForm} disabled={isFetching}>
-                  {isFetching ? "⏳ प्राप्त कर रहे हैं..." : "🔄 सर्वर से डेटा लाएँ"}
+              </div>
+
+              <div className="sync-hero-card">
+                <div className="sync-hero-info">
+                  <h3>🔄 बैकएंड से डेटा लोड करें</h3>
+                  <p>सर्वर पर अपलोड किए गए डेटा से केन्द्र, कृषक व वाहन विवरण नीचे फ़ॉर्म में अपने-आप भर जाएगा।</p>
+                </div>
+                <button
+                  className="btn-sync-action"
+                  type="button"
+                  onClick={() => fetchAndAutoFillForm()}
+                  disabled={isFetching}
+                >
+                  {isFetching ? "⏳ डेटा प्राप्त हो रहा है..." : "🔄 सर्वर से डेटा लाएँ"}
                 </button>
               </div>
 
-              <div className="bulk-upload-box">
-                <p className="bulk-upload-title">केन्द्र विवरण (Centre Details)</p>
-                <div className="bulk-upload-row">
-                  <input type="file" id="kendraFileInput" accept=".xlsx,.xls" onChange={handleKendraFileChange} disabled={isUploading} />
-                  <button className="btn s" type="button" onClick={downloadKendraTemplate} disabled={isUploading}>📄 टेम्पलेट</button>
-                  {kendraData.length > 0 && (
-                    <button className="btn p" type="button" onClick={handleKendraUpload} disabled={isUploading}>
-                      {isUploading ? "⏳ अपलोड..." : "📤 बैकएंड में पोस्ट करें"}
+              <div className="upload-cards-grid">
+                {/* Centre Details Subcard */}
+                <div className="upload-subcard">
+                  <div className="upload-subcard-header">
+                    <span className="upload-subcard-title">🏢 केन्द्र विवरण (Centre Details)</span>
+                    <button className="btn s" type="button" onClick={downloadKendraTemplate} disabled={isUploading} style={{ fontSize: "11.5px", padding: "4px 8px" }}>
+                      📄 टेम्पलेट
+                    </button>
+                  </div>
+                  <div className="file-input-wrapper">
+                    <input type="file" id="kendraFileInput" accept=".xlsx,.xls" onChange={handleKendraFileChange} disabled={isUploading} />
+                    {kendraData.length > 0 && (
+                      <button className="btn p" type="button" onClick={handleKendraUpload} disabled={isUploading} style={{ fontSize: "12px", padding: "6px 12px" }}>
+                        {isUploading ? "⏳ अपलोड..." : "📤 अपलोड करें"}
+                      </button>
+                    )}
+                  </div>
+                  {fetchedKendraData.length > 0 && (
+                    <button
+                      className="btn s"
+                      type="button"
+                      onClick={() => { setEditedRows({}); setHasUnsavedChanges(false); setModalData({ open: true, type: "kendra", data: fetchedKendraData }); }}
+                      style={{ fontSize: "12px", background: "#f8fafc", width: "100%", justifyContent: "center" }}
+                    >
+                      👁 केन्द्र डेटा देखें ({fetchedKendraData.length} पंक्तियाँ)
                     </button>
                   )}
                 </div>
-                {fetchedKendraData.length > 0 && (
-                  <button className="btn s" type="button" onClick={() => { setEditedRows({}); setHasUnsavedChanges(false); setModalData({ open: true, type: "kendra", data: fetchedKendraData }); }} style={{ marginTop: "10px" }}>
-                    👁 केन्द्र डेटा देखें ({fetchedKendraData.length} पंक्तियाँ)
-                  </button>
-                )}
-              </div>
 
-              <div className="bulk-upload-box">
-                <p className="bulk-upload-title">कृषक सूची</p>
-                <div className="bulk-upload-row">
-                  <input type="file" id="farmerFileInput" accept=".xlsx,.xls" onChange={handleFarmerFileChange} disabled={isUploading} />
-                  <button className="btn s" type="button" onClick={downloadFarmerTemplate} disabled={isUploading}>📄 टेम्पलेट</button>
-                  {farmerData.length > 0 && (
-                    <button className="btn p" type="button" onClick={handleFarmerUpload} disabled={isUploading}>
-                      {isUploading ? "⏳ अपलोड..." : "📤 बैकएंड में पोस्ट करें"}
+                {/* Farmer List Subcard */}
+                <div className="upload-subcard">
+                  <div className="upload-subcard-header">
+                    <span className="upload-subcard-title">👨‍🌾 कृषक सूची (Farmer List)</span>
+                    <button className="btn s" type="button" onClick={downloadFarmerTemplate} disabled={isUploading} style={{ fontSize: "11.5px", padding: "4px 8px" }}>
+                      📄 टेम्पलेट
+                    </button>
+                  </div>
+                  <div className="file-input-wrapper">
+                    <input type="file" id="farmerFileInput" accept=".xlsx,.xls" onChange={handleFarmerFileChange} disabled={isUploading} />
+                    {farmerData.length > 0 && (
+                      <button className="btn p" type="button" onClick={handleFarmerUpload} disabled={isUploading} style={{ fontSize: "12px", padding: "6px 12px" }}>
+                        {isUploading ? "⏳ अपलोड..." : "📤 अपलोड करें"}
+                      </button>
+                    )}
+                  </div>
+                  {fetchedFarmerData.length > 0 && (
+                    <button
+                      className="btn s"
+                      type="button"
+                      onClick={() => { setEditedRows({}); setHasUnsavedChanges(false); setModalData({ open: true, type: "farmer", data: fetchedFarmerData }); }}
+                      style={{ fontSize: "12px", background: "#f8fafc", width: "100%", justifyContent: "center" }}
+                    >
+                      👁 कृषक डेटा देखें ({fetchedFarmerData.length} पंक्तियाँ)
                     </button>
                   )}
                 </div>
-                {fetchedFarmerData.length > 0 && (
-                  <button className="btn s" type="button" onClick={() => { setEditedRows({}); setHasUnsavedChanges(false); setModalData({ open: true, type: "farmer", data: fetchedFarmerData }); }} style={{ marginTop: "10px" }}>
-                    👁 कृषक डेटा देखें ({fetchedFarmerData.length} पंक्तियाँ)
-                  </button>
-                )}
               </div>
 
               {isUploading && uploadProgress.total > 0 && (
-                <div className="upload-progress-container" style={{ marginTop: "15px" }}>
+                <div className="upload-progress-container">
                   <div className="upload-progress-label">
-                    {uploadProgress.type === "kendra" ? "केन्द्र विवरण" : "कृषक सूची"} अपलोड हो रहा है...
+                    <span>{uploadProgress.type === "kendra" ? "🏢 केन्द्र विवरण" : "👨‍🌾 कृषक सूची"} अपलोड हो रहा है...</span>
                     <span>{uploadProgress.current} / {uploadProgress.total}</span>
                   </div>
                   <div className="upload-progress-bar">
@@ -1492,191 +1805,435 @@ export default function MushroomForm() {
                   </div>
                 </div>
               )}
+
               {uploadMsg.text && (
-                <div className="excel-file-status" style={{ marginTop: "15px" }}>
-                  <span className="excel-status" style={{ color: uploadMsg.type === "error" ? "red" : uploadMsg.type === "success" ? "green" : "#333", fontWeight: "bold" }}>
-                    {uploadMsg.text}
-                  </span>
+                <div style={{ marginTop: "12px" }} className={`status-msg ${uploadMsg.type || "info"}`}>
+                  {uploadMsg.text}
                 </div>
               )}
             </div>
 
-            <div className="legend">1 · मशरूम का प्रकार चुनें</div>
-            <div className="types">
-              <div className="type" data-type="button" data-on="0" onClick={() => window.pickType("button")}>
-                <input type="radio" name="mtype" id="t_button" />
-                <div><b>बटन मशरूम (Button)</b><span>दर और बैग वजन अपलोड किए गए डेटा से आएगा</span></div>
+            {/* Step 1: Mushroom Type Selection */}
+            <div className="form-section-card">
+              <div className="section-header">
+                <div className="section-title-wrap">
+                  <div className="section-step-num">1</div>
+                  <div className="section-title-text">
+                    <h2>मशरूम का प्रकार चुनें (Mushroom Type)</h2>
+                    <p>प्रकार चुनते ही सम्बंधित केन्द्र व दर स्वतः फ़ॉर्म में लोड हो जाएँगे</p>
+                  </div>
+                </div>
               </div>
-              <div className="type" data-type="oyster" data-on="0" onClick={() => window.pickType("oyster")}>
-                <input type="radio" name="mtype" id="t_oyster" />
-                <div><b>ऑयस्टर मशरूम</b><span>दर और बैग वजन अपलोड किए गए डेटा से आएगा</span></div>
+
+              <div className="mtype-cards-grid">
+                <div
+                  className={`mtype-card ${selectedMtype === "button" ? "active" : ""}`}
+                  onClick={() => handleMtypeSelect("button")}
+                >
+                  <div className="mtype-icon-box">🍄</div>
+                  <div className="mtype-info">
+                    <h3>बटन मशरूम (Button Mushroom)</h3>
+                    <p>स्वीकृत विभागीय दर ₹126 प्रति बैग · 10 किग्रा प्रति बैग</p>
+                    <span className="mtype-preset-pill">दर: ₹126 · वजन: 10 kg</span>
+                  </div>
+                  <div className="mtype-check-icon">✓</div>
+                </div>
+
+                <div
+                  className={`mtype-card ${selectedMtype === "oyster" ? "active" : ""}`}
+                  onClick={() => handleMtypeSelect("oyster")}
+                >
+                  <div className="mtype-icon-box">🪸</div>
+                  <div className="mtype-info">
+                    <h3>ऑयस्टर मशरूम (Oyster Mushroom)</h3>
+                    <p>स्वीकृत विभागीय दर ₹90 प्रति बैग · 5 किग्रा प्रति बैग</p>
+                    <span className="mtype-preset-pill">दर: ₹90 · वजन: 5 kg</span>
+                  </div>
+                  <div className="mtype-check-icon">✓</div>
+                </div>
+              </div>
+
+              <div className="form-grid-4" style={{ marginTop: "16px" }}>
+                <div className="form-group">
+                  <label className="form-label">पूर्ण दर (₹ प्रति बैग)</label>
+                  <input type="number" id="i_rate" className="form-input" min="0" step="0.01" onInput={() => window.render()} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">बैग वजन (किग्रा)</label>
+                  <input type="number" id="i_kg" className="form-input" min="0" step="0.5" onInput={() => window.render()} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">अनुदान प्रतिशत (%)</label>
+                  <input type="number" id="i_sub" className="form-input" min="0" max="100" onInput={() => window.render()} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">जी०एस०टी० दर (%)</label>
+                  <select id="i_gst" className="form-select" onChange={() => window.render()}>
+                    <option value="">— GST चुनें —</option>
+                    <option value="0">0% (छूट प्राप्त)</option>
+                    <option value="5">5%</option>
+                    <option value="12">12%</option>
+                    <option value="18">18%</option>
+                  </select>
+                </div>
               </div>
             </div>
 
-            <div className="grid" style={{ marginTop: "12px" }}>
-              <div><label className="f">पूर्ण दर (₹ प्रति बैग)</label><input type="number" id="i_rate" min="0" step="0.01" onInput={() => window.render()} /></div>
-              <div><label className="f">बैग वजन (किग्रा)</label><input type="number" id="i_kg" min="0" step="0.5" onInput={() => window.render()} /></div>
-              <div><label className="f">अनुदान प्रतिशत (%)</label><input type="number" id="i_sub" min="0" max="100" onInput={() => window.render()} /></div>
-              <div>
-                <label className="f">जी०एस०टी० दर (%)</label>
-                <select id="i_gst" onChange={() => window.render()}>
-                  <option value="">— GST चुनें —</option>
-                  <option value="0">0% (छूट प्राप्त)</option>
-                  <option value="5">5%</option>
-                  <option value="12">12%</option>
-                  <option value="18">18%</option>
-                </select>
+            {/* Step 2: Office & Application Details */}
+            <div className="form-section-card">
+              <div className="section-header">
+                <div className="section-title-wrap">
+                  <div className="section-step-num">2</div>
+                  <div className="section-title-text">
+                    <h2>कार्यालय, केन्द्र एवं बिलिंग विवरण</h2>
+                    <p>उद्यान सचल दल केन्द्र, बिल संख्या, रसीद क्रमांक व दिनांक विवरण</p>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div className="legend">2 · कार्यालय एवं आवेदन विवरण</div>
-            <div className="grid">
-              <div>
-                <label className="f">उद्यान सचल दल केन्द्र</label>
-                <select id="i_kendra" value={currentKendra} onChange={(e) => {
-                  const selectedKendra = e.target.value;
-                  setCurrentKendra(selectedKendra);
-                  if (selectedKendra && window.applyData) {
-                    const record = fetchedRecords.find((r) => r.data.fields.i_kendra === selectedKendra);
-                    if (record) { window.applyData(record.data); window.scrollTo({ top: 0, behavior: "smooth" }); }
-                  } else { window.render(); }
-                }}>
-                  <option value="">— केन्द्र चुनें —</option>
-                  {fetchedRecords.map((rec, idx) => (<option key={idx} value={rec.data.fields.i_kendra}>{rec.data.fields.i_kendra}</option>))}
-                  {currentKendra && !fetchedRecords.some(r => r.data.fields.i_kendra === currentKendra) && (
-                    <option value={currentKendra}>{currentKendra}</option>
-                  )}
-                </select>
-              </div>
-              <div><label className="f">कार्यालय / जनपद</label><input type="text" id="i_office" onInput={() => window.render()} /></div>
-              <div><label className="f">जिला योजना वर्ष</label><input type="text" id="i_year" onInput={() => window.render()} /></div>
-              <div><label className="f">बिल दिनांक (Bill Date)</label><input type="date" id="i_date" onInput={() => window.render()} /></div>
-              <div><label className="f">आपूर्ति दिनांक</label><input type="text" id="i_supply" placeholder="जैसे 23/08/2026 या 23/08/2026, 26/08/2026" onInput={() => window.render()} /></div>
-              <div>
-                <label className="f">बिल / इनवॉइस संख्या
-                  <label style={{ fontWeight: "400", fontSize: "11px", marginLeft: "8px", cursor: "pointer" }}>
-                    <input type="checkbox" id="auto_inv_chk" onChange={() => window.toggleAuto("inv")} style={{ verticalAlign: "middle" }} /> स्वतः क्रमांक
+              <div className="form-grid-3">
+                <div className="form-group">
+                  <label className="form-label">
+                    <span>उद्यान सचल दल केन्द्र</span>
+                    {selectedMtype && (
+                      <span style={{ fontSize: "11px", color: "var(--leaf)", fontWeight: "700" }}>
+                        ({selectedMtype === "button" ? "बटन" : "ऑयस्टर"} फ़िल्टर)
+                      </span>
+                    )}
                   </label>
-                </label>
-                <input type="text" id="i_invoice" placeholder="1272" onInput={() => window.render()} />
-              </div>
-              <div>
-                <label className="f">रसीद प्रारम्भिक संख्या
-                  <label style={{ fontWeight: "400", fontSize: "11px", marginLeft: "8px", cursor: "pointer" }}>
-                    <input type="checkbox" id="auto_rcpt_chk" onChange={() => window.toggleAuto("rcpt")} style={{ verticalAlign: "middle" }} /> स्वतः क्रमांक
+                  {(() => {
+                    const filteredRecords = selectedMtype 
+                      ? fetchedRecords.filter((r) => r.data.mtype === selectedMtype)
+                      : fetchedRecords;
+                    return (
+                      <select id="i_kendra" className="form-select" value={currentKendra} onChange={(e) => {
+                        const selectedKendra = e.target.value;
+                        setCurrentKendra(selectedKendra);
+                        if (selectedKendra && window.applyData) {
+                          const record = filteredRecords.find((r) => r.data.fields.i_kendra === selectedKendra) || fetchedRecords.find((r) => r.data.fields.i_kendra === selectedKendra);
+                          if (record) { window.applyData(record.data); window.scrollTo({ top: 0, behavior: "smooth" }); }
+                        } else { window.render(); }
+                      }}>
+                        <option value="">— केन्द्र चुनें —</option>
+                        {filteredRecords.map((rec, idx) => (
+                          <option key={idx} value={rec.data.fields.i_kendra}>
+                            {rec.data.fields.i_kendra}
+                          </option>
+                        ))}
+                        {currentKendra && !filteredRecords.some(r => r.data.fields.i_kendra === currentKendra) && (
+                          <option value={currentKendra}>{currentKendra}</option>
+                        )}
+                      </select>
+                    );
+                  })()}
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">कार्यालय / जनपद</label>
+                  <input type="text" id="i_office" className="form-input" onInput={() => window.render()} />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">जिला योजना वर्ष</label>
+                  <input type="text" id="i_year" className="form-input" onInput={() => window.render()} />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">बिल दिनांक (Bill Date)</label>
+                  <input type="date" id="i_date" className="form-input" onInput={() => window.render()} />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">आपूर्ति दिनांक (Supply Date)</label>
+                  <input type="text" id="i_supply" className="form-input" placeholder="जैसे 23/08/2026, 26/08/2026" onInput={() => window.render()} />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">
+                    <span>बिल / इनवॉइस संख्या</span>
+                    <label className="auto-toggle-badge">
+                      <input type="checkbox" id="auto_inv_chk" onChange={() => window.toggleAuto("inv")} style={{ verticalAlign: "middle" }} /> स्वतः क्रमांक
+                    </label>
                   </label>
-                </label>
-                <input type="number" id="i_rcptno" placeholder="751" onInput={() => window.render()} />
+                  <input type="text" id="i_invoice" className="form-input" placeholder="1272" onInput={() => window.render()} />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">
+                    <span>रसीद प्रारम्भिक संख्या</span>
+                    <label className="auto-toggle-badge">
+                      <input type="checkbox" id="auto_rcpt_chk" onChange={() => window.toggleAuto("rcpt")} style={{ verticalAlign: "middle" }} /> स्वतः क्रमांक
+                    </label>
+                  </label>
+                  <input type="number" id="i_rcptno" className="form-input" placeholder="751" onInput={() => window.render()} />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">बिल किसके नाम (M/s)</label>
+                  <input type="text" id="i_billto" className="form-input" onInput={() => window.render()} />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">बिल पता (Billing Address)</label>
+                  <input type="text" id="i_billaddr" className="form-input" onInput={() => window.render()} />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">नकद रसीद किस प्रकार बनें</label>
+                  <select id="i_rmode" className="form-select" defaultValue="one" onChange={() => window.render()}>
+                    <option value="one">एक संयुक्त रसीद (कुल बिल का 20%)</option>
+                    <option value="each">प्रति कृषक अलग रसीद</option>
+                    <option value="both">दोनों — संयुक्त + प्रति कृषक</option>
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ gridColumn: "1 / -1", marginTop: "4px" }}>
+                  <label style={{ display: "inline-flex", alignItems: "center", gap: "10px", cursor: "pointer", fontWeight: "600", fontSize: "13.5px" }}>
+                    <input type="checkbox" id="i_showstamp" defaultChecked onChange={() => window.render()} style={{ width: "18px", height: "18px", cursor: "pointer" }} />
+                    <span>टैक्स इनवॉइस में कृषक-हस्ताक्षर वाली नीली मुहर (स्टाम्प) दिखाएँ</span>
+                  </label>
+                </div>
               </div>
-              <div><label className="f">बिल किसके नाम (M/s)</label><input type="text" id="i_billto" onInput={() => window.render()} /></div>
-              <div><label className="f">बिल पता</label><input type="text" id="i_billaddr" onInput={() => window.render()} /></div>
-              <div>
-                <label className="f">नकद रसीद किस प्रकार बनें</label>
-                <select id="i_rmode" defaultValue="one" onChange={() => window.render()}>
-                  <option value="one">एक संयुक्त रसीद (कुल बिल का 20%)</option>
-                  <option value="each">प्रति कृषक अलग रसीद</option>
-                  <option value="both">दोनों — संयुक्त + प्रति कृषक</option>
-                </select>
+            </div>
+
+            {/* Step 2A: Vehicle Numbers */}
+            <div className="form-section-card">
+              <div className="section-header">
+                <div className="section-title-wrap">
+                  <div className="section-step-num">2A</div>
+                  <div className="section-title-text">
+                    <h2>वाहन संख्या (Vehicle Numbers)</h2>
+                    <p>टैक्स इनवॉइस पर प्रदर्शित किए जाने वाले वाहन विवरण (वैकल्पिक)</p>
+                  </div>
+                </div>
+                <button className="btn s" type="button" onClick={() => window.addVehicleRow()}>
+                  + वाहन जोड़ें
+                </button>
               </div>
-              <div style={{ gridColumn: "1/-1" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontWeight: "600" }}>
-                  <input type="checkbox" id="i_showstamp" defaultChecked onChange={() => window.render()} />
-                  टैक्स इनवॉइस में कृषक-हस्ताक्षर वाली नीली मुहर (स्टाम्प) दिखाएँ
-                </label>
+              <div id="vehicle_list"></div>
+            </div>
+
+            {/* Step 3: Farmer Beneficiaries Roster */}
+            <div className="form-section-card">
+              <div className="section-header">
+                <div className="section-title-wrap">
+                  <div className="section-step-num">3</div>
+                  <div className="section-title-text">
+                    <h2>लाभार्थी कृषक सूची (Farmer Beneficiary Roster)</h2>
+                    <p>कृषकों के नाम, ग्राम, मोबाइल नंबर, आधार संख्या एवं आवंटित बैग</p>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button className="btn p" type="button" onClick={() => window.addRow()}>
+                    + कृषक जोड़ें
+                  </button>
+                  <button className="btn s" type="button" onClick={() => { document.getElementById("entry_body").innerHTML = ""; window.render(); }}>
+                    सूची खाली करें
+                  </button>
+                </div>
+              </div>
+
+              <div className="farmer-table-container">
+                <table className="entry">
+                  <thead>
+                    <tr>
+                      <th style={{ width: "40px", textAlign: "center" }}>क्र०</th>
+                      <th>कृषक का नाम</th>
+                      <th>ग्राम</th>
+                      <th style={{ width: "140px" }}>मोबाइल नंबर</th>
+                      <th style={{ width: "160px" }}>आधार सं०</th>
+                      <th style={{ width: "100px", textAlign: "center" }}>बैग</th>
+                      <th style={{ width: "50px", textAlign: "center" }}>हटाएं</th>
+                    </tr>
+                  </thead>
+                  <tbody id="entry_body"></tbody>
+                </table>
+              </div>
+
+              <div className="warn" id="warn" style={{ marginTop: "12px" }}>
+                ⚠️ कृपया कम से कम एक कृषक का नाम एवं बैग संख्या भरें।
+              </div>
+
+              {/* KPI Summary Cards */}
+              <div className="metrics-summary-grid">
+                <div className="metric-card primary">
+                  <span className="metric-card-label">📦 कुल बैग संख्या</span>
+                  <span className="metric-card-val" id="t_bags">0</span>
+                </div>
+                <div className="metric-card">
+                  <span className="metric-card-label">💰 कुल मूल्य</span>
+                  <span className="metric-card-val">₹ <span id="t_val">0.00</span></span>
+                </div>
+                <div className="metric-card">
+                  <span className="metric-card-label">👨‍🌾 कृषक अंश</span>
+                  <span className="metric-card-val">₹ <span id="t_share">0.00</span></span>
+                </div>
+                <div className="metric-card">
+                  <span className="metric-card-label">🏛️ राजसहायता (अनुदान)</span>
+                  <span className="metric-card-val">₹ <span id="t_sub">0.00</span></span>
+                </div>
               </div>
             </div>
 
-            <div className="legend">2क · वाहन संख्या (टैक्स इनवॉइस हेतु, वैकल्पिक)</div>
-            <div id="vehicle_list"></div>
-            <button className="btn s" type="button" onClick={() => window.addVehicleRow()} style={{ margin: "6px 0 4px" }}>+ वाहन जोड़ें</button>
+            {/* Step 4: Document Printing Suite */}
+            <div className="form-section-card">
+              <div className="section-header">
+                <div className="section-title-wrap">
+                  <div className="section-step-num">4</div>
+                  <div className="section-title-text">
+                    <h2>प्रपत्र जेनेरेशन एवं प्रिंट सुइट (Document Print Suite)</h2>
+                    <p>एक क्लिक में तैयार विभागीय मांग-पत्र, सत्यापन, इनवॉइस व रसीदें प्रिंट करें</p>
+                  </div>
+                </div>
+                <button className="btn s" type="button" onClick={() => window.resetLetter()} style={{ fontSize: "12px" }}>
+                  🔄 मांग-पत्र टेक्स्ट रीसेट करें
+                </button>
+              </div>
 
-            <div className="legend">3 · कृषकों की सूची</div>
-            <div style={{ overflowX: "auto" }}>
-              <table className="entry">
-                <thead><tr><th>क्र०</th><th>कृषक का नाम</th><th>ग्राम</th><th>मोबाइल नंबर</th><th>आधार सं०</th><th style={{ width: "100px" }}>बैग</th><th style={{ width: "44px" }}>हटाएं</th></tr></thead>
-                <tbody id="entry_body"></tbody>
-              </table>
+              <div className="print-actions-grid">
+                <div className="print-card-btn" onClick={() => window.printDoc("demand")}>
+                  <span className="print-icon">📄</span>
+                  <span className="print-name">मांग-पत्र</span>
+                  <span className="print-desc">कृषकों द्वारा अनुदान मांग पत्र</span>
+                </div>
+                <div className="print-card-btn" onClick={() => window.printDoc("voucher")}>
+                  <span className="print-icon">📜</span>
+                  <span className="print-name">समेकित पावती-पत्र</span>
+                  <span className="print-desc">वितरण-सह-प्राप्ति पावती</span>
+                </div>
+                <div className="print-card-btn" onClick={() => window.printDoc("satyapan")}>
+                  <span className="print-icon">🔍</span>
+                  <span className="print-name">सत्यापन आख्या</span>
+                  <span className="print-desc">प्रभारी भौतिक सत्यापन आख्या</span>
+                </div>
+                <div className="print-card-btn" onClick={() => window.printDoc("vendor")}>
+                  <span className="print-icon">🏭</span>
+                  <span className="print-name">विक्रेता प्रमाण-पत्र</span>
+                  <span className="print-desc">सप्लायर वितरण सर्टिफिकेट</span>
+                </div>
+                <div className="print-card-btn" onClick={() => window.printDoc("invoice")}>
+                  <span className="print-icon">🧾</span>
+                  <span className="print-name">टैक्स इनवॉइस</span>
+                  <span className="print-desc">GST Tax Invoice</span>
+                </div>
+                <div className="print-card-btn" onClick={() => window.printDoc("receipts")}>
+                  <span className="print-icon">💵</span>
+                  <span className="print-name">नकद रसीदें</span>
+                  <span className="print-desc">Cash Receipts Slips</span>
+                </div>
+                <div className="print-card-btn primary-all" onClick={() => window.printDoc("all")}>
+                  <span className="print-icon">🖨️</span>
+                  <span className="print-name">सभी प्रपत्र प्रिंट करें</span>
+                  <span className="print-desc">Print All 6 Documents</span>
+                </div>
+              </div>
             </div>
-            <div className="bar">
-              <button className="btn p" onClick={() => window.addRow()}>+ कृषक जोड़ें</button>
-              <button className="btn s" onClick={() => { document.getElementById("entry_body").innerHTML = ""; window.render(); }}>सूची खाली करें</button>
-              <div className="tot">कुल बैग <b id="t_bags">0</b> · कुल मूल्य ₹ <b id="t_val">0.00</b> · किसान अंश ₹ <b id="t_share">0.00</b> · अनुदान ₹ <b id="t_sub">0.00</b></div>
-            </div>
-            <div className="warn" id="warn">कृपया कम से कम एक कृषक का नाम एवं बैग संख्या भरें।</div>
 
-            <div className="legend">4 · प्रपत्र प्रिंट करें</div>
-            <div className="printrow">
-              <button className="btn p" onClick={() => window.printDoc("demand")}>मांग-पत्र</button>
-              <button className="btn p" onClick={() => window.printDoc("voucher")}>समेकित पावती-पत्र</button>
-              <button className="btn p" onClick={() => window.printDoc("satyapan")}>सत्यापन आख्या</button>
-              <button className="btn p" onClick={() => window.printDoc("vendor")}>विक्रेता का प्रमाण-पत्र</button>
-              <button className="btn p" onClick={() => window.printDoc("invoice")}>टैक्स इनवॉइस</button>
-              <button className="btn p" onClick={() => window.printDoc("receipts")}>नकद रसीदें</button>
-              <button className="btn s" onClick={() => window.printDoc("all")}>सभी प्रपत्र</button>
-              <button className="btn s" onClick={() => window.resetLetter()}>मांग-पत्र का पाठ रीसेट करें</button>
-            </div>
-
-            <div style={{ marginTop: "25px", display: "flex", gap: "15px", justifyContent: "flex-end", borderTop: "2px dashed #ccc", paddingTop: "20px" }}>
+            {/* Form Submission Bar */}
+            <div className="form-submit-bar">
               {currentFormId && (
-                <button className="btn s" onClick={handleCancelEdit} style={{ padding: "10px 20px", fontSize: "15px" }}>
+                <button className="btn s" type="button" onClick={handleCancelEdit}>
                   ❌ Cancel Edit
                 </button>
               )}
-              <button 
-                className="btn p" 
-                onClick={handleSubmit} 
+              <button
+                className="btn p"
+                type="button"
+                onClick={handleSubmit}
                 disabled={isSubmitting}
-                style={{ padding: "10px 25px", fontSize: "15px", background: currentFormId ? "#E67E22" : "#14553A" }}
+                style={{
+                  background: currentFormId ? "#d97706" : "var(--leaf)",
+                  padding: "11px 28px",
+                  fontSize: "15px"
+                }}
               >
-                {isSubmitting ? "⏳ Please wait..." : currentFormId ? "🔄 Update Form" : "💾 Submit Form"}
+                {isSubmitting ? "⏳ सहेजा जा रहा है..." : currentFormId ? "🔄 Update Form (अपडेट करें)" : "💾 Save & Submit Form (सहेजें)"}
               </button>
             </div>
 
-            <div className="no-print">
-              <div className="legend">5 · सहेजी गई प्रविष्टियाँ (<span id="rec_count">0</span>)</div>
-              <div className="bar">
-                <button className="btn p" onClick={() => window.saveRecord(true)}>इस केन्द्र की प्रविष्टि सहेजें</button>
-                <button className="btn p" id="btnUpdate" style={{ display: "none" }} onClick={() => window.saveRecord(false)}>खुली प्रविष्टि अद्यतन करें</button>
-                <button className="btn s" onClick={() => window.newEntry()}>नया प्रपत्र</button>
-                <span className="tot" id="rec_store"></span>
+            {/* Step 5: In-Memory Saved Entries */}
+            <div className="form-section-card" style={{ marginTop: "24px" }}>
+              <div className="section-header">
+                <div className="section-title-wrap">
+                  <div className="section-step-num">5</div>
+                  <div className="section-title-text">
+                    <h2>सहेजी गई स्थानीय प्रविष्टियाँ (<span id="rec_count">0</span>)</h2>
+                    <p>वर्तमान सत्र में तैयार किए गए प्रपत्रों की त्वरित सूची</p>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button className="btn p" type="button" onClick={() => window.saveRecord(true)}>
+                    इस केन्द्र की प्रविष्टि सहेजें
+                  </button>
+                  <button className="btn p" id="btnUpdate" style={{ display: "none" }} type="button" onClick={() => window.saveRecord(false)}>
+                    खुली प्रविष्टि अद्यतन करें
+                  </button>
+                  <button className="btn s" type="button" onClick={() => window.newEntry()}>
+                    नया प्रपत्र
+                  </button>
+                </div>
               </div>
-              <div className="warn" id="rec_msg" style={{ display: "none", background: "#F1F8F3", borderColor: "#BBD9C6", color: "#14553A" }}></div>
-              <div style={{ overflowX: "auto", marginTop: "8px" }}>
+
+              <div className="warn" id="rec_msg" style={{ display: "none", background: "#F1F8F3", borderColor: "#BBD9C6", color: "#14553A", marginBottom: "10px" }}></div>
+
+              <div style={{ overflowX: "auto" }}>
                 <table className="entry">
-                  <thead><tr><th>केन्द्र</th><th style={{ width: "86px" }}>दिनांक</th><th style={{ width: "80px" }}>बिल सं०</th><th style={{ width: "70px" }}>प्रकार</th><th style={{ width: "54px" }}>कृषक</th><th style={{ width: "54px" }}>बैग</th><th style={{ width: "100px" }}>कुल मूल्य</th><th style={{ width: "110px" }}>क्रिया</th></tr></thead>
+                  <thead>
+                    <tr>
+                      <th>केन्द्र</th>
+                      <th style={{ width: "95px" }}>दिनांक</th>
+                      <th style={{ width: "90px" }}>बिल सं०</th>
+                      <th style={{ width: "80px" }}>प्रकार</th>
+                      <th style={{ width: "60px", textAlign: "center" }}>कृषक</th>
+                      <th style={{ width: "60px", textAlign: "center" }}>बैग</th>
+                      <th style={{ width: "110px", textAlign: "right" }}>कुल मूल्य</th>
+                      <th style={{ width: "120px", textAlign: "center" }}>क्रिया</th>
+                    </tr>
+                  </thead>
                   <tbody id="rec_body"></tbody>
                 </table>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {activeTab === "list" && (
-        <div className="wrap no-print">
-          <div className="panel">
-            <h1>Saved Mushroom Compost Records</h1>
-            <p className="sub">यहाँ सभी सहेजे गए रिकॉर्ड्स दिखाई देंगे। Edit बटन से फ़ॉर्म खोलकर बदलाव कर सकते हैं।</p>
-            
+        {/* TAB 2: VIEW SAVED SERVER RECORDS */}
+        {activeTab === "list" && (
+          <div className="form-section-card">
+            <div className="section-header">
+              <div className="section-title-wrap">
+                <div className="section-step-num">📋</div>
+                <div className="section-title-text">
+                  <h2>Saved Mushroom Compost Records (सर्वर रिकॉर्ड्स)</h2>
+                  <p>यहाँ सभी सहेजे गए रिकॉर्ड्स दिखाई देंगे। Edit बटन से फ़ॉर्म खोलकर बदलाव कर सकते हैं।</p>
+                </div>
+              </div>
+              <button className="btn s" type="button" onClick={fetchRecords} disabled={isLoading}>
+                🔄 रिफ्रेश करें
+              </button>
+            </div>
+
             {isLoading ? (
-              <p style={{ textAlign: "center", padding: "20px", fontWeight: "bold", color: "#14553A" }}>⏳ डेटा लाया जा रहा है...</p>
+              <div style={{ textAlign: "center", padding: "40px 20px", fontWeight: "bold", color: "var(--leaf)" }}>
+                ⏳ डेटा लाया जा रहा है...
+              </div>
             ) : (
-              <div style={{ overflowX: "auto", marginTop: "15px" }}>
+              <div style={{ overflowX: "auto" }}>
                 <table className="entry">
                   <thead>
                     <tr>
-                      <th style={{ width: "120px" }}>Form ID</th>
-                      <th>केन्द्र</th>
-                      <th style={{ width: "100px" }}>दिनांक</th>
-                      <th style={{ width: "120px" }}>बिल सं०</th>
-                      <th style={{ width: "150px" }}>मशरूम प्रकार</th>
-                      <th style={{ width: "150px", textAlign: "center" }}>क्रिया (Action)</th>
+                      <th style={{ width: "130px" }}>Form ID</th>
+                      <th>केन्द्र का नाम</th>
+                      <th style={{ width: "110px" }}>बिल दिनांक</th>
+                      <th style={{ width: "130px" }}>बिल सं०</th>
+                      <th style={{ width: "160px" }}>मशरूम प्रकार</th>
+                      <th style={{ width: "160px", textAlign: "center" }}>क्रिया (Action)</th>
                     </tr>
                   </thead>
                   <tbody>
                     {formRecords.length === 0 ? (
                       <tr>
-                        <td colSpan="6" style={{ textAlign: "center", color: "#55524A", padding: "20px" }}>
+                        <td colSpan="6" style={{ textAlign: "center", color: "var(--ink-soft)", padding: "30px" }}>
                           अभी कोई रिकॉर्ड सहेजा नहीं गया है।
                         </td>
                       </tr>
@@ -1687,19 +2244,23 @@ export default function MushroomForm() {
                           <td>{rec.center_name || "—"}</td>
                           <td>{rec.bill_date || "—"}</td>
                           <td>{rec.bill_invoice_number || "—"}</td>
-                          <td>{rec.mushroom_type || "—"}</td>
+                          <td>
+                            <span className="modal-badge modal-badge-primary">
+                              {rec.mushroom_type || "—"}
+                            </span>
+                          </td>
                           <td style={{ whiteSpace: "nowrap", textAlign: "center" }}>
                             <button 
                               className="btn s" 
                               onClick={() => handleEdit(rec.form_id)}
-                              style={{ padding: "5px 12px", fontSize: "12px", marginRight: "5px" }}
+                              style={{ padding: "4px 10px", fontSize: "12px", marginRight: "6px" }}
                             >
                               ✏️ Edit
                             </button>
                             <button 
                               className="btn d" 
                               onClick={() => handleDelete(rec.form_id)}
-                              style={{ padding: "5px 10px", fontSize: "14px", border: "1px solid #E3B7B3", borderRadius: "3px", background: "#FDF3F2" }}
+                              style={{ padding: "4px 8px", fontSize: "12px" }}
                             >
                               🗑️ Delete
                             </button>
@@ -1712,8 +2273,8 @@ export default function MushroomForm() {
               </div>
             )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {activeTab === "form" && (
         <React.Fragment>
@@ -1726,28 +2287,28 @@ export default function MushroomForm() {
               suppressContentEditableWarning 
               spellCheck="false"
               dangerouslySetInnerHTML={{ __html: `
-                <p style="margin:0">सेवा में,<br>
+                <p class="doc-lead">सेवा में,<br>
                 &nbsp;&nbsp;&nbsp;<span id="d_office">उद्यान विशेषज्ञ कोटद्वार गढ़वाल (पौड़ी गढ़वाल)</span>,<br>
                 &nbsp;&nbsp;द्वारा: प्रभारी, उद्यान सचल दल केन्द्र, <span class="dline dl-long" id="d_kendra">&nbsp;</span></p>
 
-                <p style="margin:10px 0 6px"><b>विषय: कृषकों द्वारा <span id="d_sub1">80</span>% अनुदान पर बिजाई युक्त कम्पोस्ट बैग उपलब्ध कराए जाने के सम्बन्ध में।</b></p>
+                <p class="doc-subject"><b>विषय: कृषकों द्वारा <span id="d_sub1">80</span>% अनुदान पर बिजाई युक्त कम्पोस्ट बैग उपलब्ध कराए जाने के सम्बन्ध में।</b></p>
 
-                <p style="margin:0;text-align:justify">महोदय,<br>
+                <p class="doc-paragraph">महोदय,<br>
                 &nbsp;&nbsp;&nbsp;&nbsp;सविनय निवेदन है कि हम क्षेत्र के इच्छुक कृषक स्वरोजगार एवं आजीविका संवर्धन के उद्देश्य से <span id="d_typeline">बटन मशरूम (Button Mushroom)</span> की खेती करना चाहते हैं। इस हेतु हमें जिला योजना वर्ष <span id="d_year">2026-27</span> के अन्तर्गत <span id="d_sub2">80</span>% अनुदान पर बिजाई युक्त कम्पोस्ट बैग की आवश्यकता है।</p>
 
-                <p style="margin:8px 0 0;text-align:justify">हम सभी कृषक आर्थिक रूप से कमजोर एवं सीमित साधनों वाले हैं तथा कम्पोस्ट बैग की कुल देय राशि का भुगतान एक साथ करने में सक्षम नहीं हैं। अतः उक्त योजना के अन्तर्गत <span id="d_sub2b">80</span>% अनुदान पर बिजाई युक्त कम्पोस्ट बैग उपलब्ध कराए जाने हेतु यह अनुरोध प्रस्तुत किया जा रहा है।</p>
+                <p class="doc-paragraph">हम सभी कृषक आर्थिक रूप से कमजोर एवं सीमित साधनों वाले हैं तथा कम्पोस्ट बैग की कुल देय राशि का भुगतान एक साथ करने में सक्षम नहीं हैं। अतः उक्त योजना के अन्तर्गत <span id="d_sub2b">80</span>% अनुदान पर बिजाई युक्त कम्पोस्ट बैग उपलब्ध कराए जाने हेतु यह अनुरोध प्रस्तुत किया जा रहा है।</p>
 
-                <p style="margin:8px 0 0;text-align:justify">कम्पोस्ट बैग की निर्धारित दर ₹<span id="d_rate2">90</span>.00 प्रति बैग के अनुसार कृषकों द्वारा <span id="d_farmpct">20</span>% अंशदान ₹<span id="d_fs">18</span> प्रति बैग स्वयं वहन किया जाएगा। शेष <span id="d_sub3">80</span>% राजसहायता ₹<span id="d_subamt">72</span> प्रति बैग का लाभ कृषकों को "इन-काइंड सब्सिडी (In-kind Subsidy)" के रूप में कम्पोस्ट बैग की आपूर्ति के माध्यम से प्रदान किए जाने तथा अनुदान की समतुल्य राशि संबंधित आपूर्तिकर्ता को सीधे e-Payment के माध्यम से भुगतान किए जाने का अनुरोध है।</p>
+                <p class="doc-paragraph">कम्पोस्ट बैग की निर्धारित दर ₹<span id="d_rate2">90</span>.00 प्रति बैग के अनुसार कृषकों द्वारा <span id="d_farmpct">20</span>% अंशदान ₹<span id="d_fs">18</span> प्रति बैग स्वयं वहन किया जाएगा। शेष <span id="d_sub3">80</span>% राजसहायता ₹<span id="d_subamt">72</span> प्रति बैग का लाभ कृषकों को "इन-काइंड सब्सिडी (In-kind Subsidy)" के रूप में कम्पोस्ट बैग की आपूर्ति के माध्यम से प्रदान किए जाने तथा अनुदान की समतुल्य राशि संबंधित आपूर्तिकर्ता को सीधे e-Payment के माध्यम से भुगतान किए जाने का अनुरोध है।</p>
 
-                <p style="margin:8px 0 0;text-align:justify">इस सम्बन्ध में हमारे द्वारा मैसर्स बडोला मशरूम फार्म, काशीपुर, ऊधम सिंह नगर से संपर्क किया गया। साथ ही अन्य फर्मों से भी जानकारी प्राप्त की गई। अन्य फर्मों द्वारा ग्राम स्तर तक कम्पोस्ट बैग पहुँचाने हेतु परिवहन/डिलीवरी शुल्क अलग से लिये जाने की जानकारी दी गई, जबकि मैसर्स बडोला मशरूम फार्म द्वारा विभागीय निर्धारित दर ₹<span id="d_rate">90</span>.00 प्रति बैग पर बिना किसी अतिरिक्त परिवहन/डिलीवरी शुल्क के ग्राम स्तर तक बिजाई युक्त कम्पोस्ट बैग उपलब्ध कराने की सहमति दी गई है। अतः कृषकों की सहमति से उक्त फर्म से कम्पोस्ट बैग क्रय किए जाने का अनुरोध किया जा रहा है।</p>
+                <p class="doc-paragraph">इस सम्बन्ध में हमारे द्वारा मैसर्स बडोला मशरूम फार्म, काशीपुर, ऊधम सिंह नगर से संपर्क किया गया। साथ ही अन्य फर्मों से भी जानकारी प्राप्त की गई। अन्य फर्मों द्वारा ग्राम स्तर तक कम्पोस्ट बैग पहुँचाने हेतु परिवहन/डिलीवरी शुल्क अलग से लिये जाने की जानकारी दी गई, जबकि मैसर्स बडोला मशरूम फार्म द्वारा विभागीय निर्धारित दर ₹<span id="d_rate">90</span>.00 प्रति बैग पर बिना किसी अतिरिक्त परिवहन/डिलीवरी शुल्क के ग्राम स्तर तक बिजाई युक्त कम्पोस्ट बैग उपलब्ध कराने की सहमति दी गई है। अतः कृषकों की सहमति से उक्त फर्म से कम्पोस्ट बैग क्रय किए जाने का अनुरोध किया जा रहा है।</p>
 
-                <p style="margin:8px 0 0;text-align:justify">उक्त आपूर्तिकर्ता फर्म शेष देय धनराशि का भुगतान विभाग में बजट उपलब्ध होने पर प्राप्त करने हेतु सहमत है।</p>
+                <p class="doc-paragraph">उक्त आपूर्तिकर्ता फर्म शेष देय धनराशि का भुगतान विभाग में बजट उपलब्ध होने पर प्राप्त करने हेतु सहमत है।</p>
 
-                <p style="margin:8px 0 0;text-align:justify">अतः महोदय से निवेदन है कि हमारे अनुरोध पत्र के आधार पर मैसर्स बडोला मशरूम फार्म, काशीपुर, ऊधम सिंह नगर से विभागीय निर्धारित दर ₹<span id="d_rate3">90</span>.00 प्रति बैग पर बिजाई युक्त कम्पोस्ट बैग क्रय किए जाने की स्वीकृति प्रदान करने की कृपा कीजिएगा तथा विभागीय स्वीकृति के उपरान्त संबंधित आपूर्तिकर्ता द्वारा प्रस्तुत देयक के आधार पर विभागीय स्वीकृत दर के अनुसार देय <span id="d_sub4">80</span>% राजसहायता की धनराशि संबंधित आपूर्तिकर्ता फर्म को भुगतान हेतु अवमुक्त किए जाने की कृपा कीजिएगा।</p>
+                <p class="doc-paragraph">अतः महोदय से निवेदन है कि हमारे अनुरोध पत्र के आधार पर मैसर्स बडोला मशरूम फार्म, काशीपुर, ऊधम सिंह नगर से विभागीय निर्धारित दर ₹<span id="d_rate3">90</span>.00 प्रति बैग पर बिजाई युक्त कम्पोस्ट बैग क्रय किए जाने की स्वीकृति प्रदान करने की कृपा कीजिएगा तथा विभागीय स्वीकृति के उपरान्त संबंधित आपूर्तिकर्ता द्वारा प्रस्तुत देयक के आधार पर विभागीय स्वीकृत दर के अनुसार देय <span id="d_sub4">80</span>% राजसहायता की धनराशि संबंधित आपूर्तिकर्ता फर्म को भुगतान हेतु अवमुक्त किए जाने की कृपा कीजिएगा।</p>
               `}}
             />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", margin: "10px 0 6px", gap: "16px" }}>
-              <p style={{ margin: "0" }}><b>इच्छुक कृषकों की मांग का विवरण निम्नलिखित है:</b></p>
+              <p className="doc-subject" style={{ margin: "0" }}><b>इच्छुक कृषकों की मांग का विवरण निम्नलिखित है:</b></p>
               <div style={{ border: "1px solid #000", padding: "3px 7px", whiteSpace: "nowrap" }}>
                 <b>मशरूम का प्रकार:</b><br />
                 <span className="tick" id="d_tick_o">&nbsp;</span>ऑयस्टर<br />
@@ -1775,11 +2336,11 @@ export default function MushroomForm() {
                 </tr>
               </tfoot>
             </table>
-            <p className="center" style={{ margin: "10px 0 0" }}><b>समस्त कृषक गण</b></p>
+            <p className="doc-center" style={{ margin: "10px 0 0" }}><b>समस्त कृषक गण</b></p>
             <div style={{ marginTop: "8px" }}>
-              <p className="center" style={{ margin: "0 0 4px" }}><b style={{ textDecoration: "underline" }}>प्रभारी की संस्तुति एवं अग्रसारण</b></p>
-              <p style={{ margin: "0", textAlign: "justify" }}>सम्बन्धित कृषकों के अनुरोध के क्रम में, उक्त <span id="d_type3">बटन</span> मशरूम की खेती हेतु बिजाई युक्त कम्पोस्ट बैग की मांग संस्तुति सहित सादर अग्रसारित है। कृपया कृषकों को उक्त बैग क्रय किए जाने की स्वीकृति प्रदान करने की कृपा कीजियेगा।</p>
-              <p style={{ textAlign: "right", margin: "18px 0 0" }}><b>हस्ताक्षर प्रभारी: _____________________</b></p>
+              <p className="doc-center" style={{ margin: "0 0 4px" }}><b style={{ textDecoration: "underline" }}>प्रभारी की संस्तुति एवं अग्रसारण</b></p>
+              <p className="doc-paragraph" style={{ margin: "0" }}>सम्बन्धित कृषकों के अनुरोध के क्रम में, उक्त <span id="d_type3">बटन</span> मशरूम की खेती हेतु बिजाई युक्त कम्पोस्ट बैग की मांग संस्तुति सहित सादर अग्रसारित है। कृपया कृषकों को उक्त बैग क्रय किए जाने की स्वीकृति प्रदान करने की कृपा कीजियेगा।</p>
+              <p className="doc-sign"><b>हस्ताक्षर प्रभारी: _____________________</b></p>
             </div>
           </div>
 
@@ -1792,37 +2353,175 @@ export default function MushroomForm() {
       )}
 
       {modalData.open && (
-        <div className="no-print modal-overlay">
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
           <div className="modal-content">
             <div className="modal-header">
               <h3 className="modal-title">
-                {modalData.type === "kendra" ? "केन्द्र विवरण डेटा (संपादन योग्य)" : "कृषक सूची डेटा (संपादन योग्य)"}
+                <span>{modalData.type === "kendra" ? "🏢 केन्द्र विवरण डेटा (Centre Details)" : "👨‍🌾 कृषक सूची डेटा (Farmer Details)"}</span>
+                <span className="modal-badge modal-badge-primary">
+                  {modalData.data.length} कुल रिकॉर्ड्स
+                </span>
                 {hasUnsavedChanges && (
-                  <span style={{ marginLeft: "10px", fontSize: "12px", color: "#b8860b", fontWeight: "600" }}>
-                    ● असहेजे बदलाव ({Object.keys(editedRows).length} पंक्तियाँ)
+                  <span className="modal-badge modal-badge-warning">
+                    ⚠️ {Object.keys(editedRows).length} पंक्तियों में असहेजे बदलाव
                   </span>
                 )}
               </h3>
-              <button className="modal-close" onClick={closeModal} title="बंद करें" style={{ fontSize: "28px", lineHeight: "1", padding: "0 8px" }}>&times;</button>
+              <button className="modal-close" onClick={closeModal} title="बंद करें">&times;</button>
             </div>
+
+            {/* Modal Toolbar with Search, Filters and Multi-Select Actions */}
+            <div className="modal-toolbar">
+              <div className="modal-toolbar-left">
+                <input
+                  type="text"
+                  className="modal-search-input"
+                  placeholder="🔍 खोजें (केन्द्र, कृषक, ग्राम, मोबाइल, बिल आदि)..."
+                  value={modalSearchTerm}
+                  onChange={(e) => setModalSearchTerm(e.target.value)}
+                />
+                {modalData.type === "kendra" && (
+                  <select
+                    value={modalMtypeFilter}
+                    onChange={(e) => setModalMtypeFilter(e.target.value)}
+                    style={{ padding: "6px 12px", borderRadius: "6px", border: "1.5px solid #d0dbd4", fontSize: "13px", background: "#fff", cursor: "pointer" }}
+                  >
+                    <option value="all">मशरूम प्रकार: सभी (All)</option>
+                    <option value="button">बटन मशरूम (Button)</option>
+                    <option value="oyster">ऑयस्टर मशरूम (Oyster)</option>
+                  </select>
+                )}
+                {modalSearchTerm && (
+                  <button 
+                    className="btn s" 
+                    type="button"
+                    style={{ padding: "5px 10px", fontSize: "12px" }}
+                    onClick={() => setModalSearchTerm("")}
+                  >
+                    ✕ साफ़ करें
+                  </button>
+                )}
+              </div>
+
+              <div className="modal-toolbar-right">
+                {/* Actions when rows are selected */}
+                {selectedRowIds.length > 0 ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <span className="modal-badge modal-badge-info" style={{ fontWeight: "700" }}>
+                      ✓ {selectedRowIds.length} चयनित
+                    </span>
+                    <button
+                      className="btn s"
+                      type="button"
+                      onClick={handleExportSelected}
+                      style={{ padding: "6px 12px", fontSize: "12px", background: "#e8f5e9", color: "#1b5e20", border: "1px solid #c8e6c9" }}
+                    >
+                      📥 चयनित Excel ({selectedRowIds.length})
+                    </button>
+                    {selectedRowIds.some((id) => editedRows[id] !== undefined) && (
+                      <button
+                        className="btn p"
+                        type="button"
+                        onClick={handleUpdateSelected}
+                        disabled={isUpdating}
+                        style={{ padding: "6px 12px", fontSize: "12px", background: "#f59e0b", borderColor: "#d97706" }}
+                      >
+                        {isUpdating ? "⏳ सहेजा जा रहा है..." : "💾 चयनित बदलाव सहेजें"}
+                      </button>
+                    )}
+                    <button
+                      className="btn d"
+                      type="button"
+                      onClick={handleBulkDeleteSelected}
+                      disabled={isBulkDeleting}
+                      style={{ padding: "6px 12px", fontSize: "12px", background: "#FDF3F2", borderColor: "#E3B7B3", color: "#8E1F16", fontWeight: "600" }}
+                    >
+                      {isBulkDeleting ? "⏳ हटाया जा रहा है..." : `🗑️ चयनित हटाएं (${selectedRowIds.length})`}
+                    </button>
+                    <button
+                      className="btn s"
+                      type="button"
+                      onClick={handleDeselectAll}
+                      style={{ padding: "6px 10px", fontSize: "12px" }}
+                      title="चयन हटाएं"
+                    >
+                      ✕ चयन रद्द
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <button
+                      className="btn s"
+                      type="button"
+                      onClick={() => handleSelectAll(getFilteredModalRows())}
+                      style={{ padding: "6px 12px", fontSize: "12px" }}
+                    >
+                      ☑️ सभी चुनें ({getFilteredModalRows().length})
+                    </button>
+                    {hasUnsavedChanges && (
+                      <button
+                        className="btn p"
+                        type="button"
+                        onClick={handleUpdateChanges}
+                        disabled={isUpdating}
+                        style={{ padding: "6px 14px", fontSize: "12px" }}
+                      >
+                        {isUpdating ? "⏳ अद्यतन हो रहा है..." : "💾 सभी बदलाव सहेजें"}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="modal-body">
-              {hasUnsavedChanges && (
-                <div style={{ marginBottom: "12px", padding: "10px 14px", background: "#fff3cd", border: "1px solid #ffe082", borderRadius: "4px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                  <span style={{ fontSize: "13px", color: "#856404", fontWeight: "600" }}>⚠️ आपने {Object.keys(editedRows).length} पंक्ति(यों) में बदलाव किए हैं। सहेजने के लिए "अद्यतन करें" दबाएँ।</span>
-                  <button className="btn p" type="button" onClick={handleUpdateChanges} disabled={isUpdating} style={{ flexShrink: "0" }}>
-                    {isUpdating ? "⏳ अद्यतन हो रहा है..." : "💾 अद्यतन करें"}
-                  </button>
-                </div>
-              )}
               {renderModalTable()}
-              {hasUnsavedChanges && (
-                <div style={{ marginTop: "12px", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-                  <button className="btn s" type="button" onClick={() => { setEditedRows({}); setHasUnsavedChanges(false); }} disabled={isUpdating}>बदलाव रद्द करें</button>
-                  <button className="btn p" type="button" onClick={handleUpdateChanges} disabled={isUpdating}>
-                    {isUpdating ? "⏳ अद्यतन हो रहा है..." : "💾 अद्यतन करें"}
-                  </button>
-                </div>
-              )}
+            </div>
+
+            {/* Modal Footer with live counters and save/cancel actions */}
+            <div className="modal-footer">
+              <div style={{ fontSize: "12.5px", color: "var(--ink-soft)", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                <span>कुल: <b>{modalData.data.length}</b> पंक्तियाँ</span>
+                <span>•</span>
+                <span>प्रदर्शित: <b>{getFilteredModalRows().length}</b> पंक्तियाँ</span>
+                {selectedRowIds.length > 0 && (
+                  <>
+                    <span>•</span>
+                    <span style={{ color: "var(--leaf)", fontWeight: "700" }}>चयनित: <b>{selectedRowIds.length}</b> पंक्तियाँ</span>
+                  </>
+                )}
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                {hasUnsavedChanges && (
+                  <>
+                    <button 
+                      className="btn s" 
+                      type="button" 
+                      onClick={() => { setEditedRows({}); setHasUnsavedChanges(false); }} 
+                      disabled={isUpdating}
+                    >
+                      बदलाव रद्द करें
+                    </button>
+                    <button 
+                      className="btn p" 
+                      type="button" 
+                      onClick={handleUpdateChanges} 
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? "⏳ अद्यतन हो रहा है..." : "💾 सभी बदलाव सहेजें"}
+                    </button>
+                  </>
+                )}
+                <button 
+                  className="btn s" 
+                  type="button" 
+                  onClick={closeModal}
+                  style={{ fontWeight: "600", minWidth: "90px" }}
+                >
+                  बंद करें (Close)
+                </button>
+              </div>
             </div>
           </div>
         </div>
