@@ -1237,8 +1237,8 @@ table.doc td.r {
   font-weight: 700;
 }
 .inv-name {
-  text-align: center;
-  padding: 6px 8px 8px;
+  text-align: left;
+  padding: 6px 12px 8px;
   border-bottom: 1.4px solid #000;
 }
 .inv-name h1 {
@@ -1247,15 +1247,18 @@ table.doc td.r {
   letter-spacing: 0.5px;
   font-weight: 800;
   font-family: "Arial Black", Impact, sans-serif;
+  text-align: left;
 }
 .inv-name .u {
   font-size: 14px;
   font-weight: 700;
+  text-align: left;
 }
 .inv-name .a {
   font-size: 11px;
   font-weight: 600;
   margin-top: 3px;
+  text-align: left;
 }
 .inv-bill {
   display: grid;
@@ -1322,18 +1325,22 @@ table.doc td.r {
 .inv-sheet .inv-bill > div {
   padding: 8px 10px;
 }
+.inv-sheet .inv-name {
+  padding: 8px 10px 10px;
+  text-align: left;
+}
 .inv-sheet .inv-name h1 {
   font-size: 34px;
+  text-align: left;
 }
 .inv-sheet .inv-name .u {
   font-size: 15.5px;
+  text-align: left;
 }
 .inv-sheet .inv-name .a {
   font-size: 12px;
   margin-top: 4px;
-}
-.inv-sheet .inv-name {
-  padding: 8px 10px 10px;
+  text-align: left;
 }
 
 table.inv-tbl {
@@ -1371,11 +1378,26 @@ table.inv-tbl thead th {
 table.inv-tbl td.bank {
   font-size: 12px;
   line-height: 1.5;
+  text-align: left !important;
+  vertical-align: top;
+}
+table.inv-tbl td.bank > div {
+  text-align: left;
 }
 table.inv-tbl td.bank .terms {
   margin-top: 8px;
   font-size: 11px;
-  line-height: 1.45;
+  line-height: 1.55;
+  text-align: left;
+}
+table.inv-tbl td.bank .terms b {
+  display: block;
+  margin-bottom: 2px;
+}
+table.inv-tbl td.bank .terms .term-item {
+  display: block;
+  padding-left: 4px;
+  margin-bottom: 1px;
 }
 table.inv-tbl tr.gt td {
   background: none;
