@@ -114,12 +114,12 @@ export default function MushroomForm() {
   const [currentKendra, setCurrentKendra] = useState("");
 
   useEffect(() => {
-    if (activeTab === "form" && window.render) {
+    if (activeTab === "form" && window.render && !currentFormId) {
       setTimeout(() => {
         if (window.render) window.render();
       }, 50);
     }
-  }, [activeTab]);
+  }, [activeTab, currentFormId]);
 
   const [kendraFile, setKendraFile] = useState(null);
   const [farmerFile, setFarmerFile] = useState(null);
@@ -252,6 +252,8 @@ export default function MushroomForm() {
         gstMapped = String(parseFloat(gstRaw));
       }
 
+      const officeDistrict = apiData.office_district || apiData.office || "";
+
       const internalFormat = {
         mtype: apiData.mushroom_type?.includes("Oyster") ? "oyster" : "button",
         fields: {
@@ -260,7 +262,7 @@ export default function MushroomForm() {
           i_sub: apiData.subsidy_percentage || "",
           i_gst: gstMapped,
           i_kendra: kendraName,
-          i_office: apiData.office_district || "",
+          i_office: officeDistrict,
           i_year: apiData.financial_year || "",
           i_date: parseDateToISO(apiData.bill_date),
           i_supply: apiData.supply_date || "",
@@ -287,9 +289,17 @@ export default function MushroomForm() {
       if (chk) chk.checked = !!apiData.show_farmer_signature_stamp;
       if (window.render) window.render();
 
+      setTimeout(() => {
+        const officeEl = document.getElementById('d_office');
+        if (officeEl) {
+          officeEl.innerText = officeDistrict || 'उद्यान विशेषज्ञ कोटद्वार गढ़वाल (पौड़ी गढ़वाल)';
+        }
+        if (window.render) window.render();
+      }, 50);
+
       setFeedbackMsg({ text: "रिकॉर्ड एडिट मोड में खुला। बदलाव करके Update Form दबाएँ।", type: "info" });
       window.scrollTo({ top: 0, behavior: "smooth" });
-    }, 100);
+    }, 150);
   };
 
   const handleDelete = async (formId) => {
@@ -1040,7 +1050,16 @@ export default function MushroomForm() {
 
     function printDoc(which) {
       document.body.setAttribute('data-print', which);
-      window.print();
+      const doPrint = () => {
+        window.print();
+      };
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => {
+          setTimeout(doPrint, 100);
+        });
+      } else {
+        setTimeout(doPrint, 200);
+      }
     }
     window.onafterprint = () => { document.body.removeAttribute('data-print'); };
 
@@ -1284,6 +1303,109 @@ export default function MushroomForm() {
 
   return (
     <div className="mushroom-form mushroom-form-fullscreen">
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          @page {
+            size: A4;
+            margin: 8mm;
+          }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #fff !important;
+            font-display: block !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+          .mushroom-form-fullscreen {
+            overflow: visible !important;
+            height: auto !important;
+            max-height: none !important;
+          }
+          .sheet {
+            display: block !important;
+            page-break-after: always;
+            page-break-inside: avoid;
+            margin: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+            background: #fff !important;
+          }
+          .sheet:last-child {
+            page-break-after: auto;
+          }
+          body[data-print="demand"] #voucher_zone,
+          body[data-print="demand"] #vendor_zone,
+          body[data-print="demand"] #satyapan_zone,
+          body[data-print="demand"] #invoice_zone,
+          body[data-print="demand"] #receipt_zone {
+            display: none !important;
+          }
+          body[data-print="voucher"] #doc-demand,
+          body[data-print="voucher"] #vendor_zone,
+          body[data-print="voucher"] #satyapan_zone,
+          body[data-print="voucher"] #invoice_zone,
+          body[data-print="voucher"] #receipt_zone {
+            display: none !important;
+          }
+          body[data-print="vendor"] #doc-demand,
+          body[data-print="vendor"] #voucher_zone,
+          body[data-print="vendor"] #satyapan_zone,
+          body[data-print="vendor"] #invoice_zone,
+          body[data-print="vendor"] #receipt_zone {
+            display: none !important;
+          }
+          body[data-print="satyapan"] #doc-demand,
+          body[data-print="satyapan"] #voucher_zone,
+          body[data-print="satyapan"] #vendor_zone,
+          body[data-print="satyapan"] #invoice_zone,
+          body[data-print="satyapan"] #receipt_zone {
+            display: none !important;
+          }
+          body[data-print="invoice"] #doc-demand,
+          body[data-print="invoice"] #voucher_zone,
+          body[data-print="invoice"] #vendor_zone,
+          body[data-print="invoice"] #satyapan_zone,
+          body[data-print="invoice"] #receipt_zone {
+            display: none !important;
+          }
+          body[data-print="receipts"] #doc-demand,
+          body[data-print="receipts"] #voucher_zone,
+          body[data-print="receipts"] #vendor_zone,
+          body[data-print="receipts"] #satyapan_zone,
+          body[data-print="receipts"] #invoice_zone {
+            display: none !important;
+          }
+          .rcpt .rcpt-card {
+            border: 1.5px solid #000 !important;
+            page-break-inside: avoid;
+          }
+          .doc, .doc * {
+            font-family: 'Tiro Devanagari Hindi', 'Noto Sans Devanagari', 'Mangal', 'Kohinoor Devanagari', sans-serif !important;
+          }
+          .inv-sheet, .inv-sheet * {
+            font-family: 'Martel', 'Noto Sans Devanagari', serif !important;
+          }
+          .vendor-sheet, .vendor-sheet * {
+            font-family: 'Courier Prime', 'Martel', monospace !important;
+          }
+          .saty-sheet, .saty-sheet * {
+            font-family: 'Tiro Devanagari Hindi', 'Martel', serif !important;
+          }
+          table.doc {
+            border-collapse: collapse !important;
+          }
+          table.doc th, table.doc td {
+            border: 1px solid #000 !important;
+          }
+        }
+      `}} />
+      
       <div style={{ display: "flex", gap: "10px", marginBottom: "20px", borderBottom: "2px solid #ccc" }}>
         <button 
           onClick={() => setActiveTab("form")} 
