@@ -1406,7 +1406,7 @@ export default function MushroomForm() {
         }
       `}} />
       
-      <div style={{ display: "flex", gap: "10px", marginBottom: "20px", borderBottom: "2px solid #ccc" }}>
+      <div className="no-print" style={{ display: "flex", gap: "10px", marginBottom: "20px", borderBottom: "2px solid #ccc" }}>
         <button 
           onClick={() => setActiveTab("form")} 
           style={{ padding: "10px 20px", cursor: "pointer", background: activeTab === "form" ? "#14553A" : "#fff", color: activeTab === "form" ? "#fff" : "#000", border: "1px solid #ccc", borderRadius: "4px 4px 0 0", borderBottom: "none", fontWeight: "bold" }}
@@ -1422,7 +1422,7 @@ export default function MushroomForm() {
       </div>
 
       {feedbackMsg.text && (
-        <div style={{ marginBottom: "15px", padding: "10px", background: feedbackMsg.type === "error" ? "#FDF3F2" : "#F1F8F3", border: `1px solid ${feedbackMsg.type === "error" ? "#E3B7B3" : "#BBD9C6"}`, color: feedbackMsg.type === "error" ? "#8E1F16" : "#14553A", borderRadius: "4px", fontWeight: "bold" }}>
+        <div className="no-print" style={{ marginBottom: "15px", padding: "10px", background: feedbackMsg.type === "error" ? "#FDF3F2" : "#F1F8F3", border: `1px solid ${feedbackMsg.type === "error" ? "#E3B7B3" : "#BBD9C6"}`, color: feedbackMsg.type === "error" ? "#8E1F16" : "#14553A", borderRadius: "4px", fontWeight: "bold" }}>
           {feedbackMsg.text}
         </div>
       )}
@@ -1632,19 +1632,21 @@ export default function MushroomForm() {
               </button>
             </div>
 
-            <div className="legend">5 · सहेजी गई प्रविष्टियाँ (<span id="rec_count">0</span>)</div>
-            <div className="bar">
-              <button className="btn p" onClick={() => window.saveRecord(true)}>इस केन्द्र की प्रविष्टि सहेजें</button>
-              <button className="btn p" id="btnUpdate" style={{ display: "none" }} onClick={() => window.saveRecord(false)}>खुली प्रविष्टि अद्यतन करें</button>
-              <button className="btn s" onClick={() => window.newEntry()}>नया प्रपत्र</button>
-              <span className="tot" id="rec_store"></span>
-            </div>
-            <div className="warn" id="rec_msg" style={{ display: "none", background: "#F1F8F3", borderColor: "#BBD9C6", color: "#14553A" }}></div>
-            <div style={{ overflowX: "auto", marginTop: "8px" }}>
-              <table className="entry">
-                <thead><tr><th>केन्द्र</th><th style={{ width: "86px" }}>दिनांक</th><th style={{ width: "80px" }}>बिल सं०</th><th style={{ width: "70px" }}>प्रकार</th><th style={{ width: "54px" }}>कृषक</th><th style={{ width: "54px" }}>बैग</th><th style={{ width: "100px" }}>कुल मूल्य</th><th style={{ width: "110px" }}>क्रिया</th></tr></thead>
-                <tbody id="rec_body"></tbody>
-              </table>
+            <div className="no-print">
+              <div className="legend">5 · सहेजी गई प्रविष्टियाँ (<span id="rec_count">0</span>)</div>
+              <div className="bar">
+                <button className="btn p" onClick={() => window.saveRecord(true)}>इस केन्द्र की प्रविष्टि सहेजें</button>
+                <button className="btn p" id="btnUpdate" style={{ display: "none" }} onClick={() => window.saveRecord(false)}>खुली प्रविष्टि अद्यतन करें</button>
+                <button className="btn s" onClick={() => window.newEntry()}>नया प्रपत्र</button>
+                <span className="tot" id="rec_store"></span>
+              </div>
+              <div className="warn" id="rec_msg" style={{ display: "none", background: "#F1F8F3", borderColor: "#BBD9C6", color: "#14553A" }}></div>
+              <div style={{ overflowX: "auto", marginTop: "8px" }}>
+                <table className="entry">
+                  <thead><tr><th>केन्द्र</th><th style={{ width: "86px" }}>दिनांक</th><th style={{ width: "80px" }}>बिल सं०</th><th style={{ width: "70px" }}>प्रकार</th><th style={{ width: "54px" }}>कृषक</th><th style={{ width: "54px" }}>बैग</th><th style={{ width: "100px" }}>कुल मूल्य</th><th style={{ width: "110px" }}>क्रिया</th></tr></thead>
+                  <tbody id="rec_body"></tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -1790,7 +1792,7 @@ export default function MushroomForm() {
       )}
 
       {modalData.open && (
-        <div className="modal-overlay">
+        <div className="no-print modal-overlay">
           <div className="modal-content">
             <div className="modal-header">
               <h3 className="modal-title">
