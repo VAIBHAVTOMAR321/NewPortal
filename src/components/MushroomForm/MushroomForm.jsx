@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import "./MushroomForm.css";
@@ -112,9 +111,16 @@ export default function MushroomForm() {
   const [formRecords, setFormRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState({ text: "", type: "" });
-  const [currentKendra, setCurrentKendra] = useState(""); // Added state for Kendra dropdown
+  const [currentKendra, setCurrentKendra] = useState("");
 
-  // Excel Upload States
+  useEffect(() => {
+    if (activeTab === "form" && window.render) {
+      setTimeout(() => {
+        if (window.render) window.render();
+      }, 50);
+    }
+  }, [activeTab]);
+
   const [kendraFile, setKendraFile] = useState(null);
   const [farmerFile, setFarmerFile] = useState(null);
   const [kendraData, setKendraData] = useState([]);
@@ -131,7 +137,6 @@ export default function MushroomForm() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Fetch all records for the table view
   const fetchRecords = async () => {
     setIsLoading(true);
     try {
@@ -148,7 +153,6 @@ export default function MushroomForm() {
     }
   };
 
-  // Handle Form Submit (POST) and Update (PUT)
   const handleSubmit = async () => {
     if (!window.getSnapshot) return alert("फ़ॉर्म प्रणाली लोड नहीं हुई है।");
     const snap = window.getSnapshot();
@@ -195,7 +199,6 @@ export default function MushroomForm() {
     try {
       let response;
       if (currentFormId) {
-        // UPDATE (PUT) - form_id goes inside the body as per API spec
         payload.form_id = currentFormId;
         response = await mushroomExcelFetch(MUSHROOM_COMPOST_API_URL, {
           method: "PUT",
@@ -203,7 +206,6 @@ export default function MushroomForm() {
           body: JSON.stringify(payload),
         });
       } else {
-        // CREATE (POST)
         response = await mushroomExcelFetch(MUSHROOM_COMPOST_API_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -216,9 +218,8 @@ export default function MushroomForm() {
       
       setFeedbackMsg({ text: currentFormId ? "रिकॉर्ड सफलतापूर्वक अपडेट हो गया!" : "रिकॉर्ड सफलतापूर्वक सहेजा गया!", type: "success" });
       
-      // Reset form and switch to list view
       setCurrentFormId(null);
-      setCurrentKendra(""); // Reset Kendra state
+      setCurrentKendra("");
       if (window.newEntry) window.newEntry();
       fetchRecords();
       setActiveTab("list");
@@ -231,7 +232,6 @@ export default function MushroomForm() {
     }
   };
 
-  // Handle Edit (Fetch single record from state and fill form)
   const handleEdit = async (formId) => {
     const apiData = formRecords.find(r => r.form_id === formId);
     if (!apiData) {
@@ -239,16 +239,13 @@ export default function MushroomForm() {
       return;
     }
 
-    // 1. Tab Switch pehle karo, kyunki form tab mount hone mein time lagta hai
     setCurrentFormId(formId);
     const kendraName = apiData.center_name || "";
-    setCurrentKendra(kendraName); // Set Kendra state so dropdown populates correctly
+    setCurrentKendra(kendraName);
     setActiveTab("form");
     setFeedbackMsg({ text: "रिकॉर्ड एडिट मोड में खुल रहा है...", type: "info" });
 
-    // 2. Thoda wait karo taaki React pura Form ka DOM render kar sake
     setTimeout(() => {
-      // Mapping gst_rate properly (backend sends 5.00, select expects "5")
       const gstRaw = apiData.gst_rate;
       let gstMapped = "";
       if (gstRaw !== null && gstRaw !== undefined && gstRaw !== "") {
@@ -271,8 +268,7 @@ export default function MushroomForm() {
           i_rcptno: apiData.receipt_start_number || "",
           i_billto: apiData.bill_in_name_of || "",
           i_billaddr: apiData.bill_address || "",
-          // FIX: Default to "one" (एक संयुक्त रसीद) on edit to prevent multiple receipts from generating
-          i_rmode: apiData.cash_receipt_type?.includes("दोनों") ? "both" : "one",
+          i_rmode: "one",
         },
         farmers: (apiData.farmer_details || []).map(arr => ({
           name: arr[0] || "",
@@ -293,10 +289,9 @@ export default function MushroomForm() {
 
       setFeedbackMsg({ text: "रिकॉर्ड एडिट मोड में खुला। बदलाव करके Update Form दबाएँ।", type: "info" });
       window.scrollTo({ top: 0, behavior: "smooth" });
-    }, 100); // 100ms ka delay DOM ke mount hone ke liye
+    }, 100);
   };
 
-  // Handle Delete (DELETE)
   const handleDelete = async (formId) => {
     if (!window.confirm("क्या आप वाकई इस रिकॉर्ड को डिलीट करना चाहते हैं?")) return;
     
@@ -313,7 +308,7 @@ export default function MushroomForm() {
       }
       
       setFeedbackMsg({ text: "रिकॉर्ड सफलतापूर्वक डिलीट हो गया।", type: "success" });
-      fetchRecords(); // Refresh table
+      fetchRecords();
       
     } catch (err) {
       console.error("Delete error:", err);
@@ -321,7 +316,6 @@ export default function MushroomForm() {
     }
   };
 
-  // Cancel Edit and reset form
   const handleCancelEdit = () => {
     if (window.newEntry) window.newEntry();
     setCurrentFormId(null);
@@ -627,7 +621,7 @@ export default function MushroomForm() {
         if (window.applyData) {
           clearInterval(checkInterval);
           window.applyData(newRecs[0].data);
-          setCurrentKendra(newRecs[0].data.fields.i_kendra); // Update state
+          setCurrentKendra(newRecs[0].data.fields.i_kendra);
           if (window.putRecs && window.renderRecords) {
             window.putRecs(newRecs);
             window.renderRecords();
@@ -1005,29 +999,43 @@ export default function MushroomForm() {
         return '<div class="sheet rcpt"><div class="rcpt-card"><div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700"><span>GSTIN : 05CHXPS3134D1Z5</span><span class="ttl">नकद प्राप्ति रसीद</span><span style="text-align:right">M. : 9899935600<br>6398264916</span></div><h1>बडोला मशरूम फार्म (कम्पोस्ट यूनिट)</h1><div class="center" style="font-weight:700;font-size:13px">ग्राम प्रतापपुर – काशीपुर (उत्तराखण्ड)</div><div style="display:flex;justify-content:space-between;margin-top:10px;font-size:14px"><div>नं० <b>' + (no || '________') + '</b></div><div>दिनांक <b>' + (dateTxt || '____________') + '</b></div></div><div style="margin-top:10px;font-size:' + ((name || '').length > 90 ? 12.5 : 14) + 'px;line-height:' + ((name || '').length > 60 ? 1.65 : 2.1) + ';text-align:justify">नाम <b>' + (name || '____________________') + '</b><br>ग्राम <b>' + (place || '________________') + '</b> से <b>' + bags + ' बैग (' + (bags * kg) + ' किग्रा)</b> ' + T.hi + ' मशरूम<br>कम्पोस्ट का भुगतान रुपया <b>' + money(amt) + '</b> (' + hiWords(amt) + ')<br>प्राप्त किया ।</div><div style="margin-top:8px;font-size:11.5px">' + foot + '</div><div style="display:flex;justify-content:flex-end;align-items:flex-end;margin-top:26px;font-size:12px"><div class="center"><b>For BADOLA MUSHROOMS FARM</b><div style="margin-top:22px">हस्ताक्षर</div></div></div></div></div>';
       }
 
-      const voucherZone = document.getElementById('voucher_zone'); if (voucherZone) voucherZone.innerHTML = '';
-      const vendorZone = document.getElementById('vendor_zone'); if (vendorZone) vendorZone.innerHTML = '';
-      const satyapanZone = document.getElementById('satyapan_zone'); if (satyapanZone) satyapanZone.innerHTML = '';
-      const invZone = document.getElementById('invoice_zone'); if (invZone) invZone.innerHTML = '';
-      const rcptZone = document.getElementById('receipt_zone'); if (rcptZone) rcptZone.innerHTML = '';
+      const voucherZone = document.getElementById('voucher_zone');
+      const vendorZone = document.getElementById('vendor_zone');
+      const satyapanZone = document.getElementById('satyapan_zone');
+      const invZone = document.getElementById('invoice_zone');
+      const rcptZone = document.getElementById('receipt_zone');
+
+      let voucherHTML = '';
+      let vendorHTML = '';
+      let satyapanHTML = '';
+      let invHTML = '';
+      let rcptHTML = '';
 
       bins.forEach((bin, idx) => {
         const billNo = billNoFor(idx);
         const buyerName = [...new Set(bin.farmers.map(f => f.name))].join(', ');
         const buyerAddr = [...new Set(bin.farmers.map(f => f.vill).filter(Boolean))].join(', ');
-        if (voucherZone) voucherZone.insertAdjacentHTML('beforeend', buildVoucherHTML(bin, billNo));
-        if (vendorZone) vendorZone.insertAdjacentHTML('beforeend', buildVendorHTML(bin, billNo));
-        if (satyapanZone) satyapanZone.insertAdjacentHTML('beforeend', buildSatyapanHTML(bin, billNo));
-        if (invZone) invZone.insertAdjacentHTML('beforeend', buildInvoiceHTML(billNo, buyerName, buyerAddr, bin.bags, bin.value, bin.bags * perSub, bin.farmers, collectVehicles()));
+        voucherHTML += buildVoucherHTML(bin, billNo);
+        vendorHTML += buildVendorHTML(bin, billNo);
+        satyapanHTML += buildSatyapanHTML(bin, billNo);
+        invHTML += buildInvoiceHTML(billNo, buyerName, buyerAddr, bin.bags, bin.value, bin.bags * perSub, bin.farmers, collectVehicles());
         if (mode === 'one' || mode === 'both') {
-          if (bin.bags > 0 && rcptZone) {
-            rcptZone.insertAdjacentHTML('beforeend', slip(buyerName, buyerAddr || kendra || 'सचल दल केन्द्र', bin.bags, bin.bags * perFarm, 'कुल ' + bin.farmers.length + ' कृषक · बिल सं० ' + (billNo || '—') + ' · कुल बिल ₹' + money(bin.value) + ' का कृषक अंश ' + farmPct + '%'));
+          if (bin.bags > 0) {
+            rcptHTML += slip(buyerName, buyerAddr || kendra || 'सचल दल केन्द्र', bin.bags, bin.bags * perFarm, 'कुल ' + bin.farmers.length + ' कृषक · बिल सं० ' + (billNo || '—') + ' · कुल बिल ₹' + money(bin.value) + ' का कृषक अंश ' + farmPct + '%');
           }
         }
         if (mode === 'each' || mode === 'both') {
-          if (rcptZone) bin.farmers.forEach(f => rcptZone.insertAdjacentHTML('beforeend', slip(f.name, f.vill, f.bags, f.bags * perFarm, 'कृषक अंश ' + farmPct + '% · दर ₹' + money(perFarm) + ' प्रति बैग')));
+          bin.farmers.forEach(f => {
+            rcptHTML += slip(f.name, f.vill, f.bags, f.bags * perFarm, 'कृषक अंश ' + farmPct + '% · दर ₹' + money(perFarm) + ' प्रति बैग');
+          });
         }
       });
+
+      if (voucherZone) voucherZone.innerHTML = voucherHTML;
+      if (vendorZone) vendorZone.innerHTML = vendorHTML;
+      if (satyapanZone) satyapanZone.innerHTML = satyapanHTML;
+      if (invZone) invZone.innerHTML = invHTML;
+      if (rcptZone) rcptZone.innerHTML = rcptHTML;
     }
 
     function printDoc(which) {
@@ -1152,10 +1160,13 @@ export default function MushroomForm() {
       curRec = null; letterEdited = false; mtype = '';
       const letter = document.getElementById('d_letter'); if (letter) letter.innerHTML = LETTER_HTML;
       const body = document.getElementById('entry_body'); if (body) body.innerHTML = '';
-      ['i_rate', 'i_kg', 'i_sub', 'i_gst', 'i_kendra', 'i_office', 'i_year', 'i_date', 'i_supply', 'i_invoice', 'i_rcptno', 'i_billto', 'i_billaddr', 'i_rmode'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+      ['i_rate', 'i_kg', 'i_sub', 'i_gst', 'i_kendra', 'i_office', 'i_year', 'i_date', 'i_supply', 'i_invoice', 'i_rcptno', 'i_billto', 'i_billaddr'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+      const rmodeEl = document.getElementById('i_rmode'); if (rmodeEl) rmodeEl.value = 'one';
       const vl = document.getElementById('vehicle_list'); if (vl) vl.innerHTML = '';
       document.querySelectorAll('.type').forEach(el => el.dataset.on = '0');
       document.querySelectorAll('input[name="mtype"]').forEach(el => el.checked = false);
+      for (let i = 0; i < 3; i++) addRow();
+      addVehicleRow();
       applyAutoStyling(); renderRecords(); render();
     }
     function flash(msg) {
@@ -1220,6 +1231,9 @@ export default function MushroomForm() {
       LETTER_HTML = letterEl.innerHTML;
       letterEl.addEventListener('input', () => { letterEdited = true; });
     }
+    
+    for (let i = 0; i < 3; i++) addRow();
+    addVehicleRow();
     applyAutoStyling();
     render();
     renderRecords();
@@ -1270,7 +1284,6 @@ export default function MushroomForm() {
 
   return (
     <div className="mushroom-form mushroom-form-fullscreen">
-      {/* TAB HEADER */}
       <div style={{ display: "flex", gap: "10px", marginBottom: "20px", borderBottom: "2px solid #ccc" }}>
         <button 
           onClick={() => setActiveTab("form")} 
@@ -1292,7 +1305,6 @@ export default function MushroomForm() {
         </div>
       )}
 
-      {/* FORM TAB */}
       {activeTab === "form" && (
         <div className="wrap no-print">
           <div className="panel">
@@ -1438,7 +1450,7 @@ export default function MushroomForm() {
               <div><label className="f">बिल पता</label><input type="text" id="i_billaddr" onInput={() => window.render()} /></div>
               <div>
                 <label className="f">नकद रसीद किस प्रकार बनें</label>
-                <select id="i_rmode" onChange={() => window.render()}>
+                <select id="i_rmode" defaultValue="one" onChange={() => window.render()}>
                   <option value="one">एक संयुक्त रसीद (कुल बिल का 20%)</option>
                   <option value="each">प्रति कृषक अलग रसीद</option>
                   <option value="both">दोनों — संयुक्त + प्रति कृषक</option>
@@ -1482,7 +1494,6 @@ export default function MushroomForm() {
               <button className="btn s" onClick={() => window.resetLetter()}>मांग-पत्र का पाठ रीसेट करें</button>
             </div>
 
-            {/* SUBMIT / UPDATE BUTTONS */}
             <div style={{ marginTop: "25px", display: "flex", gap: "15px", justifyContent: "flex-end", borderTop: "2px dashed #ccc", paddingTop: "20px" }}>
               {currentFormId && (
                 <button className="btn s" onClick={handleCancelEdit} style={{ padding: "10px 20px", fontSize: "15px" }}>
@@ -1499,7 +1510,6 @@ export default function MushroomForm() {
               </button>
             </div>
 
-            {/* 5th Point Restored */}
             <div className="legend">5 · सहेजी गई प्रविष्टियाँ (<span id="rec_count">0</span>)</div>
             <div className="bar">
               <button className="btn p" onClick={() => window.saveRecord(true)}>इस केन्द्र की प्रविष्टि सहेजें</button>
@@ -1518,7 +1528,6 @@ export default function MushroomForm() {
         </div>
       )}
 
-      {/* LIST TAB */}
       {activeTab === "list" && (
         <div className="wrap no-print">
           <div className="panel">
@@ -1582,7 +1591,6 @@ export default function MushroomForm() {
         </div>
       )}
 
-      {/* ============ DOCUMENT ZONES (Print Area - Only visible on Form Tab) ============ */}
       {activeTab === "form" && (
         <React.Fragment>
           <div className="sheet" id="doc-demand">
@@ -1611,7 +1619,7 @@ export default function MushroomForm() {
 
                 <p style="margin:8px 0 0;text-align:justify">उक्त आपूर्तिकर्ता फर्म शेष देय धनराशि का भुगतान विभाग में बजट उपलब्ध होने पर प्राप्त करने हेतु सहमत है।</p>
 
-                <p style="margin:8px 0 0;text-align:justify">अतः महोदय से निवेदन है कि हमारे अनुरोध पत्र के आधार पर मैसर्स बडोला मशरूम फार्म, काशीपुर, ऊधम सिंह नगर से विभागीय निर्धारित दर ₹<span id="d_rate3">90</span>.00 प्रति बैग पर बिजाई युक्त कम्पोस्ट बैग क्रय किए जाने की स्वीकृति प्रदान करने की कृपा कीजिएगा तथा विभागीय स्वीकृति के उपरांत संबंधित आपूर्तिकर्ता द्वारा प्रस्तुत देयक के आधार पर विभागीय स्वीकृत दर के अनुसार देय <span id="d_sub4">80</span>% राजसहायता की धनराशि संबंधित आपूर्तिकर्ता फर्म को भुगतान हेतु अवमुक्त किए जाने की कृपा कीजिएगा।</p>
+                <p style="margin:8px 0 0;text-align:justify">अतः महोदय से निवेदन है कि हमारे अनुरोध पत्र के आधार पर मैसर्स बडोला मशरूम फार्म, काशीपुर, ऊधम सिंह नगर से विभागीय निर्धारित दर ₹<span id="d_rate3">90</span>.00 प्रति बैग पर बिजाई युक्त कम्पोस्ट बैग क्रय किए जाने की स्वीकृति प्रदान करने की कृपा कीजिएगा तथा विभागीय स्वीकृति के उपरान्त संबंधित आपूर्तिकर्ता द्वारा प्रस्तुत देयक के आधार पर विभागीय स्वीकृत दर के अनुसार देय <span id="d_sub4">80</span>% राजसहायता की धनराशि संबंधित आपूर्तिकर्ता फर्म को भुगतान हेतु अवमुक्त किए जाने की कृपा कीजिएगा।</p>
               `}}
             />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", margin: "10px 0 6px", gap: "16px" }}>
@@ -1659,7 +1667,6 @@ export default function MushroomForm() {
         </React.Fragment>
       )}
 
-      {/* ============ MODAL ============ */}
       {modalData.open && (
         <div className="modal-overlay">
           <div className="modal-content">
