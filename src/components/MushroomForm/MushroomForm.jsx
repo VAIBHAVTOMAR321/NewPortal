@@ -1332,6 +1332,12 @@ export default function MushroomForm() {
 
     function printDoc(which) {
       document.body.setAttribute('data-print', which);
+      document.querySelectorAll('.sheet.last-sheet').forEach(el => el.classList.remove('last-sheet'));
+      if (which === 'all') {
+        const allSheets = Array.from(document.querySelectorAll('.sheet'));
+        const lastSheet = allSheets[allSheets.length - 1];
+        if (lastSheet) lastSheet.classList.add('last-sheet');
+      }
       const doPrint = () => {
         window.print();
       };

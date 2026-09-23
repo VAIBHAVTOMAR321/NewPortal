@@ -1425,11 +1425,11 @@ table.inv-tbl td.sign {
     width: auto !important;
     min-height: auto !important;
   }
-  .sheet:last-child {
+  .sheet.last-sheet {
     page-break-after: auto;
     break-after: auto;
   }
-  .sheet.rcpt {
+  .sheet.last-sheet.rcpt {
     page-break-after: auto;
     padding: 4mm 2mm 8mm !important;
   }
