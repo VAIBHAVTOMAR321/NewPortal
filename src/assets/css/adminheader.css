@@ -322,3 +322,9 @@
     border-width: 2px;
   }
 }
+
+@media print {
+  .topnav {
+    display: none !important;
+  }
+}
