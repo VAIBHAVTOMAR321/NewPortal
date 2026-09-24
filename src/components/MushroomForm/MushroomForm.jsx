@@ -2749,6 +2749,10 @@ export default function MushroomForm() {
     };
   }, []);
 
+  useEffect(() => {
+    if (window.render) window.render();
+  }, [currentKendra]);
+
   const renderModalTable = () => {
     const filteredRows = getFilteredModalRows();
     if (!modalData.data || modalData.data.length === 0) {
@@ -3342,9 +3346,8 @@ export default function MushroomForm() {
                               window.applyData(record.data);
                               window.scrollTo({ top: 0, behavior: "smooth" });
                             }
-                          } else {
-                            window.render();
                           }
+                          setTimeout(() => window.render(), 0);
                         }}
                       >
                         <option value="">— केन्द्र चुनें —</option>
