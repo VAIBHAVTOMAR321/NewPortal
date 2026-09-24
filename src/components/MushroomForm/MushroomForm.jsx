@@ -1091,41 +1091,32 @@ export default function MushroomForm() {
       modalData.type === "kendra"
         ? MUSHROOM_KENDRA_API_URL
         : MUSHROOM_FARMER_API_URL;
+    const realIds = selectedRowIds
+      .filter((id) => !id.startsWith("row_") && !id.startsWith("temp_"))
+      .map((id) => id.replace("backend_", ""));
     let successCount = 0;
     let failedCount = 0;
     const remainingData = [...modalData.data];
 
     try {
-      for (let i = 0; i < selectedRowIds.length; i++) {
-        const rowId = selectedRowIds[i];
-        setUploadMsg({
-          text: `डिलीट किया जा रहा है... (${i + 1}/${count})`,
-          type: "info",
-        });
-
-        if (!rowId.startsWith("row_") && !rowId.startsWith("temp_")) {
-          const cleanId = rowId.replace("backend_", "");
-          try {
-            const response = await mushroomExcelFetch(
-              baseApiUrl + cleanId + "/",
-              {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-              },
-            );
-            if (response.ok) {
-              successCount++;
-            } else {
-              failedCount++;
-            }
-          } catch (e) {
-            console.error("Delete error for id", cleanId, e);
-            failedCount++;
+      if (realIds.length > 0) {
+        try {
+          const response = await mushroomExcelFetch(baseApiUrl, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ids: realIds }),
+          });
+          if (response.ok) {
+            successCount = realIds.length;
+          } else {
+            failedCount = realIds.length;
           }
-        } else {
-          successCount++;
+        } catch (e) {
+          console.error("Delete error:", e);
+          failedCount = realIds.length;
         }
       }
+      successCount += selectedRowIds.length - realIds.length;
 
       const updatedData = remainingData.filter(
         (r, idx) => !selectedRowIds.includes(getRowId(r, idx)),
