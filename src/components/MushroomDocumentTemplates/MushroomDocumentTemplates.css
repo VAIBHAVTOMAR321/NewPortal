@@ -354,7 +354,33 @@
 }
 
 .template-verification-attachments {
-  margin-top: 8px !important;
+  margin-top: 14px !important;
+}
+
+.template-attachments-heading {
+  margin: 0 0 6px;
+  font-weight: 700;
+}
+
+.template-attachments-list {
+  margin: 0 0 0 22px;
+  padding: 0;
+  list-style-type: none;
+  counter-reset: enc;
+}
+
+.template-attachments-list li {
+  counter-increment: enc;
+  margin-bottom: 4px;
+  position: relative;
+  padding-left: 6px;
+}
+
+.template-attachments-list li::before {
+  content: counter(enc) ".";
+  position: absolute;
+  left: -22px;
+  font-weight: 700;
 }
 
 .template-verification-signature {
@@ -534,7 +560,9 @@
   margin-top: 24px;
   text-align: right;
 }
-
+.template-paragraphs{
+  margin-left: 20px;
+}
 .template-section,
 .template-paragraphs,
 .template-attachments {
@@ -641,6 +669,7 @@
 .template-attachments ul {
   margin: 8px 0 0 20px;
   padding: 0;
+  list-style-type: none;
 }
 
 .template-panel-error,

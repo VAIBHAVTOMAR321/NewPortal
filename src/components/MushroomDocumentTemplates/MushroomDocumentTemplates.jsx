@@ -6,7 +6,6 @@ const MUSHROOM_DOCUMENT_TEMPLATE_TYPES = [
   { value: "combined_receipt", label: "समेकित पावती-पत्र" },
   { value: "verification_report", label: "सत्यापन आख्या" },
   { value: "supplier_certificate", label: "विक्रेता प्रमाण-पत्र" },
-  
 ];
 
 const getMushroomApiBase = () => {
@@ -132,11 +131,16 @@ export function replaceTemplatePlaceholders(value, context = {}) {
   });
 }
 
-function normalizeTemplateContent(content) {
+// Ensure default keys exist and provide the exact default text for 'मांग-पत्र'
+function normalizeTemplateContent(content, docType = "") {
   let parsedContent = content;
 
   if (typeof parsedContent === "string") {
-    parsedContent = JSON.parse(parsedContent);
+    try {
+      parsedContent = JSON.parse(parsedContent);
+    } catch {
+      throw new Error("Template content must be a valid JSON object.");
+    }
   }
 
   if (
@@ -147,7 +151,24 @@ function normalizeTemplateContent(content) {
     throw new Error("Template content must be a JSON object.");
   }
 
-  return parsedContent;
+  // Removed default 'संलग्नक:' to prevent 'संलग्न है:' from showing up
+  return {
+    title: "",
+    to: "",
+    through: "",
+    subject: "",
+    salutation: "महोदय,",
+    body: "",
+    paragraphs: [],
+    attachments_heading: "",
+    attachments: [],
+    payment_request: "",
+    recommendation_heading: "प्रभारी की संस्तुति एवं अग्रसारण",
+    recommendation_body: "",
+    payment_mode: "",
+    signature_label: "हस्ताक्षर प्रभारी: _____________________",
+    ...parsedContent,
+  };
 }
 
 function getMushroomTemplateKey(templateRecord) {
@@ -182,6 +203,7 @@ export function buildMushroomTemplateContext(formSnapshot = {}, companyDetails =
   const farmerSharePercentage = Math.max(0, 100 - subsidyPercentage);
   const farmerSharePerBag = ratePerBag * (farmerSharePercentage / 100);
   const subsidyPerBag = ratePerBag * (subsidyPercentage / 100);
+  
   const templateFarmers = farmers
     .filter(
       (farmer) =>
@@ -202,10 +224,8 @@ export function buildMushroomTemplateContext(formSnapshot = {}, companyDetails =
       farmer_share: (Number.parseInt(farmer?.bags, 10) || 0) * farmerSharePerBag,
       subsidy_amount: (Number.parseInt(farmer?.bags, 10) || 0) * subsidyPerBag,
     }));
-  const totalBags = farmers.reduce(
-    (sum, farmer) => sum + (Number.parseInt(farmer?.bags, 10) || 0),
-    0,
-  );
+    
+  const totalBags = templateFarmers.reduce((sum, farmer) => sum + farmer.bags, 0);
   const totalAmount = totalBags * ratePerBag;
   const subsidyTotal = totalAmount * (subsidyPercentage / 100);
   const farmerShareTotal = totalAmount * (farmerSharePercentage / 100);
@@ -214,18 +234,16 @@ export function buildMushroomTemplateContext(formSnapshot = {}, companyDetails =
   const sgstTotal = cgstTotal;
   const grandTotal = totalAmount + cgstTotal + sgstTotal;
   const totalWeightKg = totalBags * (Number.parseFloat(fields.i_kg) || 0);
+  
   const mushroomType =
     formSnapshot.mtype === "button"
       ? "Button Mushroom"
       : formSnapshot.mtype === "oyster"
         ? "Oyster Mushroom"
         : fields.i_mtype || "";
+        
   const mushroomTypeHindi =
-    formSnapshot.mtype === "button"
-      ? "बटन"
-      : formSnapshot.mtype === "oyster"
-        ? "ऑयस्टर"
-        : "";
+    formSnapshot.mtype === "button" ? "बटन" : formSnapshot.mtype === "oyster" ? "ऑयस्टर" : "";
 
   const context = {
     ...fields,
@@ -273,11 +291,11 @@ export function buildMushroomTemplateContext(formSnapshot = {}, companyDetails =
     ...companyDetails,
   };
 
-  context.company_name = companyDetails.company_name || companyDetails.name || "";
+  context.company_name = companyDetails.company_name || companyDetails.name || "BADOLA MUSHROOMS FARM";
   context.company_address =
     companyDetails.company_address ||
     companyDetails.address ||
-    "";
+    "H.O.-Dhanori Patti, D.P.S. Road, Kashipur (U.S. Nagar) U.K.";
   context.payment_mode = companyDetails.payment_mode || "";
 
   return context;
@@ -289,7 +307,7 @@ function toWords(value) {
 
   const ones = ["", "एक", "दो", "तीन", "चार", "पाँच", "छः", "सात", "आठ", "नौ"];
   const teens = ["दस", "ग्यारह", "बारह", "तेरह", "चौदह", "पन्द्रह", "सोलह", "सत्रह", "अट्ठारह", "उन्नीस"];
-  const tens = ["", "", "बीस", "तीस", "चालीस", "पचास", "साठ", "सत्तर", "अस्सी", "निंबालीस"];
+  const tens = ["", "", "बीस", "तीस", "चालीस", "पचास", "साठ", "सत्तर", "अस्सी", "नब्बे"];
 
   const convertUnderHundred = (num) => {
     if (num < 10) return ones[num];
@@ -325,7 +343,6 @@ function renderDynamicText(text, context) {
   if (typeof text !== "string") return "";
 
   return text.replace(/\{\{\s*([\w.\-:]+)\s*\}\}/g, (match, key) => {
-    // Support font weight prefix: {{fw-bold:field_name}}, {{fw-semibold:field_name}}, etc.
     const fwMatch = key.match(/^(fw-(light|normal|medium|semibold|bold|extrabold|black)):(.+)$/);
     if (fwMatch) {
       const fwClass = fwMatch[1];
@@ -342,7 +359,6 @@ function renderDynamicText(text, context) {
       return `<span class="template-dynamic ${fwClass}">${String(current)}</span>`;
     }
 
-    // Normal placeholder without font weight
     const path = key.split(".");
     let current = context;
 
@@ -356,8 +372,10 @@ function renderDynamicText(text, context) {
   });
 }
 
+// Updated to handle line breaks properly
 function SafeDynamicText({ text, context }) {
-  const rendered = renderDynamicText(text, context);
+  let rendered = renderDynamicText(text, context);
+  rendered = rendered.replace(/\n/g, "<br />");
   return <span dangerouslySetInnerHTML={{ __html: rendered }} />;
 }
 
@@ -396,7 +414,7 @@ function renderTemplateValue(value, context, keyPrefix = "value") {
   return <span key={keyPrefix}>{String(value)}</span>;
 }
 
-function renderTemplateContent(content, context) {
+function renderTemplateContent(content, context, docType = "") {
   if (!content || typeof content !== "object") return null;
 
   const renderSection = (label, value) => {
@@ -442,12 +460,64 @@ function renderTemplateContent(content, context) {
   for (const key of orderedKeys) {
     if (Object.prototype.hasOwnProperty.call(content, key)) {
       const value = content[key];
+      if (value === null || value === undefined || (typeof value === "string" && value.trim() === "")) continue;
+
+      // Explicitly skip rendering attachments for 'demand_patra'
+      if (docType === "demand_patra" && (key === "attachments_heading" || key === "attachments")) {
+        continue;
+      }
+
       if (key === "title") {
-        if (value === null || value === undefined || value === "") continue;
         displayedContent.push(
           <h3 key={key} className="template-title">
             <SafeDynamicText text={String(value)} context={context} />
-          </h3>,
+          </h3>
+        );
+        continue;
+      }
+
+      if (key === "to") {
+        displayedContent.push(
+          <p key={key} className="template-to">
+            <SafeDynamicText text={String(value)} context={context} />
+          </p>
+        );
+        continue;
+      }
+
+      if (key === "through") {
+        displayedContent.push(
+          <p key={key} className="template-through">
+            द्वारा: <SafeDynamicText text={String(value)} context={context} />
+          </p>
+        );
+        continue;
+      }
+
+      if (key === "subject") {
+        displayedContent.push(
+          <p key={key} className="template-subject">
+            <b>विषय: <SafeDynamicText text={String(value)} context={context} /></b>
+          </p>
+        );
+        continue;
+      }
+
+      if (key === "salutation") {
+        if (docType === "demand_patra") continue;
+        displayedContent.push(
+          <p key={key} className="template-salutation">
+            <SafeDynamicText text={String(value)} context={context} />
+          </p>
+        );
+        continue;
+      }
+
+      if (key === "body") {
+        displayedContent.push(
+          <p key={key} className="template-body">
+            <SafeDynamicText text={String(value)} context={context} />
+          </p>
         );
         continue;
       }
@@ -460,15 +530,20 @@ function renderTemplateContent(content, context) {
                 <SafeDynamicText text={String(item)} context={context} />
               </p>
             ))}
-          </div>,
+          </div>
         );
         continue;
       }
 
       if (key === "attachments" && Array.isArray(value)) {
+        // Skip rendering if both attachments and heading are empty
+        const hasItems = value.length > 0;
+        const hasHeading = content.attachments_heading && String(content.attachments_heading).trim() !== "";
+        if (!hasItems && !hasHeading) continue;
+        
         displayedContent.push(
           <div key={key} className="template-attachments">
-            {content.attachments_heading && (
+            {hasHeading && (
               <p className="template-attachments-heading">
                 <SafeDynamicText text={String(content.attachments_heading)} context={context} />
               </p>
@@ -478,30 +553,12 @@ function renderTemplateContent(content, context) {
                 <li key={`${key}-${index}`}><SafeDynamicText text={String(item)} context={context} /></li>
               ))}
             </ul>
-          </div>,
+          </div>
         );
         continue;
       }
 
-      if (
-        key === "to" ||
-        key === "through" ||
-        key === "subject" ||
-        key === "salutation"
-      ) {
-        displayedContent.push(
-          <p key={key} className={`template-${key}`}>
-            <SafeDynamicText text={String(value)} context={context} />
-          </p>,
-        );
-        continue;
-      }
-
-      if (
-        typeof value === "string" ||
-        Array.isArray(value) ||
-        (typeof value === "object" && value !== null)
-      ) {
+      if (typeof value === "string" || Array.isArray(value) || (typeof value === "object" && value !== null)) {
         displayedContent.push(renderSection(key, value));
       }
     }
@@ -519,6 +576,25 @@ function renderTemplateContent(content, context) {
   return displayedContent;
 }
 
+// Default content specifically for 'मांग-पत्र' to match your requested template
+const getDefaultDemandPatraContent = () => ({
+  to: "सेवा में,\n   उद्यान विशेषज्ञ कोटद्वार गढ़वाल (पौड़ी गढ़वाल),\n  द्वारा: प्रभारी, उद्यान सचल दल केन्द्र, {{kendra_name}}",
+  subject: "कृषकों द्वारा {{subsidy_percentage}}% अनुदान पर बिजाई युक्त कम्पोस्ट बैग उपलब्ध कराए जाने के सम्बन्ध में।",
+  paragraphs: [
+    "सविनय निवेदन है कि हम क्षेत्र के इच्छुक कृषक स्वरोजगार एवं आजीविका संवर्धन के उद्देश्य से {{mushroom_type_hindi}} मशरूम ({{mushroom_type}}) की खेती करना चाहते हैं। इस हेतु हमें जिला योजना वर्ष {{financial_year}} के अन्तर्गत {{subsidy_percentage}}% अनुदान पर बिजाई युक्त कम्पोस्ट बैग की आवश्यकता है।",
+    "हम सभी कृषक आर्थिक रूप से कमजोर एवं सीमित साधनों वाले हैं तथा कम्पोस्ट बैग की कुल देय राशि का भुगतान एक साथ करने में सक्षम नहीं हैं। अतः उक्त योजना के अन्तर्गत {{subsidy_percentage}}% अनुदान पर बिजाई युक्त कम्पोस्ट बैग उपलब्ध कराए जाने हेतु यह अनुरोध प्रस्तुत किया जा रहा है।",
+    "कम्पोस्ट बैग की निर्धारित दर ₹{{rate_per_bag}}.00 प्रति बैग के अनुसार कृषकों द्वारा {{farmer_share_percentage}}% अंशदान ₹{{farmer_share_per_bag}} प्रति बैग स्वयं वहन किया जाएगा। शेष {{subsidy_percentage}}% राजसहायता ₹{{subsidy_per_bag}} प्रति बैग का लाभ कृषकों को \"इन-काइंड सब्सिडी (In-kind Subsidy)\" के रूप में कम्पोस्ट बैग की आपूर्ति के माध्यम से प्रदान किए जाने तथा अनुदान की समतुल्य राशि संबंधित आपूर्तिकर्ता को सीधे e-Payment के माध्यम से भुगतान किए जाने का अनुरोध है।",
+    "इस सम्बन्ध में हमारे द्वारा मैसर्स बडोला मशरूम फार्म, काशीपुर, ऊधम सिंह नगर से संपर्क किया गया। साथ ही अन्य फर्मों से भी जानकारी प्राप्त की गई। अन्य फर्मों द्वारा ग्राम स्तर तक कम्पोस्ट बैग पहुँचाने हेतु परिवहन/डिलीवरी शुल्क अलग से लिये जाने की जानकारी दी गई, जबकि मैसर्स बडोला मशरूम फार्म द्वारा विभागीय निर्धारित दर ₹{{rate_per_bag}}.00 प्रति बैग पर बिना किसी अतिरिक्त परिवहन/डिलीवरी शुल्क के ग्राम स्तर तक बिजाई युक्त कम्पोस्ट बैग उपलब्ध कराने की सहमति दी गई है। अतः कृषकों की सहमति से उक्त फर्म से कम्पोस्ट बैग क्रय किए जाने का अनुरोध किया जा रहा है।",
+    "उक्त आपूर्तिकर्ता फर्म शेष देय धनराशि का भुगतान विभाग में बजट उपलब्ध होने पर प्राप्त करने हेतु सहमत है।",
+    "अतः महोदय से निवेदन है कि हमारे अनुरोध पत्र के आधार पर मैसर्स बडोला मशरूम फार्म, काशीपुर, ऊधम सिंह नगर से विभागीय निर्धारित दर ₹{{rate_per_bag}}.00 प्रति बैग पर बिजाई युक्त कम्पोस्ट बैग क्रय किए जाने की स्वीकृति प्रदान करने की कृपा कीजिएगा तथा विभागीय स्वीकृति के उपरान्त संबंधित आपूर्तिकर्ता द्वारा प्रस्तुत देयक के आधार पर विभागीय स्वीकृत दर के अनुसार देय {{subsidy_percentage}}% राजसहायता की धनराशि संबंधित आपूर्तिकर्ता फर्म को भुगतान हेतु अवमुक्त किए जाने की कृपा कीजिएगा।"
+  ],
+  attachments_heading: "", // Explicitly kept empty
+  attachments: [],         // Explicitly kept empty
+  recommendation_heading: "प्रभारी की संस्तुति एवं अग्रसारण",
+  recommendation_body: "सम्बन्धित कृषकों के अनुरोध के क्रम में, उक्त {{mushroom_type_hindi}} मशरूम की खेती हेतु बिजाई युक्त कम्पोस्ट बैग की मांग संस्तुति सहित सादर अग्रसारित है। कृपया कृषकों को उक्त बैग क्रय किए जाने की स्वीकृति प्रदान करने की कृपा कीजियेगा।",
+  signature_label: "हस्ताक्षर प्रभारी: _____________________"
+});
+
 export default function MushroomDocumentTemplateManager({
   documentType = "verification_report",
   docName = "",
@@ -532,18 +608,15 @@ export default function MushroomDocumentTemplateManager({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [companyDetailsState, setCompanyDetailsState] = useState(companyDetails);
+  
   const [editorForm, setEditorForm] = useState({
     id: null,
     document_type: documentType,
     doc_name: "",
-    content: {
-      title: "",
-      body: "",
-      paragraphs: [],
-      attachments: [],
-    },
+    content: normalizeTemplateContent(getDefaultDemandPatraContent()),
     is_active: true,
   });
+  
   const [saveState, setSaveState] = useState({ message: "", isError: false, isSaving: false });
 
   const defaultSnapshot = useMemo(() => {
@@ -579,16 +652,12 @@ export default function MushroomDocumentTemplateManager({
   }, [previewOnly, formSnapshot]);
 
   const resetEditorForm = (nextDocumentType = selectedDocumentTypes[0]) => {
+    const isDemandPatra = nextDocumentType === "demand_patra";
     const freshForm = {
       id: null,
       document_type: nextDocumentType,
       doc_name: "",
-      content: {
-        title: "",
-        body: "",
-        paragraphs: [],
-        attachments: [],
-      },
+      content: normalizeTemplateContent(isDemandPatra ? getDefaultDemandPatraContent() : {}),
       is_active: true,
     };
     setEditorForm(freshForm);
@@ -608,6 +677,21 @@ export default function MushroomDocumentTemplateManager({
       setError(contentError.message);
       return;
     }
+    
+    // Merge with defaults if it's a demand patra to ensure all fields exist and attachments are cleared
+    if (template.document_type === "demand_patra") {
+      const defaults = getDefaultDemandPatraContent();
+      content = {
+        ...defaults,
+        ...content,
+        // Force clear attachments and salutation specifically for मांग-पत्र as requested
+        attachments_heading: "",
+        attachments: [],
+        salutation: "",
+        paragraphs: content.paragraphs?.length ? content.paragraphs : defaults.paragraphs
+      };
+    }
+
     const nextForm = {
       id: template.id || null,
       document_type: template.document_type || selectedDocumentTypes[0],
@@ -777,10 +861,7 @@ export default function MushroomDocumentTemplateManager({
     try {
       const content = normalizeTemplateContent(templateRecord.content);
       if (omitTitle) content.title = "";
-      return renderTemplateContent(
-        content,
-        templateContext,
-      );
+      return renderTemplateContent(content, templateContext, templateRecord.document_type);
     } catch (contentError) {
       console.error("Invalid mushroom template content:", contentError);
       return <div className="template-panel-error">{contentError.message}</div>;
@@ -928,35 +1009,7 @@ export default function MushroomDocumentTemplateManager({
     const farmerShareTotal = Number(templateContext.farmer_share_total) || 0;
     const subsidyTotal = Number(templateContext.subsidy_total) || 0;
     const totalAmount = Number(templateContext.total_amount) || 0;
-    const summaryRows = [
-      ["बिल संख्या", templateContext.bill_number || "—"],
-      ["बिल दिनांक", templateContext.bill_date_display || "—"],
-      ["आपूर्ति दिनांक", templateContext.date_of_supply_display || "—"],
-      ["केन्द्र", templateContext.kendra_name || "—"],
-      ["कुल बैग", templateContext.total_bags],
-      ["कुल मूल्य", `₹ ${formatTemplateCurrency(totalAmount)}`],
-      [
-        `कृषक अंश (${templateContext.farmer_share_percentage}%)`,
-        `₹ ${formatTemplateCurrency(farmerShareTotal)}`,
-      ],
-      [
-        `राजसहायता (${templateContext.subsidy_percentage}%)`,
-        `₹ ${formatTemplateCurrency(subsidyTotal)}`,
-      ],
-    ];
-    const summaryTable = (
-      <table className="template-document-summary">
-        <tbody>
-          {summaryRows.map(([label, value]) => (
-            <tr key={label}>
-              <th>{label}</th>
-              <td>{value}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    );
-
+    
     switch (templateRecord.document_type) {
       case "combined_receipt":
         return (
@@ -981,8 +1034,8 @@ export default function MushroomDocumentTemplateManager({
               यूनिट), काशीपुर, ऊधम सिंह नगर से सम्बन्धित कृषकों द्वारा क्रय किए
               गए बिजाई युक्त {templateContext.mushroom_type_hindi || "—"} मशरूम
               कम्पोस्ट बैग का मेरे द्वारा सत्यापन कर लिया गया है। वितरित बैगों
-              की गुणवत्ता, मात्रा एवं विशिष्टताओं का भौतिक सत्यापन कर लिया गया
-              है तथा बैग रोगमुक्त एवं बिजाई युक्त पाए गए हैं। उक्त बिल के अनुसार{" "}
+              की गुणवत्ता, मात्रा एवं विशिष्टताओं का भौतिक सत्यापन कर लिया
+              गया है तथा बैग रोगमुक्त एवं बिजाई युक्त पाए गए हैं। उक्त बिल के अनुसार{" "}
               <b>{templateContext.total_bags}</b> बिजाई युक्त{" "}
               {templateContext.mushroom_type_hindi || "—"} मशरूम कम्पोस्ट बैग
               संबंधित कृषकों को दिनांक{" "}
@@ -1004,11 +1057,10 @@ export default function MushroomDocumentTemplateManager({
               {templateContext.subsidy_percentage}% है,{" "}
               <b>उक्त आपूर्तिकर्ता फर्म को भुगतान करने की कृपा कीजियेगा।</b>
             </p>
-            <p className="doc-paragraph template-verification-attachments">
-              <b>संलग्न है:</b> समेकित पावती-पत्र,{" "}
-              {templateContext.company_name || "BADOLA MUSHROOMS FARM"}{" "}
-              (COMPOST UNIT) का इनवॉइस।
-            </p>
+            <ul className="template-attachments-list">
+              <li>समेकित पावती-पत्र, {templateContext.company_name || "BADOLA MUSHROOMS FARM"} (COMPOST UNIT)</li>
+              <li>इनवॉइस की प्रति</li>
+            </ul>
             <div className="template-verification-signature">
               <span>प्रभारी,</span>
               <span>उद्यान सचल दल केन्द्र,</span>
@@ -1500,21 +1552,21 @@ export default function MushroomDocumentTemplateManager({
       {!previewOnly && (
         <div className="template-editor-panel">
           <div className="template-editor-header">
-            {/* <div className="template-editor-actions">
-            <button type="button" className="template-btn secondary" onClick={() => resetEditorForm(selectedDocumentType)}>
-              New
-            </button>
-            {editorForm.id && (
-              <button type="button" className="template-btn danger" onClick={handleDeleteTemplate}>
-                Delete
+            <div className="template-editor-actions">
+              <button type="button" className="template-btn secondary" onClick={() => resetEditorForm(selectedDocumentTypes[0])}>
+                New
               </button>
-            )}
-          </div> */}
+              {editorForm.id && (
+                <button type="button" className="template-btn danger" onClick={handleDeleteTemplate}>
+                  Delete
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="template-form-grid">
             <label className="template-field">
-              <span>Title</span>
+              <span>Title (शीर्षक)</span>
               <input
                 type="text"
                 value={editorForm.content.title || ""}
@@ -1524,34 +1576,80 @@ export default function MushroomDocumentTemplateManager({
             </label>
 
             <label className="template-field">
-              <span>Body</span>
+              <span>To (सेवा में)</span>
               <textarea
-                rows={4}
-                value={editorForm.content.body || ""}
-                onChange={(event) => updateContentField("body", event.target.value)}
-                placeholder="प्रमुख पाठ"
+                rows={2}
+                value={editorForm.content.to || ""}
+                onChange={(event) => updateContentField("to", event.target.value)}
+                placeholder="जैसे: निदेशक महोदय"
               />
             </label>
 
             <label className="template-field">
+              <span>Through (द्वारा)</span>
+              <input
+                type="text"
+                value={editorForm.content.through || ""}
+                onChange={(event) => updateContentField("through", event.target.value)}
+                placeholder="जैसे: प्रभारी, उद्यान सचल दल केन्द्र"
+              />
+            </label>
+
+            <label className="template-field">
+              <span>Subject (विषय)</span>
+              <input
+                type="text"
+                value={editorForm.content.subject || ""}
+                onChange={(event) => updateContentField("subject", event.target.value)}
+                placeholder="विषय: ..."
+              />
+            </label>
+
+            <label className="template-field">
+              <span>Salutation (महोदय)</span>
+              <input
+                type="text"
+                value={editorForm.content.salutation || ""}
+                onChange={(event) => updateContentField("salutation", event.target.value)}
+                placeholder="महोदय,"
+              />
+            </label>
+
+            {/* Conditionally render Body field: HIDE IF document_type is 'demand_patra' */}
+            {editorForm.document_type !== "demand_patra" && (
+              <label className="template-field">
+                <span>Body (मुख्य पाठ)</span>
+                <textarea
+                  rows={4}
+                  value={editorForm.content.body || ""}
+                  onChange={(event) => updateContentField("body", event.target.value)}
+                  placeholder="प्रमुख पाठ"
+                />
+              </label>
+            )}
+
+            <label className="template-field">
               <span>Paragraphs (एक प्रति पंक्ति)</span>
               <textarea
-                rows={4}
+                rows={6}
                 value={(editorForm.content.paragraphs || []).join("\n")}
                 onChange={(event) => updateContentListField("paragraphs", event.target.value)}
                 placeholder="पहला पैराग्राफ़&#10;दूसरा पैराग्राफ़"
               />
             </label>
 
-            <label className="template-field">
-              <span>Attachments (एक प्रति पंक्ति)</span>
-              <textarea
-                rows={3}
-                value={(editorForm.content.attachments || []).join("\n")}
-                onChange={(event) => updateContentListField("attachments", event.target.value)}
-                placeholder="संलग्नक 1&#10;संलग्नक 2"
-              />
-            </label>
+            {/* Hide attachments editing for demand_patra as well to avoid confusion */}
+            {editorForm.document_type !== "demand_patra" && (
+              <label className="template-field">
+                <span>Attachments (एक प्रति पंक्ति)</span>
+                <textarea
+                  rows={3}
+                  value={(editorForm.content.attachments || []).join("\n")}
+                  onChange={(event) => updateContentListField("attachments", event.target.value)}
+                  placeholder="संलग्नक 1&#10;संलग्नक 2"
+                />
+              </label>
+            )}
           </div>
 
           <div className="template-form-grid">
@@ -1608,8 +1706,6 @@ export default function MushroomDocumentTemplateManager({
           )}
         </div>
       )}
-
-  
 
       {previewOnly ? (
         selectedDocumentTypes.length > 0 ? (

@@ -124,6 +124,9 @@ body {
   font-weight: 600;
 
 }
+.template-paragraphs p span{
+  font-weight: 600;
+}
 .nav-tab-btn.active {
   background: #ffffff;
   color: var(--leaf-dark);
