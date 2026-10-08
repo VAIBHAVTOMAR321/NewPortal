@@ -120,7 +120,10 @@ body {
   color: var(--ink);
   background: rgba(255, 255, 255, 0.6);
 }
+.template-subject span{
+  font-weight: 600;
 
+}
 .nav-tab-btn.active {
   background: #ffffff;
   color: var(--leaf-dark);

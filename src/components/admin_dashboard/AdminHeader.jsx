@@ -11,9 +11,9 @@ function AdminHeader() {
     await logout();
     navigate('/login', { replace: true });
   };
-
   const navItems = [
     { path: '/MushroomForm', label: 'Mushroom Form', icon: 'mushroom' },
+    { path: '/MushroomDocumentTemplates', label: 'Mushroom Templates', icon: 'document' },
     { path: '/BaagwaniMission', label: 'Baagwani Mission', icon: 'leaf' },
     { path: '/PMKSY', label: 'PMKSY', icon: 'water' },
   ];
@@ -54,6 +54,13 @@ function AdminHeader() {
                   {item.icon === 'water' && (
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+                    </svg>
+                  )}
+                  {item.icon === 'document' && (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+                      <path d="M14 2v6h6"/>
+                      <path d="M9 13h6M9 17h6"/>
                     </svg>
                   )}
                 </span>

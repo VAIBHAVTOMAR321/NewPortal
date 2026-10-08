@@ -8,6 +8,7 @@ import Footer from "./components/footer/Footer";
 import Home from "./components/home/Home";
 import NavBar from "./components/nav_bar/NavBar";
 import MushroomForm from "./components/MushroomForm/MushroomForm";
+import MushroomDocumentTemplateManager from "./components/MushroomDocumentTemplates/MushroomDocumentTemplates";
 import BaagwaniMission from "./components/BaagwaniMission/BaagwaniMission";
 import PMKSY from "./components/PMKSY/PMKSY";
 import Login from "./components/login/Login";
@@ -61,15 +62,20 @@ const ProtectedRoute = ({ children }) => {
 const AppContent = () => {
   const location = useLocation();
 
-  // Hide global NavBar on MushroomForm
-  const hideNavBar = location.pathname === "/MushroomForm" || location.pathname === "/BaagwaniMission" || location.pathname === "/PMKSY";
+  // Hide global NavBar on admin-only content pages
+  const hideNavBar =
+    location.pathname === "/MushroomForm" ||
+    location.pathname === "/MushroomDocumentTemplates" ||
+    location.pathname === "/BaagwaniMission" ||
+    location.pathname === "/PMKSY";
 
-  // Show NavBar on all pages except MushroomForm
+  // Show NavBar on all pages except admin-only content pages
   const showNavBar = !hideNavBar;
 
   // Protected/Admin routes where Footer should NOT be shown
   const hideFooterRoutes = [
     "/MushroomForm",
+    "/MushroomDocumentTemplates",
     "/BaagwaniMission",
     "/PMKSY",
   ];
@@ -103,6 +109,11 @@ const AppContent = () => {
                   <Route
                     path="/MushroomForm"
                     element={<MushroomForm />}
+                  />
+
+                  <Route
+                    path="/MushroomDocumentTemplates"
+                    element={<MushroomDocumentTemplateManager />}
                   />
 
                   <Route

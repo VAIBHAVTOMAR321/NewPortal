@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import "./MushroomForm.css";
+import MushroomDocumentTemplateManager from "../MushroomDocumentTemplates/MushroomDocumentTemplates";
 
 let mushroomFormLogicInitialized = false;
 
@@ -3731,6 +3732,7 @@ export default function MushroomForm() {
                   <span className="print-desc">Print All 6 Documents</span>
                 </div>
               </div>
+
             </div>
 
             {/* Form Submission Bar */}
@@ -3843,6 +3845,7 @@ export default function MushroomForm() {
                 </table>
               </div>
             </div>
+            <MushroomDocumentTemplateManager previewOnly />
           </div>
         )}
 
@@ -3976,7 +3979,7 @@ export default function MushroomForm() {
                 &nbsp;&nbsp;&nbsp;<span id="d_office">उद्यान विशेषज्ञ कोटद्वार गढ़वाल (पौड़ी गढ़वाल)</span>,<br>
                 &nbsp;&nbsp;द्वारा: प्रभारी, उद्यान सचल दल केन्द्र, <span class="dline dl-long" id="d_kendra">&nbsp;</span></p>
 
-                <p class="doc-subject"><b>विषय: कृषकों द्वारा <span id="d_sub1">80</span>% अनुदान पर बिजाई युक्त कम्पोस्ट बैग उपलब्ध कराए जाने के सम्बन्ध में।</b></p>
+                <p class="doc-subject"><b style="font-weight:600">विषय: कृषकों द्वारा <span id="d_sub1">80</span>% अनुदान पर बिजाई युक्त कम्पोस्ट बैग उपलब्ध कराए जाने के सम्बन्ध में।</b></p>
 
                 <p class="doc-paragraph">महोदय,<br>
                 &nbsp;&nbsp;&nbsp;&nbsp;सविनय निवेदन है कि हम क्षेत्र के इच्छुक कृषक स्वरोजगार एवं आजीविका संवर्धन के उद्देश्य से <span id="d_typeline">बटन मशरूम (Button Mushroom)</span> की खेती करना चाहते हैं। इस हेतु हमें जिला योजना वर्ष <span id="d_year">2026-27</span> के अन्तर्गत <span id="d_sub2">80</span>% अनुदान पर बिजाई युक्त कम्पोस्ट बैग की आवश्यकता है।</p>
@@ -4003,7 +4006,7 @@ export default function MushroomForm() {
               }}
             >
               <p className="doc-subject" style={{ margin: "0" }}>
-                <b>इच्छुक कृषकों की मांग का विवरण निम्नलिखित है:</b>
+                <b style={{ fontWeight: 600 }}>इच्छुक कृषकों की मांग का विवरण निम्नलिखित है:</b>
               </p>
               <div
                 style={{
@@ -4012,7 +4015,7 @@ export default function MushroomForm() {
                   whiteSpace: "nowrap",
                 }}
               >
-                <b>मशरूम का प्रकार:</b>
+                <b style={{ fontWeight: 600 }}>मशरूम का प्रकार:</b>
                 <br />
                 <span className="tick" id="d_tick_o">
                   &nbsp;
@@ -4041,21 +4044,21 @@ export default function MushroomForm() {
               <tfoot>
                 <tr>
                   <td colSpan="5" className="r">
-                    <b>कुल योग</b>
+                    <b style={{ fontWeight: 600 }}>कुल योग</b>
                   </td>
                   <td className="c">
-                    <b id="d_total">0</b>
+                    <b id="d_total" style={{ fontWeight: 600 }}>0</b>
                   </td>
                   <td></td>
                 </tr>
               </tfoot>
             </table>
             <p className="doc-center" style={{ margin: "10px 0 0" }}>
-              <b>समस्त कृषक गण</b>
+              <b style={{ fontWeight: 600 }}>समस्त कृषक गण</b>
             </p>
             <div style={{ marginTop: "8px" }}>
               <p className="doc-center" style={{ margin: "0 0 4px" }}>
-                <b style={{ textDecoration: "underline" }}>
+                <b style={{ textDecoration: "underline", fontWeight: 600 }}>
                   प्रभारी की संस्तुति एवं अग्रसारण
                 </b>
               </p>
@@ -4067,7 +4070,7 @@ export default function MushroomForm() {
                 कीजियेगा।
               </p>
               <p className="doc-sign">
-                <b>हस्ताक्षर प्रभारी: _____________________</b>
+                <b style={{ fontWeight: 600 }}>हस्ताक्षर प्रभारी: _____________________</b>
               </p>
             </div>
           </div>
