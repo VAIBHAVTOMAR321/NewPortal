@@ -151,7 +151,7 @@ function normalizeTemplateContent(content, docType = "") {
     throw new Error("Template content must be a JSON object.");
   }
 
-  // Removed default 'संलग्नक:' to prevent 'संलग्न है:' from showing up
+  // Provide default keys to avoid structure breakage on update
   return {
     title: "",
     to: "",
@@ -462,11 +462,6 @@ function renderTemplateContent(content, context, docType = "") {
       const value = content[key];
       if (value === null || value === undefined || (typeof value === "string" && value.trim() === "")) continue;
 
-      // Explicitly skip rendering attachments for 'demand_patra'
-      if (docType === "demand_patra" && (key === "attachments_heading" || key === "attachments")) {
-        continue;
-      }
-
       if (key === "title") {
         displayedContent.push(
           <h3 key={key} className="template-title">
@@ -479,7 +474,7 @@ function renderTemplateContent(content, context, docType = "") {
       if (key === "to") {
         displayedContent.push(
           <p key={key} className="template-to">
-            <SafeDynamicText text={String(value)} context={context} />
+            सेवा में,<br /><SafeDynamicText text={String(value)} context={context} />
           </p>
         );
         continue;
@@ -504,7 +499,6 @@ function renderTemplateContent(content, context, docType = "") {
       }
 
       if (key === "salutation") {
-        if (docType === "demand_patra") continue;
         displayedContent.push(
           <p key={key} className="template-salutation">
             <SafeDynamicText text={String(value)} context={context} />
@@ -536,7 +530,6 @@ function renderTemplateContent(content, context, docType = "") {
       }
 
       if (key === "attachments" && Array.isArray(value)) {
-        // Skip rendering if both attachments and heading are empty
         const hasItems = value.length > 0;
         const hasHeading = content.attachments_heading && String(content.attachments_heading).trim() !== "";
         if (!hasItems && !hasHeading) continue;
@@ -578,8 +571,10 @@ function renderTemplateContent(content, context, docType = "") {
 
 // Default content specifically for 'मांग-पत्र' to match your requested template
 const getDefaultDemandPatraContent = () => ({
-  to: "सेवा में,\n   उद्यान विशेषज्ञ कोटद्वार गढ़वाल (पौड़ी गढ़वाल),\n  द्वारा: प्रभारी, उद्यान सचल दल केन्द्र, {{kendra_name}}",
+  to: "उद्यान विशेषज्ञ कोटद्वार गढ़वाल (पौड़ी गढ़वाल)",
+  through: "प्रभारी, उद्यान सचल दल केन्द्र, {{kendra_name}}",
   subject: "कृषकों द्वारा {{subsidy_percentage}}% अनुदान पर बिजाई युक्त कम्पोस्ट बैग उपलब्ध कराए जाने के सम्बन्ध में।",
+  salutation: "महोदय,",
   paragraphs: [
     "सविनय निवेदन है कि हम क्षेत्र के इच्छुक कृषक स्वरोजगार एवं आजीविका संवर्धन के उद्देश्य से {{mushroom_type_hindi}} मशरूम ({{mushroom_type}}) की खेती करना चाहते हैं। इस हेतु हमें जिला योजना वर्ष {{financial_year}} के अन्तर्गत {{subsidy_percentage}}% अनुदान पर बिजाई युक्त कम्पोस्ट बैग की आवश्यकता है।",
     "हम सभी कृषक आर्थिक रूप से कमजोर एवं सीमित साधनों वाले हैं तथा कम्पोस्ट बैग की कुल देय राशि का भुगतान एक साथ करने में सक्षम नहीं हैं। अतः उक्त योजना के अन्तर्गत {{subsidy_percentage}}% अनुदान पर बिजाई युक्त कम्पोस्ट बैग उपलब्ध कराए जाने हेतु यह अनुरोध प्रस्तुत किया जा रहा है।",
@@ -588,8 +583,8 @@ const getDefaultDemandPatraContent = () => ({
     "उक्त आपूर्तिकर्ता फर्म शेष देय धनराशि का भुगतान विभाग में बजट उपलब्ध होने पर प्राप्त करने हेतु सहमत है।",
     "अतः महोदय से निवेदन है कि हमारे अनुरोध पत्र के आधार पर मैसर्स बडोला मशरूम फार्म, काशीपुर, ऊधम सिंह नगर से विभागीय निर्धारित दर ₹{{rate_per_bag}}.00 प्रति बैग पर बिजाई युक्त कम्पोस्ट बैग क्रय किए जाने की स्वीकृति प्रदान करने की कृपा कीजिएगा तथा विभागीय स्वीकृति के उपरान्त संबंधित आपूर्तिकर्ता द्वारा प्रस्तुत देयक के आधार पर विभागीय स्वीकृत दर के अनुसार देय {{subsidy_percentage}}% राजसहायता की धनराशि संबंधित आपूर्तिकर्ता फर्म को भुगतान हेतु अवमुक्त किए जाने की कृपा कीजिएगा।"
   ],
-  attachments_heading: "", // Explicitly kept empty
-  attachments: [],         // Explicitly kept empty
+  attachments_heading: "",
+  attachments: [],
   recommendation_heading: "प्रभारी की संस्तुति एवं अग्रसारण",
   recommendation_body: "सम्बन्धित कृषकों के अनुरोध के क्रम में, उक्त {{mushroom_type_hindi}} मशरूम की खेती हेतु बिजाई युक्त कम्पोस्ट बैग की मांग संस्तुति सहित सादर अग्रसारित है। कृपया कृषकों को उक्त बैग क्रय किए जाने की स्वीकृति प्रदान करने की कृपा कीजियेगा।",
   signature_label: "हस्ताक्षर प्रभारी: _____________________"
@@ -678,16 +673,13 @@ export default function MushroomDocumentTemplateManager({
       return;
     }
     
-    // Merge with defaults if it's a demand patra to ensure all fields exist and attachments are cleared
     if (template.document_type === "demand_patra") {
       const defaults = getDefaultDemandPatraContent();
       content = {
         ...defaults,
         ...content,
-        // Force clear attachments and salutation specifically for मांग-पत्र as requested
         attachments_heading: "",
         attachments: [],
-        salutation: "",
         paragraphs: content.paragraphs?.length ? content.paragraphs : defaults.paragraphs
       };
     }
@@ -1577,11 +1569,11 @@ export default function MushroomDocumentTemplateManager({
 
             <label className="template-field">
               <span>To (सेवा में)</span>
-              <textarea
-                rows={2}
+              <input
+                type="text"
                 value={editorForm.content.to || ""}
                 onChange={(event) => updateContentField("to", event.target.value)}
-                placeholder="जैसे: निदेशक महोदय"
+                placeholder="जैसे: उद्यान विशेषज्ञ कोटद्वार गढ़वाल"
               />
             </label>
 
@@ -1615,7 +1607,6 @@ export default function MushroomDocumentTemplateManager({
               />
             </label>
 
-            {/* Conditionally render Body field: HIDE IF document_type is 'demand_patra' */}
             {editorForm.document_type !== "demand_patra" && (
               <label className="template-field">
                 <span>Body (मुख्य पाठ)</span>
@@ -1638,7 +1629,6 @@ export default function MushroomDocumentTemplateManager({
               />
             </label>
 
-            {/* Hide attachments editing for demand_patra as well to avoid confusion */}
             {editorForm.document_type !== "demand_patra" && (
               <label className="template-field">
                 <span>Attachments (एक प्रति पंक्ति)</span>
