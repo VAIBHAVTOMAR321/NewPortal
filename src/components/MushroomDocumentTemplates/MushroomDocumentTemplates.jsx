@@ -131,7 +131,6 @@ export function replaceTemplatePlaceholders(value, context = {}) {
   });
 }
 
-// Ensure default keys exist and provide the exact default text for 'मांग-पत्र'
 function normalizeTemplateContent(content, docType = "") {
   let parsedContent = content;
 
@@ -151,7 +150,6 @@ function normalizeTemplateContent(content, docType = "") {
     throw new Error("Template content must be a JSON object.");
   }
 
-  // Provide default keys to avoid structure breakage on update
   return {
     title: "",
     to: "",
@@ -372,9 +370,9 @@ function renderDynamicText(text, context) {
   });
 }
 
-// Updated to handle line breaks properly
 function SafeDynamicText({ text, context }) {
   let rendered = renderDynamicText(text, context);
+  // \n को <br /> में बदलने के लिए यह लाइन जिम्मेदार है ताकि नई लाइन अपने आप आ जाए
   rendered = rendered.replace(/\n/g, "<br />");
   return <span dangerouslySetInnerHTML={{ __html: rendered }} />;
 }
@@ -474,7 +472,7 @@ function renderTemplateContent(content, context, docType = "") {
       if (key === "to") {
         displayedContent.push(
           <p key={key} className="template-to">
-            सेवा में,<br /><SafeDynamicText text={String(value)} context={context} />
+            <SafeDynamicText text={String(value)} context={context} />
           </p>
         );
         continue;
@@ -483,7 +481,7 @@ function renderTemplateContent(content, context, docType = "") {
       if (key === "through") {
         displayedContent.push(
           <p key={key} className="template-through">
-            द्वारा: <SafeDynamicText text={String(value)} context={context} />
+            <SafeDynamicText text={String(value)} context={context} />
           </p>
         );
         continue;
@@ -569,12 +567,13 @@ function renderTemplateContent(content, context, docType = "") {
   return displayedContent;
 }
 
-// Default content specifically for 'मांग-पत्र' to match your requested template
 const getDefaultDemandPatraContent = () => ({
-  to: "उद्यान विशेषज्ञ कोटद्वार गढ़वाल (पौड़ी गढ़वाल)",
-  through: "प्रभारी, उद्यान सचल दल केन्द्र, {{kendra_name}}",
+  title: "मांग-पत्र",
+  to: "सेवा में,\n   {{office_name}},",
+  through: "द्वारा: प्रभारी, उद्यान सचल दल केन्द्र, {{kendra_name}}",
   subject: "कृषकों द्वारा {{subsidy_percentage}}% अनुदान पर बिजाई युक्त कम्पोस्ट बैग उपलब्ध कराए जाने के सम्बन्ध में।",
   salutation: "महोदय,",
+  body: "",
   paragraphs: [
     "सविनय निवेदन है कि हम क्षेत्र के इच्छुक कृषक स्वरोजगार एवं आजीविका संवर्धन के उद्देश्य से {{mushroom_type_hindi}} मशरूम ({{mushroom_type}}) की खेती करना चाहते हैं। इस हेतु हमें जिला योजना वर्ष {{financial_year}} के अन्तर्गत {{subsidy_percentage}}% अनुदान पर बिजाई युक्त कम्पोस्ट बैग की आवश्यकता है।",
     "हम सभी कृषक आर्थिक रूप से कमजोर एवं सीमित साधनों वाले हैं तथा कम्पोस्ट बैग की कुल देय राशि का भुगतान एक साथ करने में सक्षम नहीं हैं। अतः उक्त योजना के अन्तर्गत {{subsidy_percentage}}% अनुदान पर बिजाई युक्त कम्पोस्ट बैग उपलब्ध कराए जाने हेतु यह अनुरोध प्रस्तुत किया जा रहा है।",
@@ -588,6 +587,108 @@ const getDefaultDemandPatraContent = () => ({
   recommendation_heading: "प्रभारी की संस्तुति एवं अग्रसारण",
   recommendation_body: "सम्बन्धित कृषकों के अनुरोध के क्रम में, उक्त {{mushroom_type_hindi}} मशरूम की खेती हेतु बिजाई युक्त कम्पोस्ट बैग की मांग संस्तुति सहित सादर अग्रसारित है। कृपया कृषकों को उक्त बैग क्रय किए जाने की स्वीकृति प्रदान करने की कृपा कीजियेगा।",
   signature_label: "हस्ताक्षर प्रभारी: _____________________"
+});
+
+const getDefaultVerificationReportContent = () => ({
+  title: "",
+  to: "",
+  through: "",
+  subject: "",
+  salutation: "",
+  body: "",
+  paragraphs: [
+    "प्रमाणित किया जाता है कि उपरोक्त देयक (बिल) संख्या <b>{{bill_number}}</b> दिनांक <b>{{bill_date_display}}</b>, {{company_name}} (कम्पोस्ट यूनिट), काशीपुर, ऊधम सिंह नगर से सम्बन्धित कृषकों द्वारा क्रय किए गए बिजाई युक्त {{mushroom_type_hindi}} मशरूम कम्पोस्ट बैग का मेरे द्वारा सत्यापन कर लिया गया है। वितरित बैगों की गुणवत्ता, मात्रा एवं विशिष्टताओं का भौतिक सत्यापन कर लिया गया है तथा बैग रोगमुक्त एवं बिजाई युक्त पाए गए हैं। उक्त बिल के अनुसार <b>{{total_bags}}</b> बिजाई युक्त {{mushroom_type_hindi}} मशरूम कम्पोस्ट बैग सम्बंधित कृषकों को दिनांक <b>{{date_of_supply_display}}</b> (Date of Supply) को प्राप्त हो चुके हैं तथा कृषक अंश ({{farmer_share_percentage}}%) की धनराशि रुपये <b>₹ {{farmer_share_total_formatted}}</b> आपूर्तिकर्ता फर्म द्वारा कृषकों से प्राप्त कर ली गई है।",
+    "अतः बिल की कुल धनराशि रुपये <b>₹ {{total_amount_formatted}}</b> में से राजसहायता (अनुदान) की धनराशि रुपये <b>₹ {{subsidy_total_formatted}}</b> ({{subsidy_amount_in_words}}) जो कि बिल के कुल योग का {{subsidy_percentage}}% है, <b>उक्त आपूर्तिकर्ता फर्म को भुगतान करने की कृपा कीजियेगा।</b>"
+  ],
+  attachments_heading: "संलग्नक:",
+  attachments: [
+    "समेकित पावती-पत्र, {{company_name}} (COMPOST UNIT)",
+    "इनवॉइस की प्रति"
+  ],
+  payment_request: "",
+  recommendation_heading: "",
+  recommendation_body: "",
+  payment_mode: "",
+  signature_label: "प्रभारी,<br>उद्यान सचल दल केन्द्र, {{kendra_name}} _____________________"
+});
+
+const getDefaultCombinedReceiptContent = () => ({
+  title: "समेकित पावती-पत्र (वितरण-सह-प्राप्ति)",
+  to: "सेवा में,\n   {{office_name}},",
+  through: "द्वारा: प्रभारी, उद्यान सचल दल केन्द्र, {{kendra_name}}",
+  subject: "मैसर्स बडोला मशरूम फार्म, काशीपुर के बिल संख्या {{bill_number}} दिनांक {{bill_date_display}} पर देय राजसहायता के भुगतान हेतु प्रस्तुतीकरण।",
+  salutation: "महोदय,",
+  body: "",
+  paragraphs: [
+    "निवेदन है कि उद्यान सचल दल केन्द्र, {{kendra_name}} के अन्तर्गत निम्नानुसार कृषकों द्वारा मैसर्स बडोला मशरूम फार्म, काशीपुर, ऊधम सिंह नगर से जिला योजना वर्ष {{financial_year}} के अन्तर्गत {{subsidy_percentage}}% अनुदान पर विभागीय स्वीकृत दर ₹{{rate_per_bag}} प्रति बैग के अनुसार कुल <b>{{total_bags}}</b> बैग {{mushroom_type_hindi}} मशरूम बिजाई युक्त कम्पोस्ट क्रय किए गए हैं। उक्त कम्पोस्ट बैग संबंधित कृषकों को सही एवं पूर्ण एवं उच्च गुणवत्ता अवस्था में प्राप्त हो चुके हैं। कृषकों द्वारा निर्धारित {{farmer_share_percentage}}% कृषक अंश ₹{{farmer_share_per_bag}} प्रति बैग के अनुसार कुल ₹{{farmer_share_total_formatted}} की धनराशि उक्त फर्म को अदा कर दी गई है।",
+    "फर्म द्वारा प्रस्तुत बिल संख्या {{bill_number}}, जिसकी कुल देयक राशि ₹{{total_amount_formatted}} है, भुगतान हेतु प्रस्तुत किया जा रहा है। उक्त बिल के सापेक्ष कृषकों द्वारा ₹{{farmer_share_total_formatted}} का कृषक अंश फर्म को जमा किए जाने के उपरान्त शेष {{subsidy_percentage}}% राजसहायता (अनुदान) की धनराशि ₹{{subsidy_total_formatted}} ({{subsidy_amount_in_words}}) देय है।",
+    "अतः अनुरोध है कि हमारे आवेदन एवं प्राप्त स्वीकृति के क्रम में उक्त देयक संख्या {{bill_number}} दिनांक {{bill_date_display}} की देय राजसहायता की धनराशि ₹{{subsidy_total_formatted}} सीधे आपूर्तिकर्ता फर्म मैसर्स बडोला मशरूम फार्म, काशीपुर, ऊधम सिंह नगर को e-Payment के माध्यम से भुगतान करने की कृपा करें।",
+    "उक्त आपूर्तिकर्ता फर्म शेष देय धनराशि का भुगतान विभाग में बजट उपलब्ध होने पर किए जाने हेतु सहमत है।"
+  ],
+  attachments_heading: "",
+  attachments: [],
+  payment_request: "",
+  recommendation_heading: "लाभार्थी कृषकों का विवरण एवं हस्ताक्षर निम्नानुसार हैं —",
+  recommendation_body: "",
+  payment_mode: "",
+  signature_label: "समस्त कृषक गण / हस्ताक्षर: ___________________________"
+});
+
+const getDefaultSupplierCertificateContent = () => ({
+  title: "विक्रेता का प्रमाण-पत्र (Supplier's Certificate)",
+  to: "",
+  through: "",
+  subject: "",
+  salutation: "",
+  body: "",
+  paragraphs: [
+    "मैं, {{company_name}}, काशीपुर, ऊधम सिंह नगर, प्रमाणित करता हूँ कि उद्यान सचल दल केन्द्र, <b>{{kendra_name}}</b> के अंतर्गत बिल संख्या <b>{{bill_number}}</b> दिनांक <b>{{bill_date_display}}</b> के अनुसार उपरोक्त कृषकों को कुल <b>{{total_bags}}</b> बैग {{mushroom_type_hindi}} मशरूम बिजाई युक्त कम्पोस्ट सही एवं पूर्ण अवस्था में वितरित कर दिए हैं, जो कृषकों को दिनांक <b>{{date_of_supply_display}}</b> (Date of Supply) को प्राप्त हो चुके हैं, जिनका कुल मूल्य रुपये <b>{{total_amount_formatted}}</b> है, तथा कृषकों से निर्धारित कृषक अंश ({{farmer_share_percentage}}%) की धनराशि रुपये <b>{{farmer_share_total_formatted}}</b> प्राप्त कर ली गई है।",
+    "<b>अतः शेष {{subsidy_percentage}}% राजसहायता (अनुदान) की धनराशि रुपये {{subsidy_total_formatted}} ({{subsidy_amount_in_words}}) का भुगतान मुझे करने की कृपा कीजिएगा।</b>"
+  ],
+  attachments_heading: "",
+  attachments: [],
+  payment_request: "",
+  recommendation_heading: "",
+  recommendation_body: "",
+  payment_mode: "",
+  signature_label: "For {{company_name}}<br>Authorised Signatory / विक्रेता के हस्ताक्षर व मुहर"
+});
+
+const getDefaultTaxInvoiceContent = () => ({
+  title: "TAX INVOICE / टैक्स इनवॉइस",
+  to: "",
+  through: "",
+  subject: "",
+  salutation: "",
+  body: "",
+  paragraphs: [],
+  attachments_heading: "",
+  attachments: [],
+  payment_request: "",
+  recommendation_heading: "",
+  recommendation_body: "",
+  payment_mode: "",
+  signature_label: "{{total_weight_kg}} किग्रा कुल वजन<br>अधिकृत हस्ताक्षरकर्ता: _____________________"
+});
+
+const getDefaultCashReceiptContent = () => ({
+  title: "नकद प्राप्ति रसीद",
+  to: "",
+  through: "",
+  subject: "",
+  salutation: "",
+  body: "",
+  paragraphs: [
+    "नाम <b>{{farmer_name}}</b> · ग्राम <b>{{farmer_village}}</b> से <b>{{bags}} बैग ({{bags_kg}} किग्रा)</b> {{mushroom_type_hindi}} मशरूम<br>कम्पोस्ट का भुगतान रुपया <b>₹ {{amount}}</b> ({{amount_in_words}})<br>प्राप्त किया ।",
+    "{{note}}"
+  ],
+  attachments_heading: "",
+  attachments: [],
+  payment_request: "",
+  recommendation_heading: "",
+  recommendation_body: "",
+  payment_mode: "",
+  signature_label: "हस्ताक्षर: _____________________"
 });
 
 export default function MushroomDocumentTemplateManager({
@@ -678,6 +779,7 @@ export default function MushroomDocumentTemplateManager({
       content = {
         ...defaults,
         ...content,
+        through: defaults.through,
         attachments_heading: "",
         attachments: [],
         paragraphs: content.paragraphs?.length ? content.paragraphs : defaults.paragraphs
@@ -853,6 +955,9 @@ export default function MushroomDocumentTemplateManager({
     try {
       const content = normalizeTemplateContent(templateRecord.content);
       if (omitTitle) content.title = "";
+      if (templateRecord.document_type === "demand_patra") {
+        content.through = getDefaultDemandPatraContent().through;
+      }
       return renderTemplateContent(content, templateContext, templateRecord.document_type);
     } catch (contentError) {
       console.error("Invalid mushroom template content:", contentError);
@@ -871,12 +976,8 @@ export default function MushroomDocumentTemplateManager({
       (sum, farmer) => sum + (Number.parseInt(farmer?.bags, 10) || 0),
       0,
     );
-    const mushroomType =
-      currentSnapshot?.mtype === "oyster"
-        ? "ऑयस्टर"
-        : currentSnapshot?.mtype === "button"
-          ? "बटन"
-          : "";
+    const mushroomType = templateContext.mushroom_type || "";
+    const mushroomTypeHindi = templateContext.mushroom_type_hindi || "";
 
     return (
       <>
@@ -886,8 +987,8 @@ export default function MushroomDocumentTemplateManager({
           </p>
           <div className="template-demand-type-box">
             <b style={{ fontWeight: 600 }}>मशरूम का प्रकार:</b>
-            <span>{currentSnapshot?.mtype === "oyster" ? "☑" : "☐"} ऑयस्टर</span>
-            <span>{currentSnapshot?.mtype === "button" ? "☑" : "☐"} बटन</span>
+            <span>{mushroomTypeHindi === "ऑयस्टर" ? "☑" : "☐"} ऑयस्टर</span>
+            <span>{mushroomTypeHindi === "बटन" ? "☑" : "☐"} बटन</span>
           </div>
         </div>
         <table className="template-demand-farmer-table">
@@ -929,7 +1030,7 @@ export default function MushroomDocumentTemplateManager({
             <b style={{ fontWeight: 600 }}>प्रभारी की संस्तुति एवं अग्रसारण</b>
           </p>
           <p>
-            सम्बन्धित कृषकों के अनुरोध के क्रम में, उक्त {mushroomType} मशरूम की
+            सम्बन्धित कृषकों के अनुरोध के क्रम में, उक्त {mushroomTypeHindi} मशरूम की
             खेती हेतु बिजाई युक्त कम्पोस्ट बैग की मांग संस्तुति सहित सादर
             अग्रसारित है। कृपया कृषकों को उक्त बैग क्रय किए जाने की स्वीकृति
             प्रदान करने की कृपा कीजियेगा।
@@ -1569,11 +1670,11 @@ export default function MushroomDocumentTemplateManager({
 
             <label className="template-field">
               <span>To (सेवा में)</span>
-              <input
-                type="text"
+              <textarea
+                rows={2}
                 value={editorForm.content.to || ""}
                 onChange={(event) => updateContentField("to", event.target.value)}
-                placeholder="जैसे: उद्यान विशेषज्ञ कोटद्वार गढ़वाल"
+                placeholder="सेवा में,&#10;   उद्यान विशेषज्ञ..."
               />
             </label>
 
@@ -1583,7 +1684,7 @@ export default function MushroomDocumentTemplateManager({
                 type="text"
                 value={editorForm.content.through || ""}
                 onChange={(event) => updateContentField("through", event.target.value)}
-                placeholder="जैसे: प्रभारी, उद्यान सचल दल केन्द्र"
+                placeholder="द्वारा: प्रभारी, उद्यान सचल दल केन्द्र..."
               />
             </label>
 
@@ -1630,15 +1731,77 @@ export default function MushroomDocumentTemplateManager({
             </label>
 
             {editorForm.document_type !== "demand_patra" && (
-              <label className="template-field">
-                <span>Attachments (एक प्रति पंक्ति)</span>
-                <textarea
-                  rows={3}
-                  value={(editorForm.content.attachments || []).join("\n")}
-                  onChange={(event) => updateContentListField("attachments", event.target.value)}
-                  placeholder="संलग्नक 1&#10;संलग्नक 2"
-                />
-              </label>
+              <>
+                <label className="template-field">
+                  <span>Payment Request</span>
+                  <textarea
+                    rows={3}
+                    value={editorForm.content.payment_request || ""}
+                    onChange={(event) => updateContentField("payment_request", event.target.value)}
+                    placeholder="भुगतान हेतु अनुरोध..."
+                  />
+                </label>
+
+                <label className="template-field">
+                  <span>Recommendation Heading</span>
+                  <input
+                    type="text"
+                    value={editorForm.content.recommendation_heading || ""}
+                    onChange={(event) => updateContentField("recommendation_heading", event.target.value)}
+                    placeholder="प्रभारी की संस्तुति..."
+                  />
+                </label>
+
+                <label className="template-field">
+                  <span>Recommendation Body</span>
+                  <textarea
+                    rows={3}
+                    value={editorForm.content.recommendation_body || ""}
+                    onChange={(event) => updateContentField("recommendation_body", event.target.value)}
+                    placeholder="सम्बन्धित कृषकों के अनुरोध..."
+                  />
+                </label>
+
+                <label className="template-field">
+                  <span>Attachments Heading</span>
+                  <input
+                    type="text"
+                    value={editorForm.content.attachments_heading || ""}
+                    onChange={(event) => updateContentField("attachments_heading", event.target.value)}
+                    placeholder="संलग्नक:"
+                  />
+                </label>
+
+                <label className="template-field">
+                  <span>Attachments (एक प्रति पंक्ति)</span>
+                  <textarea
+                    rows={3}
+                    value={(editorForm.content.attachments || []).join("\n")}
+                    onChange={(event) => updateContentListField("attachments", event.target.value)}
+                    placeholder="संलग्नक 1&#10;संलग्नक 2"
+                  />
+                </label>
+
+                <label className="template-field">
+                  <span>Payment Mode</span>
+                  <input
+                    type="text"
+                    value={editorForm.content.payment_mode || ""}
+                    onChange={(event) => updateContentField("payment_mode", event.target.value)}
+                    placeholder="e-Payment के माध्यम से"
+                  />
+                </label>
+
+                <label className="template-field">
+                  <span>Signature Label</span>
+                  <input
+                    type="text"
+                    value={editorForm.content.signature_label || ""}
+                    onChange={(event) => updateContentField("signature_label", event.target.value)}
+                    placeholder="हस्ताक्षर प्रभारी: ______"
+                  />
+                </label>
+              </>
             )}
           </div>
 
