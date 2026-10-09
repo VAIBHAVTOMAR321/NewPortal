@@ -550,13 +550,14 @@ const PMKSY = () => {
               <button className="btn ghost sm" id="btnSave">अभी सहेजें</button><span className="savemsg" id="saveMsg"></span>
               <button className="btn water sm" id="btnPrint2">वर्तमान प्रपत्र प्रिंट</button>
               <button className="btn water sm" id="btnPrintAll">सभी 6 प्रपत्र प्रिंट</button>
-            </div>
-            <div className="amt-group">
+                <div className="amt-group">
               <div className="amt big"><span className="k">देय अनुदान</span><span className="v mono" id="L_sub">₹0</span></div>
               <div className="amt far"><span className="k">कृषक अंश</span><span className="v mono" id="L_far">₹0</span></div>
               <div className="amt"><span className="k">दर</span><span className="v mono" id="L_pct">—</span></div>
               <div className="amt"><span className="k">कुल क्षेत्र</span><span className="v mono" id="L_area">0 हे०</span></div>
             </div>
+            </div>
+          
           </div>
           <div className="bar"><span id="B_goi" style={{ background: '#2f9aa3' }}></span><span id="B_st" style={{ background: '#5cc4cb' }}></span><span id="B_tp" style={{ background: '#a9e4e8' }}></span><span id="B_fr" style={{ background: '#f0c46a' }}></span></div>
           <div className="legend">

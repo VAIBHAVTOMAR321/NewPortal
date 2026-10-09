@@ -479,6 +479,7 @@ input[readonly],
   gap: 12px;
   align-items: center;
   flex-wrap: nowrap;
+  margin-left: auto;
 }
 .amt {
   display: flex;
