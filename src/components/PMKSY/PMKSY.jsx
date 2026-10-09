@@ -1,1476 +1,1417 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useState } from "react";
 import "./PMKSY.css";
 
-/*
-  PMKSY.jsx
-  React conversion of the Uttarakhand Horticulture Mission document portal.
-
-  Included functionality:
-  - Farmer / land / scheme / fund / supplier segmented form
-  - Dynamic Anti-Hail Net / Plastic Mulching inputs
-  - Dynamic rate, total cost, 50% farmer share and 50% subsidy
-  - Four live documents: B5 Application, Supplier Invoice, Affidavit, Verification
-  - Demo data
-  - Local saved farmer records and supplier profiles
-  - Load / delete / reset
-  - A4 printing of the currently selected document
-  - No HTML document or CDN script is required
-*/
-
-const INITIAL = {
-  farmerName: "",
-  fatherName: "",
-  villageName: "",
-  postOffice: "",
-  blockName: "",
-  districtName: "पौड़ी गढ़वाल",
-  mobileNo: "",
-  gardenCardNo: "",
-  farmerCategory: "सामान्य",
-  farmerEducation: "Metric",
-  farmerGender: "Male",
-  farmerSize: "Small/Marginal",
-  totalArableLand: "",
-  horticultureLand: "",
-  irrigationFacilities: "",
-  khasraNo: "",
-  areaSqm: "",
-  schemeSelection: "anti-hail",
-  terrainSelection: "hilly",
-  netType: "Leno Knitted",
-  mulchingThickness: "30",
-  mulchingColor: "Black & White",
-  fundType: "Self",
-  fundBankName: "",
-  fundExtraVal1: "",
-  fundExtraVal2: "",
-  cropName: "",
-  cropArea: "",
-  cropProd: "",
-  marketingStrategy:
-    "स्थानीय कोटद्वार मंडी एवं निकटवर्ती देहरादून सब्जी मंडियों में सीधे बिक्री की जाएगी।",
-  firmName: "M/S AVANI ENTERPRISES",
-  firmAddress: "LAKHERA BHAWAN VILL. SHIBOONAGAR, KOTDWAR, GARHWAL",
-  firmGSTIN: "05COWPD8094K1Z6",
-  firmBankAcc: "025110100000143",
-  firmBankName: "ALMORA URBAN CO-OPERATIVE BANK",
-  firmIFSC: "AUCB0000026",
-  invoiceNo: "",
-  invoiceDate: new Date().toISOString().slice(0, 10),
-};
-
-const STORAGE_FARMERS = "pmksy_horticulture_farmers";
-const STORAGE_FIRMS = "pmksy_horticulture_firms";
-
-const money = (value) =>
-  `₹${Number(value || 0).toLocaleString("en-IN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-const num = (value) => Number.parseFloat(value) || 0;
-
-const dateIN = (value) =>
-  value
-    ? new Date(`${value}T00:00:00`).toLocaleDateString("hi-IN")
-    : "___/___/_____";
-
-const safe = (value, fallback = "___________") =>
-  value === undefined || value === null || value === "" ? fallback : value;
-
-function amountInWords(n) {
-  const value = Math.round(Number(n) || 0);
-  if (value === 0) return "शून्य";
-  const ones = [
-    "",
-    "एक",
-    "दो",
-    "तीन",
-    "चार",
-    "पाँच",
-    "छः",
-    "सात",
-    "आठ",
-    "नौ",
-    "दस",
-    "ग्यारह",
-    "बारह",
-    "तेरह",
-    "चौदह",
-    "पंद्रह",
-    "सोलह",
-    "सत्रह",
-    "अठारह",
-    "उन्नीस",
-  ];
-  const tens = [
-    "",
-    "",
-    "बीस",
-    "तीस",
-    "चालीस",
-    "पचास",
-    "साठ",
-    "सत्तर",
-    "अस्सी",
-    "नब्बे",
-  ];
-  const under100 = (x) =>
-    x < 20
-      ? ones[x]
-      : `${tens[Math.floor(x / 10)]}${x % 10 ? ` ${ones[x % 10]}` : ""}`;
-  const under1000 = (x) =>
-    x < 100
-      ? under100(x)
-      : `${ones[Math.floor(x / 100)]} सौ${x % 100 ? ` ${under100(x % 100)}` : ""}`;
-
-  let result = [];
-  if (Math.floor(value / 10000000)) {
-    result.push(`${under100(Math.floor(value / 10000000))} करोड़`);
-  }
-  const lakh = Math.floor((value % 10000000) / 100000);
-  if (lakh) result.push(`${under100(lakh)} लाख`);
-  const thousand = Math.floor((value % 100000) / 1000);
-  if (thousand) result.push(`${under100(thousand)} हजार`);
-  const rem = value % 1000;
-  if (rem) result.push(under1000(rem));
-  return result.join(" ");
-}
-
-function Check({ active }) {
-  return (
-    <span className={`pm-check ${active ? "active" : ""}`}>
-      {active ? "✓" : ""}
-    </span>
-  );
-}
-
 export default function PMKSY() {
-  const [form, setForm] = useState(INITIAL);
-  const [formSegment, setFormSegment] = useState("farmer");
-  const [documentTab, setDocumentTab] = useState(1);
-  const [toast, setToast] = useState(null);
-  const [farmers, setFarmers] = useState([]);
-  const [firms, setFirms] = useState([]);
+  const [step, setStep] = useState(1);
+  const [firmPanel, setFirmPanel] = useState(false);
+  const [officePanel, setOfficePanel] = useState(false);
+  const [allRecPanel, setAllRecPanel] = useState(false);
 
-  const showToast = (message, icon = "✓") => {
-    setToast({ message, icon });
-    window.clearTimeout(window.__pmksyToast);
-    window.__pmksyToast = window.setTimeout(() => setToast(null), 3200);
-  };
-
-  useEffect(() => {
-    try {
-      setFarmers(JSON.parse(localStorage.getItem(STORAGE_FARMERS) || "[]"));
-      setFirms(JSON.parse(localStorage.getItem(STORAGE_FIRMS) || "[]"));
-    } catch {
-      setFarmers([]);
-      setFirms([]);
-    }
-  }, []);
-
-  const update = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
-
-  const calculated = useMemo(() => {
-    const antiHail = form.schemeSelection === "anti-hail";
-    let rate = 0;
-    let materialDescription = "";
-    let subDescription = "";
-    let hsnCode = "";
-    let standardCode = "";
-    let warranty = "";
-
-    if (antiHail) {
-      rate = 35;
-      materialDescription = `Anti-Hail Net (${form.netType}, HDPE Thread, 70 GSM)`;
-      subDescription = "UV Stabilized, 100% Virgin Material, Transparent Color";
-      hsnCode = "5608 19 00";
-      standardCode = "IS 17730:2021";
-      warranty = "3 Years (नेट की वारंटी)";
-    } else {
-      rate = form.terrainSelection === "hilly" ? 3.68 : 3.2;
-      materialDescription = `Plastic Mulching Sheet (${form.mulchingThickness} Microns)`;
-      subDescription = `Color: ${form.mulchingColor}, Standard Agricultural Mulch Grade`;
-      hsnCode = "3920 10 12";
-      standardCode = "IS 17216:2019";
-      warranty = "1 Year (मल्चिंग की वारंटी)";
-    }
-
-    const totalCost = num(form.areaSqm) * rate;
-    return {
-      rate,
-      totalCost,
-      farmerShare: totalCost * 0.5,
-      subsidy: totalCost * 0.5,
-      materialDescription,
-      subDescription,
-      hsnCode,
-      standardCode,
-      warranty,
-      antiHail,
-    };
-  }, [form]);
-
-  const saveFarmers = (items) => {
-    setFarmers(items);
-    localStorage.setItem(STORAGE_FARMERS, JSON.stringify(items));
-  };
-
-  const saveFirms = (items) => {
-    setFirms(items);
-    localStorage.setItem(STORAGE_FIRMS, JSON.stringify(items));
-  };
-
-  const saveFarmer = () => {
-    const id = form.gardenCardNo.trim() || `TEMP-${Date.now()}`;
-    const record = { ...form, gardenCardNo: id, lastUpdated: Date.now() };
-    const next = farmers.filter((x) => x.gardenCardNo !== id);
-    saveFarmers([record, ...next]);
-    update("gardenCardNo", id);
-    showToast(`कृषक रिकॉर्ड "${safe(form.farmerName, id)}" सुरक्षित किया गया।`);
-  };
-
-  const loadFarmer = (id) => {
-    const record = farmers.find((x) => x.gardenCardNo === id);
-    if (!record) return;
-    setForm({ ...INITIAL, ...record });
-    setFormSegment("farmer");
-    showToast(`कृषक रिकॉर्ड "${safe(record.farmerName)}" लोड किया गया।`);
-  };
-
-  const deleteFarmer = (id) => {
-    if (!window.confirm("क्या आप इस कृषक रिकॉर्ड को हटाना चाहते हैं?")) return;
-    saveFarmers(farmers.filter((x) => x.gardenCardNo !== id));
-    showToast("कृषक रिकॉर्ड सूची से हटा दिया गया।", "🗑");
-  };
-
-  const saveFirm = () => {
-    const name = form.firmName.trim();
-    if (!name) {
-      showToast("कृपया वैध फर्म का नाम दर्ज करें।", "!");
-      return;
-    }
-    const record = {
-      firmName: name,
-      firmAddress: form.firmAddress,
-      firmGSTIN: form.firmGSTIN,
-      firmBankAcc: form.firmBankAcc,
-      firmBankName: form.firmBankName,
-      firmIFSC: form.firmIFSC,
-      lastUpdated: Date.now(),
-    };
-    const next = firms.filter((x) => x.firmName !== name);
-    saveFirms([record, ...next]);
-    showToast(`सप्लायर "${name}" सुरक्षित किया गया।`);
-  };
-
-  const loadFirm = (name) => {
-    const record = firms.find((x) => x.firmName === name);
-    if (!record) return;
-    setForm((prev) => ({ ...prev, ...record }));
-    showToast(`सप्लायर "${name}" लोड किया गया।`);
-  };
-
-  const resetForm = () => {
-    setForm({ ...INITIAL, invoiceDate: new Date().toISOString().slice(0, 10) });
-    showToast("सभी फ़ॉर्म फ़ील्ड्स रीसेट कर दिए गए हैं।");
-  };
-
-  const loadDemo = () => {
-    setForm({
-      ...INITIAL,
-      farmerName: "दिनेश सिंह रावत",
-      fatherName: "स्व० सुरेन्द्र सिंह",
-      villageName: "लक्ष्मीनगर, कोटद्वार",
-      postOffice: "कोटद्वार मुख्यालय",
-      blockName: "दुगड्डा",
-      districtName: "पौड़ी गढ़वाल",
-      mobileNo: "9876543210",
-      gardenCardNo: "UK-HR-2026-9043",
-      farmerCategory: "सामान्य",
-      farmerEducation: "Metric",
-      farmerGender: "Male",
-      farmerSize: "Small/Marginal",
-      totalArableLand: "0.85",
-      horticultureLand: "0.30",
-      irrigationFacilities: "स्प्रिंकलर एवं स्प्रिंग नहर",
-      khasraNo: "102 ख / 2",
-      areaSqm: "800",
-      schemeSelection: "anti-hail",
-      terrainSelection: "hilly",
-      netType: "Leno Knitted",
-      fundType: "KCC",
-      fundBankName: "उत्तराखंड ग्रामीण बैंक",
-      fundExtraVal1: "CardNo-29302213",
-      fundExtraVal2: "₹1,50,000/-",
-      cropName: "शिमला मिर्च (Solan Hybrid)",
-      cropArea: "0.08",
-      cropProd: "24",
-      marketingStrategy:
-        "स्थानीय कोटद्वार मंडी एवं निकटवर्ती देहरादून सब्जी मंडियों में सीधे बिक्री की जाएगी।",
-      invoiceNo: "AE/2026/024",
-      invoiceDate: "2026-07-06",
-    });
-    showToast("डेमो डेटा चारों दस्तावेजों में सफलतापूर्वक भर दिया गया।", "⚡");
-  };
-
-  const printCurrent = () => {
-    window.print();
-  };
-
-  const setScheme = (value) => update("schemeSelection", value);
-  const setFund = (value) => update("fundType", value);
+  const steps = [
+    { s: 1, no: "चरण 01", nm: "आवेदन प्रपत्र" },
+    { s: 2, no: "चरण 02", nm: "शपथ पत्र" },
+    { s: 3, no: "चरण 03", nm: "फर्म चयन" },
+    { s: 4, no: "चरण 04", nm: "भौतिक सत्यापन" },
+    { s: 5, no: "चरण 05", nm: "कंपनी बिल / BoQ" },
+    { s: 6, no: "चरण 06", nm: "नकद रसीद" },
+    { s: 7, no: "रजिस्टर", nm: "सभी किसान" },
+    { s: 8, no: "प्रबंधन", nm: "दर तालिका" },
+  ];
 
   return (
-    <div className="pmksy-app">
-      <header className="pmksy-header no-print">
-        <div className="pmksy-header-inner">
-          <div className="brand-wrap">
-            <div className="brand-mark">🌿</div>
-            <div>
-              <h1 className="pmksy-brand-title">
-                राज्य बागवानी मिशन, उत्तराखण्ड
-              </h1>
-              <p className="pmksy-brand-subtitle">
-                Document Automation &amp; Cloud Database Portal
-              </p>
-            </div>
-          </div>
-          <div className="header-actions">
-            <button className="btn btn-header" onClick={loadDemo}>
-              ⚡ Demo Data
-            </button>
-            <span className="sync-pill">
-              <i /> Local Sync Active
+    <div className="noprint">
+      <header className="mast">
+        <div className="crest">उ</div>
+        <div>
+          <h1>PMKSY–PDMC · सम्पूर्ण प्रपत्र प्रणाली</h1>
+          <div className="sub">
+            उद्यान एवं खाद्य प्रसंस्करण विभाग, उत्तराखण्ड · कार्यालय उद्यान
+            विशेषज्ञ, कोटद्वार, पौड़ी गढ़वाल, उत्तराखण्ड{" "}
+            <span
+              style={{
+                background: "#0d7680",
+                color: "#fff",
+                padding: "1px 7px",
+                borderRadius: "9px",
+                fontSize: "10.5px",
+                fontWeight: "700",
+                marginLeft: "6px",
+              }}
+            >
+              संस्करण 8 · 23-08-2026
             </span>
           </div>
         </div>
+        <div className="sp"></div>
+        <div className="firmswitch">
+          <label htmlFor="activeFirmSel">सक्रिय फर्म</label>
+          <select id="activeFirmSel"></select>
+          <button
+            className="btn ghost sm"
+            type="button"
+            onClick={() => setFirmPanel(true)}
+          >
+            फर्म जोड़ें/हटाएँ
+          </button>
+          <button
+            className="btn ghost sm"
+            type="button"
+            onClick={() => setAllRecPanel(true)}
+          >
+            सभी फर्मों का रिकॉर्ड
+          </button>
+          <button
+            className="btn ghost sm"
+            type="button"
+            onClick={() => setOfficePanel(true)}
+          >
+            कार्यालय सेटिंग
+          </button>
+        </div>
+        <div className="btnrow">
+          <select
+            id="quickFarmer"
+            style={{ minWidth: "190px", fontSize: "13px" }}
+          >
+            <option value="">— सहेजा किसान खोलें —</option>
+          </select>
+          <button className="btn ghost sm" id="btnNew">
+            नया आवेदन
+          </button>
+          <button className="btn water sm" id="btnPrint">
+            वर्तमान प्रपत्र प्रिंट
+          </button>
+        </div>
       </header>
 
-      <div className="instruction-bar no-print">
-        <div className="instruction-inner">
-          <span>
-            <b>स्वीकृत अनुक्रम:</b> 1. आवेदन प्रपत्र (B5) ➜ 2. आपूर्तिकर्ता बिल
-            ➜ 3. शपथ पत्र ➜ 4. सत्यापन रिपोर्ट
-          </span>
-          <span className="instruction-badge">
-            सभी 4 डाक्यूमेंट्स एक साथ ऑटो-फिल होते हैं
-          </span>
-        </div>
-      </div>
-
-      <main className="pmksy-workspace">
-        <section className="form-panel no-print">
-          <div className="segment-tabs">
-            {[
-              ["farmer", "1. कृषक और भूमि"],
-              ["scheme", "2. योजना व फंड"],
-              ["firm", "3. फर्म & बैंक"],
-              ["records", "4. सहेजे गए रिकॉर्ड"],
-            ].map(([key, label]) => (
+      {firmPanel && (
+        <div className="firmpanel-backdrop" onClick={() => setFirmPanel(false)}>
+          <div
+            className="firmpanel"
+            role="dialog"
+            aria-label="फर्म प्रबंधन"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="firmpanel-head">
+              <h2>फर्म प्रबंधन — जोड़ें, हटाएँ, सक्रिय फर्म चुनें</h2>
               <button
-                key={key}
-                className={formSegment === key ? "segment active" : "segment"}
-                onClick={() => setFormSegment(key)}
+                className="btn ghost sm"
+                type="button"
+                onClick={() => setFirmPanel(false)}
               >
-                {label}
+                बंद करें ✕
               </button>
-            ))}
+            </div>
+            <div className="firmpanel-body">
+              <div className="flag info">
+                हर फर्म का किसान-रजिस्टर अलग-अलग सहेजा जाता है। ऊपर "सक्रिय
+                फर्म" बदलते ही सिर्फ़ उसी फर्म के सहेजे किसान दिखेंगे, नए आवेदन
+                भी उसी फर्म के नाम से बनेंगे। "हटाएँ" करने से फर्म सूची से छिप
+                जाती है — उसका पुराना डेटा सुरक्षित रहता है, मिटता नहीं।
+              </div>
+              <h4 className="subh" style={{ marginTop: "4px" }}>
+                नई फर्म जोड़ें
+              </h4>
+              <div className="grid">
+                <div className="f">
+                  <label>फर्म का नाम *</label>
+                  <input id="nf_name" placeholder="जैसे: Ganga Enterprises" />
+                </div>
+                <div className="f">
+                  <label>निर्माता / मैन्युफैक्चरर</label>
+                  <input
+                    id="nf_mfr"
+                    placeholder="जैसे: भारत ड्रिप इरिगेशन एंड एग्रो"
+                  />
+                </div>
+                <div className="f wide">
+                  <label>पता</label>
+                  <input id="nf_addr" placeholder="पूरा पता" />
+                </div>
+                <div className="f">
+                  <label>मोबाइल</label>
+                  <input id="nf_mob" inputMode="numeric" />
+                </div>
+                <div className="f">
+                  <label>GSTIN</label>
+                  <input id="nf_gst" className="mono" />
+                </div>
+                <div className="f">
+                  <label>बैंक का नाम</label>
+                  <input id="nf_bank" />
+                </div>
+                <div className="f">
+                  <label>खाता संख्या</label>
+                  <input id="nf_acct" className="mono" />
+                </div>
+                <div className="f">
+                  <label>IFSC</label>
+                  <input id="nf_ifsc" className="mono" />
+                </div>
+              </div>
+              <div className="btnrow" style={{ marginTop: "10px" }}>
+                <button className="btn water sm" id="btnFirmAdd" type="button">
+                  फर्म जोड़ें
+                </button>
+                <span className="hint" id="firmAddMsg"></span>
+              </div>
+              <h4 className="subh">
+                सभी फर्में <span className="tag" id="firmCountTag"></span>
+              </h4>
+              <input
+                id="firmSearch"
+                placeholder="फर्म खोजें…"
+                style={{ marginBottom: "9px" }}
+              />
+              <div
+                id="firmListWrap"
+                style={{
+                  maxHeight: "280px",
+                  overflowY: "auto",
+                  border: "1px solid var(--line)",
+                  borderRadius: "var(--r-sm)",
+                }}
+              ></div>
+            </div>
           </div>
+        </div>
+      )}
 
-          <div className="form-scroll">
-            {formSegment === "farmer" && (
-              <FarmerForm form={form} update={update} />
-            )}
-
-            {formSegment === "scheme" && (
-              <SchemeForm
-                form={form}
-                update={update}
-                calculated={calculated}
-                setScheme={setScheme}
-                setFund={setFund}
-              />
-            )}
-
-            {formSegment === "firm" && (
-              <FirmForm
-                form={form}
-                update={update}
-                firms={firms}
-                saveFirm={saveFirm}
-                loadFirm={loadFirm}
-              />
-            )}
-
-            {formSegment === "records" && (
-              <RecordsForm
-                farmers={farmers}
-                saveFarmer={saveFarmer}
-                resetForm={resetForm}
-                loadFarmer={loadFarmer}
-                deleteFarmer={deleteFarmer}
-              />
-            )}
-
-            <div className="financial-card">
-              <div className="financial-title">📊 वित्तीय सारांश</div>
-              <div className="financial-grid">
-                <div>
-                  Total Cost<strong>{money(calculated.totalCost)}</strong>
+      {officePanel && (
+        <div
+          className="firmpanel-backdrop"
+          onClick={() => setOfficePanel(false)}
+        >
+          <div
+            className="firmpanel"
+            role="dialog"
+            aria-label="कार्यालय सेटिंग"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="firmpanel-head">
+              <h2>कार्यालय नाम प्रबंधन — जोड़ें, चुनें, हटाएँ</h2>
+              <button
+                className="btn ghost sm"
+                type="button"
+                onClick={() => setOfficePanel(false)}
+              >
+                बंद करें ✕
+              </button>
+            </div>
+            <div className="firmpanel-body">
+              <div className="flag info">
+                यहाँ चुना गया कार्यालय नाम सिस्टम के मुख्य शीर्षक और प्रिंट होने
+                वाले आवेदन/प्रपत्रों के कार्यालय शीर्षक में स्वतः दिखाई देगा।
+                अलग-अलग कार्यालयों के नाम सुरक्षित करके जरूरत के अनुसार बदले जा
+                सकते हैं।
+              </div>
+              <div className="f" style={{ marginTop: "10px" }}>
+                <label>सक्रिय कार्यालय</label>
+                <select id="officeActiveSel"></select>
+              </div>
+              <h4 className="subh" style={{ marginTop: "12px" }}>
+                नया कार्यालय जोड़ें
+              </h4>
+              <div className="grid">
+                <div className="f wide">
+                  <label>कार्यालय का पूरा नाम *</label>
+                  <input
+                    id="no_name"
+                    placeholder="जैसे: कार्यालय उद्यान विशेषज्ञ, कोटद्वार, पौड़ी गढ़वाल, उत्तराखण्ड"
+                  />
                 </div>
-                <div>
-                  Self Cont. (50%)
-                  <strong className="green">
-                    {money(calculated.farmerShare)}
-                  </strong>
+              </div>
+              <div className="btnrow" style={{ marginTop: "10px" }}>
+                <button
+                  className="btn water sm"
+                  id="btnOfficeAdd"
+                  type="button"
+                >
+                  कार्यालय जोड़ें
+                </button>
+                <span className="hint" id="officeAddMsg"></span>
+              </div>
+              <h4 className="subh">
+                सभी कार्यालय <span className="tag" id="officeCountTag"></span>
+              </h4>
+              <div
+                id="officeListWrap"
+                style={{
+                  maxHeight: "280px",
+                  overflowY: "auto",
+                  border: "1px solid var(--line)",
+                  borderRadius: "var(--r-sm)",
+                }}
+              ></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {allRecPanel && (
+        <div
+          className="firmpanel-backdrop"
+          onClick={() => setAllRecPanel(false)}
+        >
+          <div
+            className="firmpanel"
+            role="dialog"
+            aria-label="सभी फर्मों का रिकॉर्ड"
+            style={{ maxWidth: "1080px" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="firmpanel-head">
+              <h2>सभी फर्मों के दस्तावेज़ — एक साथ देखें</h2>
+              <button
+                className="btn ghost sm"
+                type="button"
+                onClick={() => setAllRecPanel(false)}
+              >
+                बंद करें ✕
+              </button>
+            </div>
+            <div className="firmpanel-body">
+              <div className="flag info">
+                हर किसान के सभी 6 प्रपत्र (आवेदन, शपथ पत्र, फर्म सहमति, बिल,
+                रसीद, भौतिक सत्यापन) यहीं से "प्रिंट सभी" दबाकर खोले जा सकते हैं
+                — भले वह किसी भी फर्म के अंतर्गत सहेजा गया हो।
+              </div>
+              <div
+                className="grid"
+                style={{ gridTemplateColumns: "1fr 2fr", marginBottom: "10px" }}
+              >
+                <div className="f">
+                  <label>फर्म अनुसार फ़िल्टर</label>
+                  <select id="allRecFirmFilter"></select>
                 </div>
-                <div>
-                  Subsidy (50%)
-                  <strong className="indigo">
-                    {money(calculated.subsidy)}
-                  </strong>
+                <div className="f">
+                  <label>किसान/ग्राम/केंद्र खोजें</label>
+                  <input
+                    id="allRecSearch"
+                    placeholder="नाम, ग्राम, केंद्र टाइप करें…"
+                  />
+                </div>
+              </div>
+              <div
+                className="hint"
+                id="allRecCountMsg"
+                style={{ marginBottom: "8px" }}
+              ></div>
+              <div id="allRecTable"></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="wrap">
+        <div className="steps" role="tablist" id="stepbar">
+          {steps.map((st) => (
+            <button
+              key={st.s}
+              className={`step ${step === st.s ? "active" : ""}`}
+              role="tab"
+              aria-selected={step === st.s}
+              onClick={() => setStep(st.s)}
+            >
+              <span className="no">{st.no}</span>
+              <span className="nm">{st.nm}</span>
+            </button>
+          ))}
+        </div>
+
+        {step === 1 && (
+          <section id="S1">
+            <div className="card">
+              <h2>
+                <span className="kh">क</span> क्षेत्र विवरण{" "}
+                <span className="en">Location</span>
+              </h2>
+              <div className="body">
+                <div className="grid">
+                  <div className="f">
+                    <label>
+                      <span className="n">1</span>जनपद
+                    </label>
+                    <input
+                      id="district"
+                      className="auto"
+                      value="पौड़ी गढ़वाल"
+                      readOnly
+                    />
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">2</span>उद्यान सचल दल केंद्र
+                    </label>
+                    <select id="kendra"></select>
+                    <div className="hint">
+                      केंद्र चुनते ही विकासखंड एवं विधान सभा स्वतः भर जाएँगे
+                    </div>
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">3</span>विकासखंड
+                    </label>
+                    <select id="block" className="auto"></select>
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">4</span>विधान सभा
+                    </label>
+                    <select id="vidhan" className="auto"></select>
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">5</span>ग्राम पंचायत
+                    </label>
+                    <input id="panchayat" list="dlPan" />
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">6</span>ग्राम
+                    </label>
+                    <input id="village" list="dlVil" />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
 
-        <section className="preview-panel">
-          <div className="document-toolbar no-print">
-            <div className="document-tabs">
-              {[
-                ["1", "आवेदन (B5)"],
-                ["2", "आपूर्तिकर्ता बिल"],
-                ["3", "शपथ पत्र"],
-                ["4", "सत्यापन रिपोर्ट"],
-              ].map(([key, label]) => (
-                <button
-                  key={key}
-                  className={
-                    documentTab === Number(key) ? "doc-tab active" : "doc-tab"
-                  }
-                  onClick={() => setDocumentTab(Number(key))}
+            <div className="card">
+              <h2>
+                <span className="kh">ख</span> किसान एवं बैंक विवरण{" "}
+                <span className="en">Farmer &amp; Bank — DBT</span>
+              </h2>
+              <div className="body">
+                <div
+                  className="flag ok"
+                  id="recall"
+                  style={{ display: "none" }}
+                ></div>
+                <div
+                  className="btnrow sample-toolbar"
+                  style={{ marginBottom: "12px" }}
                 >
-                  <span>{key}.</span> {label}
-                </button>
-              ))}
+                  <button
+                    className="btn water sm"
+                    id="btnCompleteFarmerDemo"
+                    type="button"
+                  >
+                    🧪 पूरा भरा हुआ किसान Sample देखें
+                  </button>
+                  <button
+                    className="btn ghost sm"
+                    id="btnCompleteSamplePrint"
+                    type="button"
+                  >
+                    🖨️ Sample के सभी 6 प्रपत्र प्रिंट
+                  </button>
+                  <span className="hint">
+                    Apple · Drip · 2×2 m · 0.20 हे० — सभी 6 प्रपत्रों की testing
+                    के लिए demo data भरेगा; रजिस्टर में save नहीं होगा।
+                  </span>
+                </div>
+                <div className="grid">
+                  <div className="f">
+                    <label>
+                      <span className="n">1</span>किसान का नाम
+                    </label>
+                    <input
+                      id="fname"
+                      list="dlF"
+                      autoComplete="off"
+                      placeholder="नाम लिखें"
+                    />
+                    <datalist id="dlF"></datalist>
+                    <div className="hint">
+                      पुराना किसान हो तो पूरा रिकॉर्ड अपने आप भर जाएगा
+                    </div>
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">2</span>पिता / पति का नाम
+                    </label>
+                    <input id="rel" />
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">3</span>लिंग
+                    </label>
+                    <div className="chips" id="gender"></div>
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">4</span>सामाजिक श्रेणी
+                    </label>
+                    <select id="social"></select>
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">5</span>किसान वर्ग{" "}
+                      <span className="tag">कुल भूमि से स्वतः</span>
+                    </label>
+                    <select id="fclass"></select>
+                    <div className="hint" id="fcHint"></div>
+                  </div>
+                  <div className="f">
+                    <label>
+                      अनुदान दर <span className="tag">बदलना हो तो चुनें</span>
+                    </label>
+                    <select id="subOverride"></select>
+                    <div className="hint">
+                      डिफ़ॉल्ट किसान वर्ग से स्वतः तय होती है — किसी विशेष
+                      प्रकरण में दर स्वयं तय करनी हो तो यहाँ चुन लें
+                    </div>
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">6</span>लाभार्थी प्रकार
+                    </label>
+                    <select id="btype"></select>
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">7</span>आधार संख्या
+                    </label>
+                    <input
+                      id="aadhaar"
+                      className="mono"
+                      inputMode="numeric"
+                      maxLength="14"
+                      placeholder="XXXX XXXX XXXX"
+                    />
+                    <div className="errtxt" id="e_aadhaar"></div>
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">8</span>मोबाइल नंबर
+                    </label>
+                    <input
+                      id="mobile"
+                      className="mono"
+                      inputMode="numeric"
+                      maxLength="10"
+                    />
+                    <div className="errtxt" id="e_mobile"></div>
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">9</span>बैंक खाता सं० (आधार लिंक)
+                    </label>
+                    <input id="acct" className="mono" />
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">11</span>IFSC कोड
+                    </label>
+                    <input
+                      id="ifsc"
+                      className="mono"
+                      maxLength="11"
+                      style={{ textTransform: "uppercase" }}
+                      placeholder="ABCD0123456"
+                    />
+                    <div className="errtxt" id="e_ifsc"></div>
+                  </div>
+                  <div className="f wide">
+                    <label>
+                      <span className="n">10</span>बैंक का नाम एवं शाखा
+                    </label>
+                    <input id="bank" list="dlBank" />
+                    <datalist id="dlBank"></datalist>
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">12</span>उद्यान कार्ड / पंजीकरण सं०
+                    </label>
+                    <input id="hortcard" className="mono" />
+                  </div>
+                  <div className="f wide">
+                    <label>
+                      <span className="n">13</span>पूरा पता{" "}
+                      <span className="tag">स्वतः</span>
+                    </label>
+                    <input id="addr" className="auto" />
+                  </div>
+                </div>
+              </div>
             </div>
-            <button className="btn btn-print" onClick={printCurrent}>
-              🖨 प्रिंट करें (A4)
-            </button>
-          </div>
 
-          <div className="paper-shell" id="pmksy-print-area">
-            {documentTab === 1 && (
-              <ApplicationDocument form={form} calculated={calculated} />
-            )}
-            {documentTab === 2 && (
-              <InvoiceDocument form={form} calculated={calculated} />
-            )}
-            {documentTab === 3 && (
-              <AffidavitDocument form={form} calculated={calculated} />
-            )}
-            {documentTab === 4 && (
-              <VerificationDocument form={form} calculated={calculated} />
-            )}
-          </div>
-        </section>
-      </main>
+            <div className="card">
+              <h2>
+                <span className="kh">ग</span> भूमि, जल स्रोत एवं प्रस्तावित
+                प्रणाली <span className="en">Land &amp; System</span>
+              </h2>
+              <div className="body">
+                <div id="landFlags"></div>
+                <h4
+                  className="subh"
+                  style={{
+                    borderTop: "none",
+                    paddingTop: "0",
+                    marginTop: "2px",
+                  }}
+                >
+                  प्रस्तावित प्रणाली — अधिकतम 2 पंक्तियाँ (प्रपत्र का भाग «छ»)
+                </h4>
+                <div id="sysRows"></div>
+                <div className="btnrow" style={{ marginTop: "9px" }}>
+                  <button className="btn ghost sm" id="btnAddRow">
+                    + प्रणाली पंक्ति जोड़ें
+                  </button>
+                  <span className="hint">
+                    प्रणाली → फसल → स्पेसिंग → क्षेत्र चुनते ही लागत एवं अनुदान
+                    PDMC Table 3/4/5/6 से स्वतः
+                  </span>
+                </div>
 
-      {toast && (
-        <div className="pmksy-toast">
-          <span>{toast.icon}</span>
-          <strong>{toast.message}</strong>
-        </div>
-      )}
-    </div>
-  );
-}
+                <h4 className="subh">
+                  भूमि विवरण — उपरोक्त क्षेत्रफल किस-किस की भूमि से पूरा हो रहा
+                  है
+                </h4>
+                <div className="hint" style={{ marginBottom: "8px" }}>
+                  पहली पंक्ति कृषक की स्वयं की भूमि है (विवरण ऊपर से स्वतः)।
+                  अपनी भूमि कम पड़े तो नीचे रक्त-संबंधी सह-खाताधारक जोड़ें — यही
+                  तालिका शपथ पत्र में छपेगी।
+                </div>
+                <div style={{ overflowX: "auto" }}>
+                  <table className="dt landtbl" id="landTable"></table>
+                </div>
+                <div className="btnrow" style={{ marginTop: "8px" }}>
+                  <button className="btn ghost sm" id="btnAddCo">
+                    + सह-खाताधारक जोड़ें
+                  </button>
+                  <span className="hint">
+                    रक्त-संबंध (पिता, भाई, पुत्र आदि) होना आवश्यक है
+                  </span>
+                </div>
+                <div id="landSrcFlag" style={{ marginTop: "12px" }}></div>
 
-function SectionTitle({ children }) {
-  return <h3 className="form-section-title">{children}</h3>;
-}
+                <h4 className="subh">भूमि स्वामित्व, जल स्रोत एवं फर्म</h4>
+                <div className="grid">
+                  <div className="f">
+                    <label>
+                      <span className="n">4</span>भूमि स्वामित्व
+                    </label>
+                    <select id="tenure"></select>
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">5</span>पट्टा अवधि (वर्ष)
+                    </label>
+                    <input
+                      id="lease"
+                      type="number"
+                      min="0"
+                      className="mono"
+                      placeholder="न्यूनतम 07"
+                    />
+                    <div className="errtxt" id="e_lease"></div>
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">8</span>गत 07 वर्षों में पूर्व अनुदान?
+                    </label>
+                    <div className="chips" id="prevsub"></div>
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">9</span>जल स्रोत
+                    </label>
+                    <select id="source"></select>
+                  </div>
+                  <div
+                    className="f"
+                    id="srcOtherWrap"
+                    style={{ display: "none" }}
+                  >
+                    <label>अन्य जल स्रोत का विवरण</label>
+                    <input
+                      id="source_other"
+                      placeholder="जल स्रोत का नाम / प्रकार लिखें"
+                    />
+                  </div>
+                  <div className="f wide">
+                    <label>
+                      <span className="n">11</span>चयनित / अधिकृत डीलर
+                    </label>
+                    <input
+                      id="company"
+                      list="dlDealer"
+                      placeholder="डीलर का नाम टाइप करें — 177 अधिकृत डीलरों में से खोजें"
+                    />
+                    <datalist id="dlDealer"></datalist>
+                    <div className="hint">
+                      चुनते ही फर्म का पता, मोबाइल एवं GSTIN चरण 03 में स्वतः भर
+                      जाएँगे
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-function Field({
-  label,
-  value,
-  onChange,
-  type = "text",
-  placeholder = "",
-  disabled = false,
-}) {
-  return (
-    <label className="pmksy-field">
-      <span>{label}</span>
-      <input
-        type={type}
-        value={value ?? ""}
-        placeholder={placeholder}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.value)}
-      />
-    </label>
-  );
-}
+            <div className="card">
+              <h2>
+                <span className="kh">च</span> स्थलीय सत्यापन एवं प्रक्षेत्र
+                विवरण <span className="en">Joint Survey</span>
+              </h2>
+              <div className="body">
+                <div className="grid">
+                  <div className="f">
+                    <label>
+                      <span className="n">1</span>अक्षांश
+                    </label>
+                    <input id="lat" className="mono" placeholder="29.7xxxxx" />
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">2</span>देशांतर
+                    </label>
+                    <input id="lon" className="mono" placeholder="78.5xxxxx" />
+                  </div>
+                  <div className="f wide">
+                    <div className="btnrow">
+                      <button className="btn ghost sm" id="btnGeo">
+                        मौजूदा लोकेशन भरें
+                      </button>
+                      <span className="hint" id="geoMsg"></span>
+                    </div>
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">3</span>कृषि मैपर एप ID
+                    </label>
+                    <input id="mapperid" className="mono" />
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">4</span>भूमि की प्रकृति
+                    </label>
+                    <select id="terrain"></select>
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">5</span>जल स्रोत की दूरी (मी०)
+                    </label>
+                    <input id="wdist" type="number" min="0" className="mono" />
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">6</span>ऊर्ध्वाधर ऊँचाई अंतर (मी०)
+                    </label>
+                    <input id="vdrop" type="number" min="0" className="mono" />
+                    <div className="hint" id="valveHint"></div>
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">7</span>जल उपलब्धता (ली०/घंटा)
+                    </label>
+                    <input id="wavail" type="number" min="0" className="mono" />
+                    <div className="errtxt" id="e_water"></div>
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">8</span>जल की गुणवत्ता
+                    </label>
+                    <select id="wqual"></select>
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">9</span>पंप
+                    </label>
+                    <select id="pump"></select>
+                  </div>
+                  <div className="f">
+                    <label>
+                      <span className="n">10</span>पंप क्षमता (HP)
+                    </label>
+                    <input
+                      id="hp"
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      className="mono"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
 
-function SelectField({ label, value, onChange, options }) {
-  return (
-    <label className="pmksy-field">
-      <span>{label}</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)}>
-        {options.map(([v, text]) => (
-          <option key={v} value={v}>
-            {text}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-function FarmerForm({ form, update }) {
-  return (
-    <div className="form-content devanagari">
-      <SectionTitle>क) कृषक प्रोफाइल (B5 के अनुसार)</SectionTitle>
-      <div className="grid-2">
-        <Field
-          label="लाभार्थी का नाम *"
-          value={form.farmerName}
-          onChange={(v) => update("farmerName", v)}
-          placeholder="उदा. सुरेश प्रसाद"
-        />
-        <Field
-          label="पिता/पति का नाम *"
-          value={form.fatherName}
-          onChange={(v) => update("fatherName", v)}
-          placeholder="उदा. राम लाल"
-        />
-      </div>
-      <div className="grid-3">
-        <Field
-          label="ग्राम *"
-          value={form.villageName}
-          onChange={(v) => update("villageName", v)}
-          placeholder="शिबूनगर"
-        />
-        <Field
-          label="डाकखाना *"
-          value={form.postOffice}
-          onChange={(v) => update("postOffice", v)}
-          placeholder="कोटद्वार"
-        />
-        <Field
-          label="विकासखण्ड *"
-          value={form.blockName}
-          onChange={(v) => update("blockName", v)}
-          placeholder="दुगड्डा"
-        />
-      </div>
-      <div className="grid-2">
-        <Field
-          label="जनपद *"
-          value={form.districtName}
-          onChange={(v) => update("districtName", v)}
-        />
-        <Field
-          label="मोबाइल नंबर *"
-          value={form.mobileNo}
-          onChange={(v) =>
-            update("mobileNo", v.replace(/\D/g, "").slice(0, 10))
-          }
-          placeholder="10 अंकों का"
-        />
-      </div>
-      <div className="grid-3">
-        <SelectField
-          label="शैक्षिक योग्यता *"
-          value={form.farmerEducation}
-          onChange={(v) => update("farmerEducation", v)}
-          options={[
-            ["Non Metric", "Non-Metric"],
-            ["Metric", "Metric (10वीं)"],
-            ["Intermediate", "Intermediate (12वीं)"],
-            ["Graduate", "Graduate (स्नातक)"],
-          ]}
-        />
-        <SelectField
-          label="लाभार्थी लिंग *"
-          value={form.farmerGender}
-          onChange={(v) => update("farmerGender", v)}
-          options={[
-            ["Male", "पुरुष (Male)"],
-            ["Female", "महिला (Female)"],
-          ]}
-        />
-        <SelectField
-          label="कृषक प्रकार *"
-          value={form.farmerSize}
-          onChange={(v) => update("farmerSize", v)}
-          options={[
-            ["Small/Marginal", "लघु / सीमान्त"],
-            ["Big farmer", "बड़े किसान"],
-          ]}
-        />
-      </div>
-      <div className="grid-2">
-        <Field
-          label="उद्यान कार्ड संख्या"
-          value={form.gardenCardNo}
-          onChange={(v) => update("gardenCardNo", v)}
-          placeholder="उदा. UK-HR-1094"
-        />
-        <SelectField
-          label="लाभार्थी की श्रेणी *"
-          value={form.farmerCategory}
-          onChange={(v) => update("farmerCategory", v)}
-          options={[
-            ["सामान्य", "सामान्य वर्ग (General)"],
-            ["SC", "अनुसूचित जाति (SC)"],
-            ["ST", "अनुसूचित जनजाति (ST)"],
-            ["अन्य", "अन्य पिछड़ा वर्ग (OBC)"],
-          ]}
-        />
-      </div>
-
-      <SectionTitle>ख) कृषि योग्य भूमि का विवरण</SectionTitle>
-      <div className="grid-3">
-        <Field
-          label="कुल भूमि (है०) *"
-          type="number"
-          value={form.totalArableLand}
-          onChange={(v) => update("totalArableLand", v)}
-          placeholder="0.50"
-        />
-        <Field
-          label="बागवानी भूमि *"
-          type="number"
-          value={form.horticultureLand}
-          onChange={(v) => update("horticultureLand", v)}
-          placeholder="0.20"
-        />
-        <Field
-          label="सिंचाई सुविधा *"
-          value={form.irrigationFacilities}
-          onChange={(v) => update("irrigationFacilities", v)}
-          placeholder="स्प्रिंकलर / नहर"
-        />
-      </div>
-    </div>
-  );
-}
-
-function SchemeForm({ form, update, calculated, setScheme, setFund }) {
-  return (
-    <div className="form-content devanagari">
-      <SectionTitle>ग) प्रस्तावित योजना व तकनीकी संरचना</SectionTitle>
-      <div className="grid-2">
-        <Field
-          label="खसरा संख्या *"
-          value={form.khasraNo}
-          onChange={(v) => update("khasraNo", v)}
-          placeholder="उदा. 452/3"
-        />
-        <Field
-          label="स्वीकृत क्षेत्रफल (Sqm) *"
-          type="number"
-          value={form.areaSqm}
-          onChange={(v) => update("areaSqm", v)}
-          placeholder="उदा. 500"
-        />
-      </div>
-      <div className="grid-2">
-        <SelectField
-          label="चयनित योजना *"
-          value={form.schemeSelection}
-          onChange={setScheme}
-          options={[
-            ["anti-hail", "एंटी-हेलनेट (Anti-Hail Net)"],
-            ["mulching", "प्लास्टिक मल्चिंग (Plastic Mulching)"],
-          ]}
-        />
-        <SelectField
-          label="भौगोलिक श्रेणी *"
-          value={form.terrainSelection}
-          onChange={(v) => update("terrainSelection", v)}
-          options={[
-            ["hilly", "पर्वतीय क्षेत्र (Hilly Area)"],
-            ["plain", "मैदानी क्षेत्र (Plain Area)"],
-          ]}
-        />
-      </div>
-
-      {calculated.antiHail ? (
-        <div className="conditional-card">
-          <b>एंटी-हैलनेट विवरण:</b>
-          <div className="grid-2">
-            <SelectField
-              label="नेट प्रकार"
-              value={form.netType}
-              onChange={(v) => update("netType", v)}
-              options={[
-                ["Woven", "Woven (बुना हुआ)"],
-                ["Leno Knitted", "Leno Knitted"],
-                ["Raschel", "Raschel"],
-              ]}
-            />
-            <Field
-              label="मानक दर"
-              value="₹35.00 / Sqm"
-              onChange={() => {}}
-              disabled
-            />
-          </div>
-        </div>
-      ) : (
-        <div className="conditional-card">
-          <b>मल्चिंग शीट विवरण:</b>
-          <div className="grid-2">
-            <SelectField
-              label="मोटाई (Microns)"
-              value={form.mulchingThickness}
-              onChange={(v) => update("mulchingThickness", v)}
-              options={[
-                ["25", "25 Micron"],
-                ["30", "30 Micron"],
-                ["50", "50 Micron"],
-              ]}
-            />
-            <SelectField
-              label="रंग (Color)"
-              value={form.mulchingColor}
-              onChange={(v) => update("mulchingColor", v)}
-              options={[
-                ["Black & White", "Black & White"],
-                ["Black", "Black Only"],
-                ["Silver", "Silver"],
-              ]}
-            />
-          </div>
-        </div>
-      )}
-
-      <SectionTitle>घ) धनराशि व्यवस्था (प्रारूप B5 - बिंदु 11)</SectionTitle>
-      <div className="grid-2">
-        <SelectField
-          label="धनराशि स्रोत *"
-          value={form.fundType}
-          onChange={setFund}
-          options={[
-            ["Self", "निजी स्रोत (By Self)"],
-            ["KCC", "किसान क्रेडिट कार्ड (KCC)"],
-            ["Loan", "बैंक ऋण (Bank Loan)"],
-          ]}
-        />
-        <Field
-          label="बैंक का नाम *"
-          value={form.fundBankName}
-          onChange={(v) => update("fundBankName", v)}
-          placeholder="उदा. भारतीय स्टेट बैंक"
-        />
-      </div>
-      <div className="conditional-card indigo-card">
-        <div className="grid-2">
-          <Field
-            label={
-              form.fundType === "KCC" ? "खाता / कार्ड संख्या" : "खाता संख्या"
-            }
-            value={form.fundExtraVal1}
-            onChange={(v) => update("fundExtraVal1", v)}
-            placeholder="3940201021"
-          />
-          <Field
-            label={form.fundType === "KCC" ? "क्रेडिट लिमिट" : "अतिरिक्त विवरण"}
-            value={form.fundExtraVal2}
-            onChange={(v) => update("fundExtraVal2", v)}
-            placeholder="N/A"
-          />
-        </div>
-      </div>
-
-      <SectionTitle>ङ) प्रस्तावित फसल उत्पादन & विपणन</SectionTitle>
-      <div className="grid-3">
-        <Field
-          label="फसल का नाम"
-          value={form.cropName}
-          onChange={(v) => update("cropName", v)}
-          placeholder="शिमला मिर्च"
-        />
-        <Field
-          label="क्षेत्रफल (हैक्टर)"
-          type="number"
-          value={form.cropArea}
-          onChange={(v) => update("cropArea", v)}
-          placeholder="0.05"
-        />
-        <Field
-          label="उत्पादन (कुंतल)"
-          type="number"
-          value={form.cropProd}
-          onChange={(v) => update("cropProd", v)}
-          placeholder="15"
-        />
-      </div>
-      <Field
-        label="विपणन व्यवस्था / रणनीति *"
-        value={form.marketingStrategy}
-        onChange={(v) => update("marketingStrategy", v)}
-      />
-    </div>
-  );
-}
-
-function FirmForm({ form, update, firms, saveFirm, loadFirm }) {
-  return (
-    <div className="form-content devanagari">
-      <SectionTitle>च) आपूर्तिकर्ता (Supplier Firm) विवरण</SectionTitle>
-      <div className="notice-card">
-        <b>✨ सप्लायर बदलें / नया सहेजें</b>
-        <p>
-          नीचे दिए फर्म डिटेल्स को बदलें और सप्लायर सेव करें। सेव किए गए सप्लायर
-          अगली बार सीधे लोड किए जा सकते हैं।
-        </p>
-      </div>
-      <Field
-        label="फर्म/आपूर्तिकर्ता का नाम *"
-        value={form.firmName}
-        onChange={(v) => update("firmName", v)}
-      />
-      <Field
-        label="फर्म का पता (Address) *"
-        value={form.firmAddress}
-        onChange={(v) => update("firmAddress", v)}
-      />
-      <div className="grid-2">
-        <Field
-          label="GSTIN *"
-          value={form.firmGSTIN}
-          onChange={(v) => update("firmGSTIN", v.toUpperCase())}
-        />
-        <Field
-          label="बैंक खाता संख्या *"
-          value={form.firmBankAcc}
-          onChange={(v) => update("firmBankAcc", v)}
-        />
-      </div>
-      <div className="grid-2">
-        <Field
-          label="बैंक का नाम *"
-          value={form.firmBankName}
-          onChange={(v) => update("firmBankName", v)}
-        />
-        <Field
-          label="IFSC Code *"
-          value={form.firmIFSC}
-          onChange={(v) => update("firmIFSC", v.toUpperCase())}
-        />
-      </div>
-      <div className="button-row">
-        <button className="btn btn-indigo" onClick={saveFirm}>
-          💾 सप्लायर सेव करें
-        </button>
-        <select
-          className="load-select"
-          value=""
-          onChange={(e) => loadFirm(e.target.value)}
-        >
-          <option value="">-- लोड सप्लायर --</option>
-          {firms.map((firm) => (
-            <option key={firm.firmName} value={firm.firmName}>
-              {firm.firmName}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <SectionTitle>छ) बिल / चालान क्रमांक एवं तिथि</SectionTitle>
-      <div className="grid-2">
-        <Field
-          label="चालान (Invoice) सं० *"
-          value={form.invoiceNo}
-          onChange={(v) => update("invoiceNo", v)}
-          placeholder="उदा. AE/2026/024"
-        />
-        <Field
-          label="चालान दिनांक *"
-          type="date"
-          value={form.invoiceDate}
-          onChange={(v) => update("invoiceDate", v)}
-        />
-      </div>
-    </div>
-  );
-}
-
-function RecordsForm({
-  farmers,
-  saveFarmer,
-  resetForm,
-  loadFarmer,
-  deleteFarmer,
-}) {
-  return (
-    <div className="form-content devanagari">
-      <SectionTitle>ज) क्लाउड डेटाबेस एवं सहेजे गए रिकॉर्ड</SectionTitle>
-      <div className="notice-card green-notice">
-        <b>📁 डेटाबेस कार्यक्षेत्र</b>
-        <p>
-          नए किसानों के आवेदन सहेजें, पुराने रिकॉर्ड को एडिट के लिए लोड करें या
-          उन्हें डिलीट करें। यह standalone React version browser local storage
-          का उपयोग करता है।
-        </p>
-      </div>
-      <div className="button-row">
-        <button className="btn btn-green" onClick={saveFarmer}>
-          💾 रिकॉर्ड सुरक्षित करें
-        </button>
-        <button className="btn btn-light" onClick={resetForm}>
-          🧹 रीसेट
-        </button>
-      </div>
-      <div className="saved-heading">सहेजे गए किसान रिकॉर्ड्स सूची</div>
-      <div className="record-list">
-        {!farmers.length && (
-          <p className="empty-records">कोई रिकॉर्ड सहेजा नहीं गया है</p>
+            <div className="card">
+              <h2>
+                <span className="kh">घ</span> संलग्न दस्तावेज़{" "}
+                <span className="en">Enclosures</span>
+              </h2>
+              <div className="body" id="encList"></div>
+            </div>
+            <div className="card">
+              <h2>
+                <span className="kh">ज</span> पात्रता एवं स्थल परीक्षण जाँच सूची{" "}
+                <span className="en">Eligibility Checklist</span>
+              </h2>
+              <div className="body">
+                <div className="hint" style={{ marginBottom: "8px" }}>
+                  भरी हुई सूचना से जो बिंदु तय हो सकते हैं वे{" "}
+                  <span className="tag">स्वतः</span> चिह्नित हैं — बदल सकते हैं।
+                </div>
+                <div id="chkList"></div>
+              </div>
+            </div>
+            <div className="card">
+              <h2>
+                <span className="kh">झ</span> प्रमाणीकरण एवं संस्तुति
+              </h2>
+              <div className="body">
+                <div className="grid">
+                  <div className="f">
+                    <label>प्रकरण</label>
+                    <select id="verdict"></select>
+                  </div>
+                  <div className="f">
+                    <label>आवेदन दिनांक</label>
+                    <input id="appdate" type="date" />
+                  </div>
+                  <div className="f wide">
+                    <label>
+                      संस्तुति / टिप्पणी{" "}
+                      <span className="tag">खाली छोड़ें तो स्वतः</span>
+                    </label>
+                    <textarea id="remark" rows="2"></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
         )}
-        {farmers.map((record) => (
-          <div className="record-card" key={record.gardenCardNo}>
-            <button
-              className="record-main"
-              onClick={() => loadFarmer(record.gardenCardNo)}
-            >
-              <b>{safe(record.farmerName, "अज्ञात कृषक")}</b>
-              <small>
-                {record.gardenCardNo} |{" "}
-                {record.schemeSelection === "anti-hail"
-                  ? "एंटीहेलनेट"
-                  : "मल्चिंग"}
-              </small>
-            </button>
-            <button
-              className="delete-record"
-              onClick={() => deleteFarmer(record.gardenCardNo)}
-              title="हटाएं"
-            >
-              🗑
-            </button>
+
+        {step === 2 && (
+          <section id="S2">
+            <div className="card">
+              <h2>
+                <span className="kh">२</span> लाभार्थी स्व-घोषणा एवं शपथ पत्र{" "}
+                <span className="en">Affidavit / Self-Declaration</span>
+              </h2>
+              <div className="body">
+                <div className="flag info">
+                  कृषक, भूमि, फर्म एवं वित्तीय विवरण चरण 01 से स्वतः आते हैं। इस
+                  प्रपत्र में <b>शीर्षक, स्थान एवं दिनांक जानबूझकर रिक्त</b>{" "}
+                  छोड़े जाते हैं — विभागीय लेटरहेड/स्टाम्प पर हाथ से भरे जाएँ।
+                </div>
+                <div className="grid">
+                  <div className="f">
+                    <label>स्टाम्प पत्र मूल्य (₹)</label>
+                    <select id="af_stamp"></select>
+                  </div>
+                  <div className="f">
+                    <label>नोटरी / शपथ आयुक्त</label>
+                    <input id="af_notary" placeholder="नाम एवं पंजीकरण सं०" />
+                  </div>
+                </div>
+                <div className="grid" style={{ marginTop: "12px" }}>
+                  <div className="f wide">
+                    <div className="flag info" style={{ margin: "0" }}>
+                      सह-खाताधारकों की भूमि का विवरण अब{" "}
+                      <b>चरण 01 → भूमि स्रोत</b> में भरा जाता है; शपथ पत्र में
+                      वही अपने आप छपेगा।
+                    </div>
+                  </div>
+                </div>
+                <div className="flag warn" style={{ marginTop: "14px" }}>
+                  शपथ पत्र में «कार्य पूर्ण करा लिया है» लिखा है — इसे स्थापना
+                  पूर्ण होने के बाद ही निष्पादित कराएँ।
+                </div>
+              </div>
+            </div>
+            <div className="card">
+              <h2>
+                <span className="kh">₹</span> शपथ पत्र का वित्तीय विवरण{" "}
+                <span className="en">auto</span>
+              </h2>
+              <div className="body">
+                <div style={{ overflowX: "auto" }}>
+                  <table className="dt" id="afMoney"></table>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {step === 3 && (
+          <section id="S3">
+            <div className="card">
+              <h2>
+                <span className="kh">३</span> फर्म चयन एवं स्वैच्छिक सहमति{" "}
+                <span className="en">Firm Selection</span>
+              </h2>
+              <div className="body">
+                <div className="grid">
+                  <div className="f wide">
+                    <label>
+                      चयनित पंजीकृत / अधिकृत डीलर{" "}
+                      <span className="tag">चरण 01 से</span>
+                    </label>
+                    <input
+                      id="fm_name"
+                      list="dlDealer"
+                      placeholder="डीलर का नाम"
+                    />
+                  </div>
+                  <div className="f">
+                    <label>फर्म पंजीकरण / empanelment सं०</label>
+                    <input id="fm_reg" className="mono" />
+                  </div>
+                  <div className="f">
+                    <label>GSTIN</label>
+                    <input
+                      id="fm_gst"
+                      className="mono"
+                      maxLength="15"
+                      style={{ textTransform: "uppercase" }}
+                    />
+                    <div className="errtxt" id="e_fm_gst"></div>
+                  </div>
+                  <div className="f">
+                    <label>अधिकृत डीलर / प्रतिनिधि</label>
+                    <input id="fm_dealer" />
+                  </div>
+                  <div className="f">
+                    <label>प्रतिनिधि मोबाइल</label>
+                    <input id="fm_mob" className="mono" maxLength="10" />
+                  </div>
+                  <div className="f wide">
+                    <label>फर्म का पता</label>
+                    <input id="fm_addr" />
+                  </div>
+                  <div className="f">
+                    <label>चयन दिनांक</label>
+                    <input id="fm_date" type="date" />
+                  </div>
+                  <div className="f">
+                    <label>प्रस्तावित स्थापना अवधि (दिन)</label>
+                    <input
+                      id="fm_days"
+                      type="number"
+                      min="1"
+                      defaultValue="30"
+                      className="mono"
+                    />
+                  </div>
+                  <div className="f">
+                    <label>वारंटी अवधि (वर्ष)</label>
+                    <select id="fm_warr"></select>
+                  </div>
+                  <div className="f">
+                    <label>निःशुल्क सेवा भ्रमण (प्रति वर्ष)</label>
+                    <input
+                      id="fm_visits"
+                      type="number"
+                      min="0"
+                      defaultValue="3"
+                      className="mono"
+                    />
+                  </div>
+                </div>
+                <h4
+                  style={{
+                    fontSize: "11.5px",
+                    color: "var(--ink2)",
+                    margin: "16px 0 6px",
+                    borderTop: "1px solid var(--line)",
+                    paddingTop: "13px",
+                  }}
+                >
+                  कृषक की स्वैच्छिक घोषणा
+                </h4>
+                <div id="fmChk"></div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {step === 4 && (
+          <section id="S4">
+            <div className="card">
+              <h2>
+                <span className="kh">४</span> भौतिक सत्यापन रिपोर्ट{" "}
+                <span className="en">Physical Verification Report</span>
+              </h2>
+              <div className="body">
+                <div className="flag info">
+                  कृषक, फर्म, प्रणाली एवं वित्तीय विवरण चरण 01/03 से स्वतः। यहाँ
+                  केवल मौके पर पाई गई स्थिति भरें।
+                </div>
+                <div className="grid">
+                  <div className="f">
+                    <label>सत्यापन दिनांक</label>
+                    <input id="pv_date" type="date" />
+                  </div>
+                  <div className="f">
+                    <label>QR Code / Unique ID</label>
+                    <input id="pv_qr" className="mono" />
+                  </div>
+                  <div className="f">
+                    <label>मौके पर मापा गया क्षेत्रफल (हे०)</label>
+                    <input
+                      id="pv_area"
+                      type="number"
+                      step="0.01"
+                      className="mono"
+                    />
+                    <div className="errtxt" id="e_pv_area"></div>
+                  </div>
+                  <div className="f">
+                    <label>फिल्टर प्रकार</label>
+                    <select id="pv_filter"></select>
+                  </div>
+                  <div className="f">
+                    <label>फर्टिगेशन उपकरण</label>
+                    <select id="pv_fert"></select>
+                  </div>
+                  <div className="f">
+                    <label>Trial Run</label>
+                    <select id="pv_trial"></select>
+                  </div>
+                  <div className="f">
+                    <label>सत्यापन परिणाम</label>
+                    <select id="pv_result"></select>
+                  </div>
+                  <div className="f">
+                    <label>सत्यापन अधिकारी</label>
+                    <input id="pv_officer" placeholder="नाम एवं पदनाम" />
+                  </div>
+                  <div className="f wide">
+                    <label>
+                      सत्यापित कुल लागत (₹){" "}
+                      <span className="tag">बिल से स्वतः</span>
+                    </label>
+                    <input id="pv_cost" className="auto mono" readOnly />
+                  </div>
+                </div>
+                <h4
+                  style={{
+                    fontSize: "11.5px",
+                    color: "var(--ink2)",
+                    margin: "16px 0 6px",
+                    borderTop: "1px solid var(--line)",
+                    paddingTop: "13px",
+                  }}
+                >
+                  BIS मानक अनुपालन (मौके पर जाँचा)
+                </h4>
+                <div id="pvChk"></div>
+                <div className="grid" style={{ marginTop: "12px" }}>
+                  <div className="f wide">
+                    <label>
+                      सत्यापन टिप्पणी{" "}
+                      <span className="tag">खाली छोड़ें तो स्वतः</span>
+                    </label>
+                    <textarea id="pv_remark" rows="2"></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {step === 5 && (
+          <section id="S5">
+            <div className="card">
+              <h2>
+                <span className="kh">५</span> कंपनी बिल — सामग्री-वार BoQ{" "}
+                <span className="en">Item-wise Bill</span>
+              </h2>
+              <div className="body">
+                <div className="grid" style={{ marginBottom: "12px" }}>
+                  <div className="f">
+                    <label>बिल किस प्रणाली पंक्ति का?</label>
+                    <select id="bl_row"></select>
+                  </div>
+                  <div className="f">
+                    <label>बिल संख्या</label>
+                    <div className="btnrow">
+                      <input
+                        id="bl_no"
+                        className="mono"
+                        style={{ flex: "1" }}
+                      />
+                      <button
+                        className="btn ghost sm"
+                        id="btnBillNo"
+                        type="button"
+                        title="अगला बिल नंबर अपने आप ले लें"
+                      >
+                        नया नंबर
+                      </button>
+                    </div>
+                  </div>
+                  <div className="f">
+                    <label>बिल दिनांक</label>
+                    <input id="bl_date" type="date" />
+                  </div>
+                  <div className="f">
+                    <label>स्थापना दिनांक</label>
+                    <input id="bl_install_date" type="date" />
+                    <div className="hint">
+                      यह बिल दिनांक से स्वतंत्र है और इसे अलग से बदला जा सकता
+                      है।
+                    </div>
+                  </div>
+                  <div className="f">
+                    <label>GST दर (कुल बिल में शामिल)</label>
+                    <select id="bl_gst"></select>
+                  </div>
+                </div>
+                <div className="btnrow" style={{ marginBottom: "10px" }}>
+                  <button
+                    className="btn water sm"
+                    id="btnAppleDemo"
+                    type="button"
+                  >
+                    🧪 Apple 0.20 हे० / 2×2 m पूरा Sample देखें
+                  </button>
+                  <span className="hint">
+                    यह Demo केवल देखने/Testing के लिए है; इसे रजिस्टर में स्वतः
+                    Save नहीं किया जाएगा।
+                  </span>
+                </div>
+                <div className="stamp-options">
+                  <div className="stamp-options-title">
+                    केवल कंपनी Tax Invoice पर नीली मुहर — प्रिंट विकल्प
+                  </div>
+                  <label>
+                    <input
+                      type="checkbox"
+                      id="bl_stamp_farmer"
+                      defaultChecked
+                    />{" "}
+                    कृषक हस्ताक्षर वाली मुहर
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      id="bl_stamp_officer"
+                      defaultChecked
+                    />{" "}
+                    प्रभारी की संस्तुति वाली मुहर
+                  </label>
+                  <span className="hint">
+                    ये दोनों मुहरें केवल प्रिंट किए जाने वाले कंपनी बिल में
+                    दिखाई देंगी। दोनों या किसी एक मुहर को रखना/हटाना चुन सकते
+                    हैं।
+                  </span>
+                </div>
+                <div id="blFlags"></div>
+                <div style={{ overflowX: "auto" }}>
+                  <table className="dt" id="blTable"></table>
+                </div>
+                <div className="btnrow" style={{ marginTop: "10px" }}>
+                  <button className="btn ghost sm" id="btnResetRates">
+                    मानक दरें पुनः लगाएँ
+                  </button>
+                  <span className="hint">
+                    मात्राएँ PDMC Annexure की spacing/area-wise BoQ से स्वतः आती
+                    हैं। प्रारंभिक कंपनी दरें guideline × निर्धारित वृद्धि से
+                    automatic हैं; manual बदलाव करने पर total लक्ष्य से अलग हो
+                    सकता है।
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="card">
+              <h2>
+                <span className="kh">₹</span> कंपनी बिल — गाइडलाइन दर + स्वीकृत
+                वृद्धि <span className="en">Guideline-linked Dealer Bill</span>
+              </h2>
+              <div className="body">
+                <div className="flag info">
+                  <b>महत्वपूर्ण:</b> सामग्री-वार BoQ की मात्राएँ चयनित{" "}
+                  <b>प्रणाली + फसल/स्पेसिंग + क्षेत्रफल</b> से स्वतः आती हैं।
+                  कंपनी बिल का मूल लक्ष्य अब उसी चयन की{" "}
+                  <b>PDMC इकाई लागत × निर्धारित वृद्धि</b> होगा — ड्रिप +8%,
+                  स्प्रिंकलर-परिवार +6.4%। इसलिए उदाहरणतः 0.20 हे०, 2×2 मी०
+                  ड्रिप में ₹29,915 × 1.08 = <b>₹32,308</b> (राउंडेड) बेस कंपनी
+                  बिल बनेगा; GST यदि अलग से चुना गया है तो वह इसके ऊपर दिखेगा।
+                </div>
+                <div style={{ overflowX: "auto" }}>
+                  <table className="dt" id="pkgTable"></table>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {step === 6 && (
+          <section id="S6">
+            <div className="card">
+              <h2>
+                <span className="kh">६</span> नकद प्राप्ति रसीद{" "}
+                <span className="en">Cash Receipt</span>
+              </h2>
+              <div className="body">
+                <div className="flag info">
+                  कृषक द्वारा कंपनी को पूर्ण वास्तविक बिल राशि का भुगतान होने पर
+                  यह रसीद बनाइए। DBT राजसहायता की राशि विभाग द्वारा कृषक के बैंक
+                  खाते में अलग से भुगतान की जाएगी।
+                </div>
+                <div className="grid">
+                  <div className="f">
+                    <label>रसीद संख्या</label>
+                    <div className="btnrow">
+                      <input
+                        id="rc_no"
+                        className="mono"
+                        style={{ flex: "1" }}
+                      />
+                      <button
+                        className="btn ghost sm"
+                        id="btnRcNo"
+                        type="button"
+                        title="अगला रसीद नंबर अपने आप ले लें"
+                      >
+                        नया नंबर
+                      </button>
+                    </div>
+                  </div>
+                  <div className="f">
+                    <label>रसीद दिनांक</label>
+                    <input id="rc_date" type="date" />
+                  </div>
+                  <div className="f">
+                    <label>
+                      कंपनी को प्राप्त पूर्ण बिल राशि (₹){" "}
+                      <span className="tag">डिफ़ॉल्ट वास्तविक बिल</span>
+                    </label>
+                    <input id="rc_amt" type="number" min="0" className="mono" />
+                  </div>
+                </div>
+                <div id="rcPreview" style={{ marginTop: "10px" }}></div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {step === 7 && (
+          <section id="S7">
+            <div className="card">
+              <h2>किसान रजिस्टर</h2>
+              <div className="body">
+                <div className="btnrow" style={{ marginBottom: "12px" }}>
+                  <input
+                    id="rsearch"
+                    placeholder="नाम / ग्राम / केंद्र / आधार से खोजें"
+                    style={{ maxWidth: "280px" }}
+                  />
+                  <button className="btn ghost sm" id="btnCsv">
+                    CSV निर्यात
+                  </button>
+                  <button className="btn ghost sm" id="btnJson">
+                    बैकअप (JSON)
+                  </button>
+                  <label
+                    className="btn ghost sm"
+                    style={{ cursor: "pointer", margin: "0" }}
+                  >
+                    बैकअप आयात
+                    <input type="file" id="fileJson" accept=".json" hidden />
+                  </label>
+                  <label
+                    className="btn water sm"
+                    style={{ cursor: "pointer", margin: "0" }}
+                  >
+                    Excel से बल्क आयात
+                    <input type="file" id="fileBulk" accept=".xlsx" hidden />
+                  </label>
+                  <a
+                    className="btn ghost sm"
+                    id="btnBulkTemplate"
+                    href="#"
+                    style={{ textDecoration: "none" }}
+                  >
+                    बल्क टेम्पलेट (.xlsx)
+                  </a>
+                </div>
+                <div id="recTable"></div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {step === 8 && (
+          <section id="S8">
+            <div className="card">
+              <h2>
+                <span className="kh">₹</span> दर तालिका — प्रबंधन{" "}
+                <span className="en">Rate Management</span>
+              </h2>
+              <div className="body">
+                <div className="flag info">
+                  यहाँ दी गई दरें ही «प्रस्तावित प्रणाली» की सारी गणना (इकाई
+                  लागत, अनुदान, कृषक अंश) में उपयोग होती हैं। दिशा-निर्देश
+                  भविष्य में बदलें तो असली फ़ाइल छेड़े बिना यहीं से नई दर लागू
+                  कर दीजिए — तुरंत हर नए एवं खुले हुए आवेदन में वही नई दर से
+                  गणना होगी। मूल गाइडलाइन दर हमेशा साथ में दिखती रहेगी, तुलना के
+                  लिए।
+                </div>
+                <div className="btnrow" style={{ marginBottom: "12px" }}>
+                  <button className="btn water sm" id="btnRateExport">
+                    दर तालिका डाउनलोड (.xlsx)
+                  </button>
+                  <label
+                    className="btn water sm"
+                    style={{ cursor: "pointer", margin: "0" }}
+                  >
+                    Excel से दरें अपडेट करें
+                    <input
+                      type="file"
+                      id="fileRateImport"
+                      accept=".xlsx"
+                      hidden
+                    />
+                  </label>
+                  <button className="btn ghost sm" id="btnRateSaveAll">
+                    तालिका में किए बदलाव सहेजें
+                  </button>
+                  <button className="btn danger sm" id="btnRateResetAll">
+                    सभी को मूल दर पर लौटाएँ
+                  </button>
+                  <span
+                    className="hint"
+                    id="rateMsg"
+                    style={{ marginLeft: "auto" }}
+                  ></span>
+                </div>
+                <div
+                  id="rateOverrideCount"
+                  className="hint"
+                  style={{ marginBottom: "8px" }}
+                ></div>
+                <div style={{ overflowX: "auto" }}>
+                  <table className="dt" id="rateTable"></table>
+                </div>
+
+                <h3 className="subh">
+                  कंपनी दर मार्कअप — गाइडलाइन दर से कितना % ऊपर{" "}
+                  <span className="en">Company Rate Markup</span>
+                </h3>
+                <div className="flag info">
+                  यह वही प्रतिशत है जिससे गाइडलाइन दर पर{" "}
+                  <b>कंपनी की वास्तविक बिल राशि</b> बनती है (कंपनी बिल, नीली
+                  मुहर, नकद रसीद — सभी जगह)। गाइडलाइन दर ऊपर बदलें या यहाँ का %
+                  — दोनों स्वतंत्र हैं; % बदलने पर गाइडलाइन दर पर कोई असर नहीं
+                  पड़ेगा, केवल कंपनी की दर ऊपर/नीचे होगी।
+                </div>
+                <div className="btnrow" style={{ marginBottom: "10px" }}>
+                  <button className="btn water sm" id="btnMarkupSave">
+                    मार्कअप % सहेजें
+                  </button>
+                  <button className="btn danger sm" id="btnMarkupReset">
+                    सभी को मूल % पर लौटाएँ
+                  </button>
+                  <span
+                    className="hint"
+                    id="markupMsg"
+                    style={{ marginLeft: "auto" }}
+                  ></span>
+                </div>
+                <div style={{ overflowX: "auto" }}>
+                  <table className="dt" id="markupTable"></table>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        <div className="ledger">
+          <div className="row">
+            <div className="amt">
+              <span className="k">कुल परियोजना लागत</span>
+              <span className="v mono" id="L_cost">
+                ₹0
+              </span>
+            </div>
+            <div className="amt big">
+              <span className="k">देय अनुदान</span>
+              <span className="v mono" id="L_sub">
+                ₹0
+              </span>
+            </div>
+            <div className="amt far">
+              <span className="k">कृषक अंश</span>
+              <span className="v mono" id="L_far">
+                ₹0
+              </span>
+            </div>
+            <div className="amt">
+              <span className="k">दर</span>
+              <span className="v mono" id="L_pct">
+                —
+              </span>
+            </div>
+            <div className="amt">
+              <span className="k">कुल क्षेत्र</span>
+              <span className="v mono" id="L_area">
+                0 हे०
+              </span>
+            </div>
+            <div style={{ flex: "1" }}></div>
+            <div className="btnrow">
+              <button className="btn ghost sm" id="btnSave">
+                अभी सहेजें
+              </button>
+              <span className="savemsg" id="saveMsg"></span>
+              <button className="btn water sm" id="btnPrint2">
+                वर्तमान प्रपत्र प्रिंट
+              </button>
+              <button className="btn water sm" id="btnPrintAll">
+                सभी 6 प्रपत्र प्रिंट
+              </button>
+            </div>
           </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function DocumentHeader({ title, subtitle }) {
-  return (
-    <div className="doc-header">
-      <div className="doc-kicker">राज्य बागवानी मिशन, उत्तराखण्ड</div>
-      <h1>{title}</h1>
-      {subtitle && <p>{subtitle}</p>}
-    </div>
-  );
-}
-
-function ApplicationDocument({ form, calculated }) {
-  return (
-    <article className="print-document devanagari">
-      <DocumentHeader
-        title="बागवानी मिशन के अन्तर्गत संरक्षित खेती (Protected Cultivation) के लिये आवेदन हेतु प्रारूप-B5"
-        subtitle={`जनपद: ${safe(form.districtName)}  |  उद्यान कार्ड संख्या: ${safe(form.gardenCardNo, "---")}`}
-      />
-
-      <div className="doc-two-column">
-        <div className="doc-info-list">
-          <p>
-            <b>1. लाभार्थी का नाम:</b> {safe(form.farmerName)}
-          </p>
-          <p>
-            <b>2. पिता/पति का नाम:</b> {safe(form.fatherName)}
-          </p>
-          <p>
-            <b>3. पता:</b> ग्राम {safe(form.villageName)}, डाकखाना{" "}
-            {safe(form.postOffice)}, विकासखण्ड {safe(form.blockName)}, जनपद{" "}
-            {safe(form.districtName)}
-          </p>
-          <p>
-            <b>4. मोबाइल नंबर:</b> {safe(form.mobileNo)}
-          </p>
-          <p>
-            <b>5. भूमि विवरण:</b> कुल भूमि {safe(form.totalArableLand, "0")}{" "}
-            है०, बागवानी भूमि {safe(form.horticultureLand, "0")} है०
-          </p>
-          <p>
-            <b>6. सिंचाई सुविधा:</b> {safe(form.irrigationFacilities)}
-          </p>
-          <p>
-            <b>7. खसरा संख्या:</b>{" "}
-            <span className="mono">{safe(form.khasraNo)}</span>
-          </p>
-        </div>
-        <div className="photo-box">
-          <span>
-            लाभार्थी का
-            <br />
-            फोटो
-          </span>
-        </div>
-      </div>
-
-      <div className="doc-box">
-        <div className="doc-box-title">लाभार्थी की व्यक्तिगत जानकारी</div>
-        <div className="checkbox-row">
-          <span>श्रेणी:</span>
-          <Check active={form.farmerCategory === "सामान्य"} /> सामान्य
-          <Check active={form.farmerCategory === "SC"} /> SC
-          <Check active={form.farmerCategory === "ST"} /> ST
-          <Check active={form.farmerCategory === "अन्य"} /> OBC
-        </div>
-        <div className="checkbox-row">
-          <span>लिंग:</span>
-          <Check active={form.farmerGender === "Male"} /> पुरुष
-          <Check active={form.farmerGender === "Female"} /> महिला
-          <span className="ml-gap">कृषक:</span>
-          <Check active={form.farmerSize === "Small/Marginal"} /> लघु / सीमान्त
-          <Check active={form.farmerSize === "Big farmer"} /> बड़ा
-        </div>
-        <div className="checkbox-row">
-          <span>शैक्षिक योग्यता:</span>
-          <Check active={form.farmerEducation === "Non Metric"} /> Non-Metric
-          <Check active={form.farmerEducation === "Metric"} /> Metric
-          <Check active={form.farmerEducation === "Intermediate"} />{" "}
-          Intermediate
-          <Check active={form.farmerEducation === "Graduate"} /> Graduate
-        </div>
-      </div>
-
-      <div className="doc-section-heading">
-        प्रस्तावित योजना एवं तकनीकी विवरण
-      </div>
-      <table className="doc-table">
-        <thead>
-          <tr>
-            <th>योजना</th>
-            <th>क्षेत्रफल (Sqm)</th>
-            <th>तकनीकी विवरण</th>
-            <th>मानक</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>
-              {calculated.antiHail ? "✓ एंटीहेलनेट" : "✓ प्लास्टिक मल्चिंग"}
-            </td>
-            <td>{num(form.areaSqm).toLocaleString("en-IN")}</td>
-            <td>{calculated.subDescription}</td>
-            <td>{calculated.standardCode}</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div className="doc-section-heading">धनराशि व्यवस्था एवं फसल उत्पादन</div>
-      <table className="doc-table">
-        <tbody>
-          <tr>
-            <th>धनराशि स्रोत</th>
-            <td>{form.fundType}</td>
-            <th>बैंक</th>
-            <td>{safe(form.fundBankName)}</td>
-          </tr>
-          <tr>
-            <th>खाता/कार्ड</th>
-            <td>{safe(form.fundExtraVal1)}</td>
-            <th>लिमिट/विवरण</th>
-            <td>{safe(form.fundExtraVal2)}</td>
-          </tr>
-          <tr>
-            <th>फसल</th>
-            <td>{safe(form.cropName)}</td>
-            <th>क्षेत्रफल</th>
-            <td>{safe(form.cropArea, "0")} है०</td>
-          </tr>
-          <tr>
-            <th>उत्पादन</th>
-            <td>{safe(form.cropProd, "0")} कुंतल</td>
-            <th>विपणन</th>
-            <td>{safe(form.marketingStrategy)}</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div className="financial-doc">
-        <div>
-          <span>कुल लागत</span>
-          <b>{money(calculated.totalCost)}</b>
-        </div>
-        <div>
-          <span>कृषक अंशदान (50%)</span>
-          <b>{money(calculated.farmerShare)}</b>
-        </div>
-        <div>
-          <span>विभागीय अनुदान (50%)</span>
-          <b>{money(calculated.subsidy)}</b>
-        </div>
-      </div>
-
-      <div className="signature-grid">
-        <div>
-          <span className="signature-line" />
-          <b>लाभार्थी के हस्ताक्षर</b>
-        </div>
-        <div>
-          <span className="signature-line" />
-          <b>संबंधित अधिकारी के हस्ताक्षर व मोहर</b>
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function InvoiceDocument({ form, calculated }) {
-  return (
-    <article className="print-document invoice-doc devanagari">
-      <div className="invoice-top">
-        <div>
-          <span className="invoice-label">TAX INVOICE</span>
-          <h1>{safe(form.firmName, "M/S AVANI ENTERPRISES")}</h1>
-          <p>{safe(form.firmAddress)}</p>
-        </div>
-        <div className="invoice-meta">
-          <p>
-            <b>GSTIN:</b>{" "}
-            <span className="mono">{safe(form.firmGSTIN, "---")}</span>
-          </p>
-          <p>
-            <b>Invoice No:</b>{" "}
-            <span className="mono red">{safe(form.invoiceNo, "---")}</span>
-          </p>
-          <p>
-            <b>Date:</b>{" "}
-            <span className="mono">{dateIN(form.invoiceDate)}</span>
-          </p>
-        </div>
-      </div>
-
-      <div className="bill-to-grid">
-        <div>
-          <h3>Bill To / Deliver To</h3>
-          <b>{safe(form.farmerName)}</b>
-          <p>S/o: {safe(form.fatherName)}</p>
-          <p>
-            ग्राम: {safe(form.villageName)}, विकासखंड: {safe(form.blockName)}
-          </p>
-          <p>{safe(form.districtName)} (उत्तराखण्ड)</p>
-        </div>
-        <div className="text-right">
-          <h3>Technical Specs Enforced</h3>
-          <p>
-            <b>Material Type:</b>{" "}
-            {calculated.antiHail
-              ? form.netType
-              : `${form.mulchingThickness} Micron (${form.mulchingColor})`}
-          </p>
-          <p>
-            <b>Standard Code:</b>{" "}
-            <span className="mono">{calculated.standardCode}</span>
-          </p>
-          <p>
-            <b>Khasra Number:</b>{" "}
-            <span className="mono">{safe(form.khasraNo, "---")}</span>
-          </p>
-        </div>
-      </div>
-
-      <table className="doc-table invoice-table">
-        <thead>
-          <tr>
-            <th>S.No.</th>
-            <th>विवरण</th>
-            <th>HSN</th>
-            <th>Qty</th>
-            <th>Rate</th>
-            <th>Unit</th>
-            <th>Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>1</td>
-            <td>
-              <b>{calculated.materialDescription}</b>
-              <small>{calculated.subDescription}</small>
-            </td>
-            <td className="mono">{calculated.hsnCode}</td>
-            <td>{num(form.areaSqm).toLocaleString("en-IN")}</td>
-            <td>{money(calculated.rate)}</td>
-            <td>SQM</td>
-            <td>
-              <b>{money(calculated.totalCost)}</b>
-            </td>
-          </tr>
-          <tr className="total-row">
-            <td colSpan="6">Total Cost:</td>
-            <td>{money(calculated.totalCost)}</td>
-          </tr>
-          <tr className="grand-row">
-            <td colSpan="6">Grand Total (Inclusive of Subsidy):</td>
-            <td>{money(calculated.totalCost)}</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div className="invoice-footer-grid">
-        <div>
-          <div className="bank-box">
-            <h4>🏦 Supplier Bank Details (For Direct Subsidy Release)</h4>
-            <p>
-              <b>Bank Name:</b> {safe(form.firmBankName)}
-            </p>
-            <p>
-              <b>Account Number:</b>{" "}
-              <span className="mono">{safe(form.firmBankAcc)}</span>
-            </p>
-            <p>
-              <b>IFSC Code:</b>{" "}
-              <span className="mono">{safe(form.firmIFSC)}</span>
-            </p>
+          <div className="bar">
+            <span id="B_goi" style={{ background: "#2f9aa3" }}></span>
+            <span id="B_st" style={{ background: "#5cc4cb" }}></span>
+            <span id="B_tp" style={{ background: "#a9e4e8" }}></span>
+            <span id="B_fr" style={{ background: "#f0c46a" }}></span>
           </div>
-          <p className="terms">
-            * Received/Delivered the above mentioned material in good condition.
-          </p>
-          <p className="terms">
-            * Interest will be charged at 18% p.a on overdue payments.
-          </p>
-        </div>
-        <div className="supplier-sign">
-          <b>For {safe(form.firmName)}</b>
-          <span className="stamp-box">Authorised Stamp</span>
-          <b>Authorised Signatory</b>
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function AffidavitDocument({ form, calculated }) {
-  return (
-    <article className="print-document affidavit-doc devanagari">
-      <div className="affidavit-title">
-        <h1>शपथ पत्र (AFFIDAVIT)</h1>
-        <p>Non-Judicial Stamp Paper value of ₹10/-</p>
-      </div>
-
-      <p className="aff-lead">
-        मैं, <b>{safe(form.farmerName)}</b>, पुत्र/पुत्री/पत्नी श्री{" "}
-        <b>{safe(form.fatherName)}</b>, निवासी ग्राम:{" "}
-        <b>{safe(form.villageName)}</b>, विकासखण्ड:{" "}
-        <b>{safe(form.blockName)}</b>, जनपद: <b>{safe(form.districtName)}</b>,
-        उत्तराखण्ड, आज दिनांक <b>{dateIN(form.invoiceDate)}</b> को यह शपथ पत्र
-        अपनी सच्चाई एवं शुद्धता के साथ प्रस्तुत करता/करती हूँ कि:
-      </p>
-
-      <ol className="aff-list">
-        <li>
-          मैंने अपनी भूमि (खसरा संख्या <b>{safe(form.khasraNo, "---")}</b>) में
-          <b>
-            {calculated.antiHail
-              ? " एंटीहेलनेट (Anti-Hail Net)"
-              : " मल्चिंग शीट (Mulching Sheet)"}
-          </b>
-          की स्थापना का कार्य <b>{safe(form.firmName)}</b> द्वारा विभागीय मानकों
-          (MIDH) एवं BIS ग्रेड के अनुसार पूर्ण करा लिया है।
-        </li>
-        <li>
-          <b>कार्य एवं वित्तीय विश्लेषण का विवरण:</b>
-          <ul>
-            <li>
-              कुल स्थापित/स्वीकृत क्षेत्रफल:{" "}
-              <b>{num(form.areaSqm).toLocaleString("en-IN")}</b> वर्ग मीटर
-            </li>
-            <li>
-              निर्माण सामग्री/शीट्स की कुल लागत:{" "}
-              <b>{money(calculated.totalCost)}</b>
-            </li>
-            <li>
-              मेरा स्वयं का 50% अंशदान: <b>{money(calculated.farmerShare)}</b>
-            </li>
-            <li>
-              विभागीय अनुदान राशि (50%): <b>{money(calculated.subsidy)}</b>
-            </li>
-          </ul>
-        </li>
-        <li>
-          मैं प्रमाणित करता/करती हूँ कि मुझे या मेरे परिवार के किसी भी सदस्य को
-          विगत वर्षों में कभी भी इस मद हेतु विभागीय सहायता/अनुदान प्राप्त नहीं
-          हुआ है।
-        </li>
-        <li>
-          स्थापित संरचना की सुरक्षा, आगजनी, ओलावृष्टि, फटने, जंगली जानवरों
-          द्वारा क्षति तथा नियमित देखभाल की समस्त जिम्मेदारी मेरी स्वयं की होगी।
-        </li>
-        <li>
-          मैंने आपूर्तिकर्ता संस्था <b>{safe(form.firmName)}</b> को अपना 50%
-          अंशदान पूर्णतः अदा कर दिया है। विभाग से देय 50% अनुदान राशि सीधे उक्त
-          आपूर्तिकर्ता फर्म के बैंक खाते में अवमुक्त करने का अनुरोध है।
-        </li>
-      </ol>
-
-      <div className="declaration">
-        <b>अंतिम घोषणा:</b>
-        <p>
-          मैं उपरोक्त शपथपत्र की सभी बातों को अपने निजी ज्ञान एवं विश्वास के
-          अनुसार सत्य एवं सही मानता/मानती हूँ। इसमें कोई भी तथ्य छिपाया नहीं गया
-          है। यदि कोई कथन असत्य पाया गया, तो प्राप्त अनुदान राशि वापस करने तथा
-          कानूनी कार्यवाही भुगतने हेतु मैं पूर्ण रूप से सहमत हूँ।
-        </p>
-      </div>
-
-      <div className="signature-grid affidavit-signatures">
-        <div>
-          <p>गवाहों के नाम व हस्ताक्षर:</p>
-          <p>1. ___________________</p>
-          <p>2. ___________________</p>
-        </div>
-        <div className="signature-center">
-          <span className="signature-line" />
-          <b>शपथी/शपथकर्ता के हस्ताक्षर</b>
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function VerificationDocument({ form, calculated }) {
-  return (
-    <article className="print-document verification-doc devanagari">
-      <div className="office-copy">कार्यालय प्रति</div>
-      <DocumentHeader
-        title="भौतिक सत्यापन रिपोर्ट (एंटीहेलनेट / मल्चिंग शीट)"
-        subtitle="राज्य बागवानी मिशन, उत्तराखण्ड"
-      />
-
-      <div className="verify-grid">
-        <div className="verify-box">
-          <h3>1. कृषक एवं भूमि का विवरण</h3>
-          <p>
-            <b>कृषक का नाम:</b> {safe(form.farmerName)}
-          </p>
-          <p>
-            <b>पिता/पति का नाम:</b> {safe(form.fatherName)}
-          </p>
-          <p>
-            <b>ग्राम व विकासखंड:</b> {safe(form.villageName)},{" "}
-            {safe(form.blockName)}
-          </p>
-          <p>
-            <b>मोबाइल नंबर:</b> {safe(form.mobileNo)}
-          </p>
-          <p>
-            <b>कृषक श्रेणी / लिंग:</b> {safe(form.farmerCategory)} /{" "}
-            {form.farmerGender === "Male" ? "पुरुष" : "महिला"}
-          </p>
-        </div>
-        <div className="verify-box">
-          <h3>2. आपूर्तिकर्ता फर्म का विवरण</h3>
-          <p>
-            <b>फर्म का नाम:</b> {safe(form.firmName)}
-          </p>
-          <p>
-            <b>निःशुल्क स्थापना सुविधा:</b> ☑ हाँ
-          </p>
-          <p>
-            <b>वारंटी प्रमाण-पत्र प्राप्त:</b> ☑ हाँ
-          </p>
-          <p>
-            <b>वारंटी अवधि:</b>{" "}
-            <span className="indigo-text">{calculated.warranty}</span>
-          </p>
-          <p>
-            <b>खसरा संख्या:</b>{" "}
-            <span className="mono">{safe(form.khasraNo)}</span>
-          </p>
+          <div className="legend">
+            <span>
+              <i style={{ background: "#2f9aa3" }}></i>भा०स० अंश{" "}
+              <b className="mono" id="L_goi">
+                ₹0
+              </b>
+            </span>
+            <span>
+              <i style={{ background: "#5cc4cb" }}></i>राज्यांश{" "}
+              <b className="mono" id="L_st">
+                ₹0
+              </b>
+            </span>
+            <span>
+              <i style={{ background: "#a9e4e8" }}></i>राज्य टॉप-अप 25%{" "}
+              <b className="mono" id="L_tp">
+                ₹0
+              </b>
+            </span>
+            <span>
+              <i style={{ background: "#f0c46a" }}></i>कृषक अंश
+            </span>
+          </div>
         </div>
       </div>
 
-      <h3 className="verify-heading">
-        3. स्थापना एवं तकनीकी सत्यापन (मौके पर जांच)
-      </h3>
-      <table className="doc-table">
-        <thead>
-          <tr>
-            <th>अवयव</th>
-            <th>स्वीकृत क्षेत्रफल (M²)</th>
-            <th>मौके पर मापा (M²)</th>
-            <th>लागू BIS मानक</th>
-            <th>कार्य की स्थिति</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>
-              <b>{calculated.antiHail ? "एंटीहेलनेट" : "मल्चिंग शीट"}</b>
-            </td>
-            <td>{num(form.areaSqm).toLocaleString("en-IN")}</td>
-            <td>
-              <b>{num(form.areaSqm).toLocaleString("en-IN")}</b>
-            </td>
-            <td className="mono">{calculated.standardCode}</td>
-            <td className="green-text">☑ सन्तोषजनक</td>
-          </tr>
-        </tbody>
-      </table>
-      <p className="technical-note">
-        Specs Check: {calculated.materialDescription} |{" "}
-        {calculated.subDescription}
-      </p>
-
-      <h3 className="verify-heading">4. वित्तीय विवरण (Financial Summary)</h3>
-      <table className="doc-table financial-table">
-        <tbody>
-          <tr>
-            <th>1</th>
-            <td>कुल स्वीकृत/सत्यापित लागत (Total Cost)</td>
-            <td>{money(calculated.totalCost)}</td>
-          </tr>
-          <tr>
-            <th>2</th>
-            <td>कृषक द्वारा वहन की गई धनराशि (50% Share)</td>
-            <td className="green-text">{money(calculated.farmerShare)}</td>
-          </tr>
-          <tr className="subsidy-row">
-            <th>3</th>
-            <td>फर्म को अवमुक्त की जाने वाली अनुदान राशि (50% Subsidy)</td>
-            <td>{money(calculated.subsidy)}</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div className="certification">
-        <p>
-          <b>प्रमाण-पत्र एवं संस्तुति:</b> प्रमाणित किया जाता है कि हमारे द्वारा
-          कृषक के प्रक्षेत्र का भौतिक सत्यापन किया गया। स्थापित संरचना का कार्य
-          सन्तोषजनक, स्वीकृत तकनीकी मानदंडों, विभागीय दिशा-निर्देशों एवं
-          निर्धारित BIS मानकों के अनुरूप पाया गया है।
-        </p>
-        <p>
-          अतः लाभार्थी को देय अनुदान राशि{" "}
-          <b className="indigo-text">{money(calculated.subsidy)}</b> मात्र, सीधे
-          अधिकृत आपूर्तिदाता फर्म <b>{safe(form.firmName)}</b> को भुगतान किए
-          जाने हेतु संस्तुति सहित अग्रसारित की जाती है।
-        </p>
-      </div>
-
-      <div className="signature-grid verify-signatures">
-        <div>
-          <span className="signature-line" />
-          <b>कृषक के हस्ताक्षर</b>
-          <small>दिनांक: ___/___/2026</small>
-        </div>
-        <div>
-          <span className="signature-line wide" />
-          <b>सत्यापन अधिकारी के हस्ताक्षर व मोहर</b>
-          <small>उद्यान विभाग, उत्तराखंड शासन</small>
-        </div>
-      </div>
-    </article>
+      <datalist id="dlRel">
+        <option value="पिता" />
+        <option value="माता" />
+        <option value="भाई" />
+        <option value="बहन" />
+        <option value="पुत्र" />
+        <option value="पुत्री" />
+        <option value="पति" />
+        <option value="पत्नी" />
+        <option value="चाचा" />
+        <option value="ताऊ" />
+      </datalist>
+      <datalist id="dlCrop"></datalist>
+      <div id="printArea" aria-label="प्रिंट पूर्वावलोकन"></div>
+    </div>
   );
 }
