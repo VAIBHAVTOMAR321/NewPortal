@@ -527,6 +527,7 @@
 .pmksy-app .amt {
   display: flex;
   flex-direction: column;
+  width: 0% !important;
 }
 .pmksy-app .amt .k {
   font-size: 10px;
