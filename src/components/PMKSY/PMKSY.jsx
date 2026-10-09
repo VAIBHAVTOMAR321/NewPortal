@@ -1,11 +1,177 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import './PMKSY.css';
+
+const FEEDBACK_KEY = 'pmksy:feedback:v1';
+const FEEDBACK_WHERE = [
+  'चरण 01 — आवेदन प्रपत्र',
+  'चरण 01 — भूमि विवरण / मिलान',
+  'चरण 01 — प्रणाली पंक्ति एवं अनुदान',
+  'चरण 02 — शपथ पत्र',
+  'चरण 03 — फर्म चयन',
+  'चरण 04 — भौतिक सत्यापन',
+  'चरण 05 — कंपनी बिल / BoQ',
+  'किसान रजिस्टर / सहेजना',
+  'प्रिंट एवं छपाई',
+  'दरें / गणना सही नहीं',
+  'केंद्र–विकासखंड सूची',
+  'अन्य / पूरी प्रणाली',
+];
+const FEEDBACK_KINDS = ['गड़बड़ी है', 'ऐसा बदलो', 'नया चाहिए'];
+const SAMPLE_INVOICE_ITEMS = [
+  ['Screen Filter 10 m3/hr / Disc Filter', 'IS 12785:1994', '1', 'Nos', '3,580'],
+  ['Venturi & Manifold (1.5 in)', 'IS 14483 (Part 1):1997', '1', 'Nos', '1,718'],
+  ['Air Release Valve 1 in', 'Mfr. Assured Quality (Para 15.7)', '1', 'Nos', '430'],
+  ['Non Return Valve 1.5 in', 'Mfr. Assured Quality (Para 15.7)', '1', 'Nos', '573'],
+  ['By-Pass Assembly 1.5x1.5 in', 'Mfr. Assured Quality (Para 15.7)', '1', 'Nos', '716'],
+  ['HDPE Pipe 50 mm; 4 kg/cm2', 'IS 4984:2016', '54', 'Meter', '115'],
+  ['Lateral 12 mm, Class II; 2.5 kg/cm2', 'IS 12786:1989', '1010', 'Meter', '11'],
+  ['Pressure Regulating Emitter/Dripper 2/4/8 lph', 'IS 13487:1992', '1020', 'Nos', '3'],
+  ['Control Valve 50 mm', 'IS 18286:2023', '1', 'Nos', '573'],
+  ['Control Valve 63 mm', 'IS 18286:2023', '1', 'Nos', '859'],
+  ['Flush Valve 50 mm', 'IS 18286:2023', '2', 'Nos', '501'],
+  ['Throttle Valve 1.5 in', 'IS 18286:2023', '1', 'Nos', '644'],
+];
+const SAMPLE_INVOICE_GRAND = 32308;
+const sampleInvoiceRate = (rate) => (
+  Number(String(rate).replace(/,/g, '')) * (SAMPLE_INVOICE_GRAND / (30475 + 1523.75))
+);
+const sampleInvoiceLineTotal = (item) => (
+  Number(item[2]) * Number(sampleInvoiceRate(item[4]).toFixed(2))
+);
+const sampleInvoiceSubtotal = SAMPLE_INVOICE_ITEMS.reduce((sum, item) => sum + sampleInvoiceLineTotal(item), 0);
+const sampleInvoiceCurrency = (amount) => amount.toLocaleString('en-IN', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+const SAMPLE_PRINT_DOCUMENTS = [
+  {
+    title: 'सूक्ष्म सिंचाई — आवेदन-सह-संयुक्त सर्वेक्षण प्रपत्र',
+    sections: [
+      { title: 'क — क्षेत्र विवरण', fields: [['जनपद', 'पौड़ी गढ़वाल'], ['उद्यान सचल दल केंद्र', 'कोटद्वार'], ['विकासखंड', 'नगर निगम कोटद्वार'], ['विधान सभा', 'कोटद्वार'], ['ग्राम पंचायत', 'कोटद्वार'], ['ग्राम', 'शिबूनगर']] },
+      { title: 'ख — किसान एवं बैंक विवरण (DBT हेतु)', fields: [['किसान का नाम', 'श्री सुरेश सिंह'], ['पिता का नाम', 'पुत्र श्री मोहन सिंह'], ['लिंग / सामाजिक श्रेणी', 'पुरुष / सामान्य'], ['मोबाइल', '9876543210'], ['आधार संख्या', 'XXXX-XXXX-1234'], ['बैंक खाता सं०', '123456789012'], ['बैंक एवं शाखा', 'भारतीय स्टेट बैंक — कोटद्वार शाखा'], ['IFSC', 'SBIN0001234'], ['उद्यान कार्ड सं०', 'HK-2026-00125']] },
+      { title: 'ग — भूमि एवं प्रस्तावित प्रणाली', fields: [['खाता / खसरा सं०', '00056 / 125/2'], ['भूमि क्षेत्रफल', '0.20 हे०'], ['जल स्रोत / भूमि प्रकृति', 'निजी भूमि / समतल'], ['प्रस्तावित प्रणाली', 'ड्रिप — सेब — 2×2 m'], ['प्रस्तावित क्षेत्र', '0.20 हे०']] },
+      { title: 'घ — फर्म एवं वित्तीय विवरण', fields: [['अधिकृत फर्म', 'Avani Enterprises'], ['पंजीकरण सं०', 'UK-PDMC-AVANI-2026'], ['अनुमानित इकाई लागत', '₹29,915'], ['आवेदन दिनांक', '10-09-2026']] },
+    ],
+    footer: 'लाभार्थी के हस्ताक्षर ____________________    अधिकृत अधिकारी ____________________',
+  },
+  {
+    title: 'आवेदन · पृष्ठ 2 / 2',
+    sections: [
+      { title: 'ङ — लाभार्थी की घोषणा', paragraphs: ['मैं, श्री सुरेश सिंह, सत्यनिष्ठा से घोषित करता हूँ कि इस प्रपत्र में दी गई समस्त सूचनाएँ पूर्णतः सत्य एवं सही हैं। मैं योजना के दिशा-निर्देशों के अनुसार अपने प्रक्षेत्र में सूक्ष्म सिंचाई प्रणाली स्थापित कराने हेतु सहमत हूँ तथा उसके रख-रखाव एवं सुचारु संचालन की पूर्ण जिम्मेदारी लेता हूँ। मैं स्वीकृत अनुदान DBT के माध्यम से सीधे अपने आधार-लिंक बैंक खाते में प्राप्त करने हेतु सहमत हूँ। मैंने विगत 07 वर्षों में इस भूमि खंड पर सूक्ष्म सिंचाई हेतु किसी भी सरकारी योजना से अनुदान प्राप्त नहीं किया है।'], fields: [['नाम', 'श्री सुरेश सिंह'], ['दिनांक', '10-09-2026']] },
+      { title: 'भाग – 2 : संयुक्त सर्वेक्षण के समय भरा जाने वाला विवरण', fields: [['अक्षांश / देशांतर', '29.750000 / 78.525000'], ['कृषि मैपर एप ID', 'PMKSY-DEMO-APPLE-0001'], ['भूमि की प्रकृति', 'समतल'], ['जल स्रोत की दूरी / ऊँचाई अंतर', '80 मी० / 12 मी०'], ['जल गुणवत्ता / पंप', 'अच्छी / सबमर्सिबल'], ['पंप क्षमता', '2 HP']] },
+      { title: 'छ — प्रस्तावित प्रणाली एवं अनुदान की गणना', table: { headings: ['क्र.', 'प्रणाली', 'फसल', 'स्पेसिंग', 'क्षेत्र (हे०)', 'इकाई लागत (₹)', 'दर', 'अनुदान (₹)', 'कृषक अंश (₹)'], rows: [['1', 'ड्रिप', 'सेब', '2×2 m', '0.20', '29,915', '80%', '23,932', '5,983'], ['', '', '', 'योग', '0.20', '29,915', '80%', '23,932', '5,983']] } },
+      { title: 'ज — पात्रता एवं स्थल परीक्षण जाँच सूची', fields: [['पूर्व अनुदान नहीं', '☑ हाँ'], ['निर्धारित क्षेत्र में स्थापना', '☑ हाँ'], ['सिंचाई जल स्रोत उपलब्ध', '☑ हाँ'], ['लाभार्थी दस्तावेज़ सत्यापित', '☑ हाँ']] },
+      { title: 'झ — प्रमाणीकरण एवं संस्तुति', paragraphs: ['प्रमाणित किया जाता है कि उपरोक्त प्रक्षेत्र का संयुक्त रूप से स्थलीय निरीक्षण किया गया, अभिलेखों का परीक्षण किया गया तथा लाभार्थी दिशा-निर्देशों के अनुसार पात्र पाया गया। प्रकरण संस्तुत किया जाता है।'], fields: [['संस्तुति / टिप्पणी', '0.20 हे० क्षेत्र हेतु ड्रिप प्रणाली की स्थापना संस्तुत। कुल लागत ₹29,915, देय अनुदान ₹23,932, कृषक अंश ₹5,983।']] },
+    ],
+    footer: 'फर्म प्रतिनिधि ____________________    प्रभारी, उद्यान सचल दल केंद्र ____________________',
+  },
+  {
+    title: 'लाभार्थी स्व-घोषणा एवं शपथ पत्र',
+    sections: [
+      { title: 'लाभार्थी का विवरण', fields: [['नाम', 'श्री सुरेश सिंह'], ['पिता का नाम', 'श्री मोहन सिंह'], ['ग्राम / विकासखंड', 'शिबूनगर / नगर निगम कोटद्वार'], ['भूमि खाता / खसरा', '00056 / 125/2'], ['कुल क्षेत्र', '0.20 हे०']] },
+      { title: 'घोषणा', paragraphs: ['मैं सत्यनिष्ठा से घोषणा करता हूँ कि मैंने अपनी 0.20 हेक्टेयर कृषि भूमि पर PMKSY-PDMC के अंतर्गत 0.20 हेक्टेयर क्षेत्र में ड्रिप सिंचाई प्रणाली (सेब, 2×2 m) स्थापित कराई है।', 'मैंने विगत सात वर्षों में इस भू-खंड पर सूक्ष्म सिंचाई हेतु केंद्र अथवा राज्य सरकार की किसी योजना से दोहरा अनुदान प्राप्त नहीं किया है। प्रणाली के रख-रखाव एवं सुरक्षा की जिम्मेदारी मेरी होगी तथा विभागीय भौतिक सत्यापन एवं जियो-टैगिंग के लिए मेरी सहमति है।', 'मैं प्रमाणित करता हूँ कि इस शपथ पत्र में दी गई जानकारी मेरे ज्ञान एवं विश्वास के अनुसार सत्य है। गलत जानकारी पाए जाने पर नियमानुसार कार्यवाही एवं अनुदान राशि की वसूली स्वीकार होगी।'], fields: [['स्वीकृत प्रणाली', 'ड्रिप — सेब'], ['क्षेत्रफल', '0.20 हे०'], ['स्थान / दिनांक', 'कोटद्वार / 10-09-2026'], ['शपथ आयुक्त', 'शपथ आयुक्त, कोटद्वार']] },
+    ],
+    footer: 'लाभार्थी के हस्ताक्षर ____________________    शपथ आयुक्त की मुहर ____________________',
+  },
+  {
+    title: 'फर्म सहमति एवं स्थापना प्रमाण-पत्र',
+    sections: [
+      { title: 'लाभार्थी एवं फर्म', fields: [['लाभार्थी', 'श्री सुरेश सिंह'], ['फर्म', 'Avani Enterprises'], ['फर्म पंजीकरण', 'UK-PDMC-AVANI-2026'], ['GSTIN', '05COWPD8094K1Z6'], ['मोबाइल', '9536462212'], ['स्थापना स्थल', 'ग्राम शिबूनगर, कोटद्वार, पौड़ी गढ़वाल']] },
+      { title: 'स्थापित प्रणाली का विवरण', fields: [['प्रणाली / फसल', 'ड्रिप / सेब'], ['स्पेसिंग', '2×2 m'], ['स्थापित क्षेत्र', '0.20 हे०'], ['स्थापना दिनांक', '18-09-2026'], ['वारंटी अवधि', '1 वर्ष']] },
+      { title: 'फर्म का प्रमाणन', paragraphs: ['प्रमाणित किया जाता है कि उपर्युक्त लाभार्थी के खेत में उल्लिखित सूक्ष्म सिंचाई प्रणाली निर्धारित तकनीकी मानकों के अनुसार स्थापित की गई है। प्रणाली की जानकारी एवं स्थापना विवरण सही हैं।'] },
+    ],
+    footer: 'लाभार्थी के हस्ताक्षर ____________________    फर्म प्रतिनिधि एवं मुहर ____________________',
+  },
+  {
+    title: 'कंपनी बिल / Tax Invoice एवं BoQ',
+    sections: [
+      { title: 'बिल विवरण', fields: [['फर्म', 'Avani Enterprises'], ['GSTIN', '05COWPD8094K1Z6'], ['बिल संख्या', 'DEMO-APPLE-0001'], ['बिल दिनांक', '20-09-2026'], ['लाभार्थी', 'श्री सुरेश सिंह'], ['स्थापना दिनांक', '18-09-2026']] },
+      { title: 'BoQ — ड्रिप प्रणाली (सेब, 2×2 m, 0.20 हे०)', table: { headings: ['क्र.', 'विवरण', 'क्षेत्र / राशि (₹)'], rows: [['1', 'कुल गाइडलाइन लागत', '0.20 हे० / 29,915'], ['2', 'कंपनी बिल राशि (मार्कअप सहित)', '32,308']] } },
+      { title: 'भुगतान एवं प्रमाणन', fields: [['कुल बिल राशि', '₹32,308'], ['GST', 'कुल राशि में अलग से देय नहीं'], ['भुगतान स्थिति', 'लाभार्थी द्वारा भुगतान प्राप्त']] },
+    ],
+    footer: 'लाभार्थी के हस्ताक्षर ____________________    अधिकृत फर्म प्रतिनिधि ____________________',
+  },
+  {
+    title: 'नकद प्राप्ति रसीद',
+    sections: [
+      { title: 'रसीद विवरण', fields: [['रसीद संख्या', '001'], ['रसीद दिनांक', '20-09-2026'], ['प्राप्तकर्ता फर्म', 'Avani Enterprises'], ['लाभार्थी का नाम', 'श्री सुरेश सिंह'], ['ग्राम', 'शिबूनगर, कोटद्वार'], ['कार्य', 'ड्रिप सिंचाई प्रणाली — सेब — 0.20 हे०']] },
+      { title: 'प्राप्त धनराशि', table: { headings: ['विवरण', 'राशि (₹)'], rows: [['ड्रिप प्रणाली एवं स्थापना — बिल DEMO-APPLE-0001', '32,308'], ['कुल प्राप्त राशि', '32,308']] }, paragraphs: ['रुपये बत्तीस हजार तीन सौ आठ मात्र। उपर्युक्त राशि लाभार्थी से प्राप्त हुई।'] },
+    ],
+    footer: 'लाभार्थी के हस्ताक्षर ____________________    प्राप्तकर्ता के हस्ताक्षर एवं मुहर ____________________',
+  },
+  {
+    title: 'भौतिक सत्यापन एवं स्थापना निरीक्षण रिपोर्ट',
+    sections: [
+      { title: 'निरीक्षण विवरण', fields: [['निरीक्षण दिनांक', '19-09-2026'], ['लाभार्थी', 'श्री सुरेश सिंह'], ['ग्राम / केंद्र', 'शिबूनगर / कोटद्वार'], ['जियो-टैग / QR', 'PMKSY-DEMO-APPLE-0001'], ['निरीक्षण अधिकारी', 'श्री अनिल कुमार, प्रभारी']] },
+      { title: 'स्थापित प्रणाली का सत्यापन', fields: [['प्रणाली / फसल', 'ड्रिप / सेब'], ['स्पेसिंग / क्षेत्रफल', '2×2 m / 0.20 हे०'], ['फिल्टर / फर्टिगेशन', 'स्क्रीन फिल्टर / वेंचुरी'], ['प्रणाली परीक्षण', 'सफल'], ['स्थल परिणाम', 'सन्तोषजनक']] },
+      { title: 'निरीक्षण टिप्पणी', paragraphs: ['स्थल निरीक्षण एवं अभिलेखों के आधार पर प्रणाली स्थापित पाई गई। उपलब्ध दस्तावेज़ों, क्षेत्रफल, बिल एवं स्थापना विवरण का परीक्षण किया गया। प्रकरण संस्तुति योग्य है।'] },
+    ],
+    footer: 'लाभार्थी के हस्ताक्षर ____________________    निरीक्षण अधिकारी के हस्ताक्षर ____________________',
+  },
+];
+
+function loadFeedbackNotes() {
+  if (typeof window === 'undefined') return { notes: [], error: '' };
+
+  try {
+    const stored = window.localStorage.getItem(FEEDBACK_KEY);
+    if (!stored) return { notes: [], error: '' };
+
+    const notes = JSON.parse(stored).notes;
+    if (!Array.isArray(notes)) throw new Error('सहेजे गए सुझावों का प्रारूप सही नहीं है।');
+    return {
+      notes: notes.map((note, index) => {
+        if (!note || typeof note !== 'object' || typeof note.text !== 'string') {
+          throw new Error('सहेजे गए सुझावों का प्रारूप सही नहीं है।');
+        }
+        return {
+          ...note,
+          id: note.id ?? `legacy-${index}`,
+          time: note.time ?? note.t ?? '',
+          where: note.where ?? 'अन्य / पूरी प्रणाली',
+          kind: note.kind ?? FEEDBACK_KINDS[1],
+          step: note.step ?? '',
+        };
+      }),
+      error: '',
+    };
+  } catch (error) {
+    return {
+      notes: [],
+      error: `सहेजे गए सुझाव पढ़े नहीं जा सके: ${error.message}`,
+    };
+  }
+}
 
 const PMKSY = () => {
   const [activeStep, setActiveStep] = useState(1);
   const [showFirmPanel, setShowFirmPanel] = useState(false);
   const [showOfficePanel, setShowOfficePanel] = useState(false);
   const [showAllRecPanel, setShowAllRecPanel] = useState(false);
+  const [samplePrintReady, setSamplePrintReady] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackTab, setFeedbackTab] = useState('w');
+  const [feedbackWhere, setFeedbackWhere] = useState(FEEDBACK_WHERE[0]);
+  const [feedbackKind, setFeedbackKind] = useState(FEEDBACK_KINDS[1]);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [feedbackLog, setFeedbackLog] = useState([]);
+  const [feedbackLoaded] = useState(loadFeedbackNotes);
+  const [feedbackNotes, setFeedbackNotes] = useState(feedbackLoaded.notes);
+  const [feedbackMessage, setFeedbackMessage] = useState(feedbackLoaded.error);
+  const feedbackTextRef = useRef(null);
+  const feedbackPanelRef = useRef(null);
+
+  useEffect(() => {
+    if (!samplePrintReady) return undefined;
+
+    const printTimer = window.setTimeout(() => window.print(), 350);
+    const handleAfterPrint = () => setSamplePrintReady(false);
+    window.addEventListener('afterprint', handleAfterPrint);
+    return () => {
+      window.clearTimeout(printTimer);
+      window.removeEventListener('afterprint', handleAfterPrint);
+    };
+  }, [samplePrintReady]);
 
   const steps = [
     { id: 1, no: 'चरण 01', nm: 'आवेदन प्रपत्र' },
@@ -43,7 +209,116 @@ const PMKSY = () => {
   const rowOpts = ["पंक्ति 1", "पंक्ति 2"];
   const gstOpts = ["0%", "5%", "12%", "18%"];
 
+  const logFeedbackEvent = (kind, message) => {
+    setFeedbackLog((entries) => [
+      ...entries,
+      { id: `${Date.now()}-${entries.length}`, time: new Date().toLocaleString('hi-IN'), kind, message },
+    ]);
+  };
+
+  const closeFeedback = () => setFeedbackOpen(false);
+
+  useEffect(() => {
+    if (!feedbackOpen) return undefined;
+
+    if (feedbackTab === 'w') feedbackTextRef.current?.focus();
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setFeedbackOpen(false);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [feedbackOpen, feedbackTab]);
+
+  const persistFeedbackNotes = (notes) => {
+    try {
+      window.localStorage.setItem(FEEDBACK_KEY, JSON.stringify({ notes }));
+      setFeedbackNotes(notes);
+      return true;
+    } catch (error) {
+      setFeedbackMessage(`सुझाव सहेजे नहीं जा सके: ${error.message}`);
+      return false;
+    }
+  };
+
+  const addFeedbackNote = () => {
+    const text = feedbackText.trim();
+    if (!text) {
+      setFeedbackMessage('पहले कुछ लिखें।');
+      feedbackTextRef.current?.focus();
+      return;
+    }
+
+    const note = {
+      id: `${Date.now()}-${feedbackNotes.length}`,
+      time: new Date().toLocaleString('hi-IN'),
+      where: feedbackWhere,
+      kind: feedbackKind,
+      text,
+      step: steps.find((step) => step.id === activeStep)?.nm ?? '',
+    };
+    const notes = [...feedbackNotes, note];
+    if (!persistFeedbackNotes(notes)) return;
+
+    setFeedbackText('');
+    setFeedbackMessage(`जुड़ गया (${notes.length})`);
+    logFeedbackEvent('नोट', `${note.kind} — ${note.where}`);
+  };
+
+  const deleteFeedbackNote = (noteId) => {
+    const notes = feedbackNotes.filter((note) => note.id !== noteId);
+    if (!persistFeedbackNotes(notes)) return;
+    setFeedbackMessage('सुझाव हटाया गया।');
+    logFeedbackEvent('नोट', 'सहेजा गया सुझाव हटाया');
+  };
+
+  const createFeedbackReport = () => {
+    const lines = [
+      'PMKSY–PDMC · अनुभव रिपोर्ट',
+      `तैयार किया गया: ${new Date().toLocaleString('hi-IN')}`,
+      '',
+      `── सुझाव (${feedbackNotes.length}) ──`,
+      ...(feedbackNotes.length
+        ? feedbackNotes.flatMap((note, index) => [
+            `${index + 1}. [${note.kind}] ${note.where}`,
+            `   ${note.text.replace(/\n/g, '\n   ')}`,
+            `   (समय ${note.time}${note.step ? ` · चरण ${note.step}` : ''})`,
+          ])
+        : ['(कोई सुझाव नहीं लिखा गया)']),
+      '',
+      '── कार्य डायरी ──',
+      ...(feedbackLog.length
+        ? feedbackLog.map((entry) => `${entry.time}  [${entry.kind}]  ${entry.message}`)
+        : ['(अभी कोई गतिविधि दर्ज नहीं है)']),
+    ];
+    return lines.join('\n');
+  };
+
+  const copyFeedbackReport = async () => {
+    try {
+      await navigator.clipboard.writeText(createFeedbackReport());
+      setFeedbackMessage('कॉपी हो गया — चैट में चिपकाएँ।');
+    } catch (error) {
+      setFeedbackMessage(`रिपोर्ट कॉपी नहीं हो सकी: ${error.message}`);
+    }
+  };
+
+  const saveFeedbackReport = () => {
+    try {
+      const blob = new Blob([`\ufeff${createFeedbackReport()}`], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'PMKSY_अनुभव_रिपोर्ट.txt';
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+      setFeedbackMessage('फाइल बन गई।');
+    } catch (error) {
+      setFeedbackMessage(`रिपोर्ट फाइल नहीं बन सकी: ${error.message}`);
+    }
+  };
+
   return (
+    <>
     <div className="noprint">
       <header className="mast">
         <div className="crest">उ</div>
@@ -78,6 +353,153 @@ const PMKSY = () => {
           <button className="btn water sm" type="button">वर्तमान प्रपत्र प्रिंट</button>
         </div>
       </header>
+
+      <button
+        className="feedback-button"
+        type="button"
+        title="सुझाव लिखें / रिपोर्ट बनाएँ"
+        aria-expanded={feedbackOpen}
+        aria-controls="feedbackPanel"
+        onClick={() => {
+          setFeedbackOpen((open) => !open);
+          if (!feedbackOpen) {
+            setFeedbackTab('w');
+            logFeedbackEvent('नोट', 'सुझाव पैनल खोला');
+          }
+        }}
+      >
+        ✎ सुझाव{feedbackNotes.length > 0 && <span className="feedback-dot">{feedbackNotes.length}</span>}
+      </button>
+      <div
+        className={`feedback-panel${feedbackOpen ? ' on' : ''}`}
+        id="feedbackPanel"
+        ref={feedbackPanelRef}
+        role="dialog"
+        aria-label="सुझाव एवं रिपोर्ट"
+        aria-modal="false"
+        aria-hidden={!feedbackOpen}
+      >
+        <h3>
+          अनुभव रिपोर्ट
+          <span className="feedback-subtitle">सब कुछ इसी फाइल में — कहीं नहीं भेजा जाता</span>
+          <button type="button" onClick={closeFeedback} aria-label="बंद करें">×</button>
+        </h3>
+        <div className="feedback-tabs" role="tablist" aria-label="अनुभव रिपोर्ट">
+          {[
+            { id: 'w', label: 'सुझाव लिखें' },
+            { id: 'l', label: 'मेरे सुझाव', count: feedbackNotes.length },
+            { id: 'd', label: 'कार्य डायरी' },
+          ].map((tab) => (
+            <button
+              className="feedback-tab"
+              id={`feedback-tab-${tab.id}`}
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={feedbackTab === tab.id}
+              aria-controls={`feedback-content-${tab.id}`}
+              onClick={() => {
+                setFeedbackTab(tab.id);
+                setFeedbackMessage('');
+              }}
+            >
+              {tab.label}{tab.count > 0 && <span className="feedback-count">{tab.count}</span>}
+            </button>
+          ))}
+        </div>
+
+        <div
+          className="feedback-content"
+          id="feedback-content-w"
+          role="tabpanel"
+          aria-labelledby="feedback-tab-w"
+          hidden={feedbackTab !== 'w'}
+        >
+          <div className="f feedback-field">
+            <label htmlFor="feedbackWhere">यह किस बारे में है?</label>
+            <select id="feedbackWhere" value={feedbackWhere} onChange={(event) => setFeedbackWhere(event.target.value)}>
+              {FEEDBACK_WHERE.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+          </div>
+          <div className="f feedback-field">
+            <label>किस तरह की बात है?</label>
+            <div className="chips feedback-kinds">
+              {FEEDBACK_KINDS.map((kind, index) => (
+                <React.Fragment key={kind}>
+                  <input
+                    type="radio"
+                    name="feedbackKind"
+                    id={`feedback-kind-${index}`}
+                    value={kind}
+                    checked={feedbackKind === kind}
+                    onChange={() => setFeedbackKind(kind)}
+                  />
+                  <label htmlFor={`feedback-kind-${index}`}>{kind}</label>
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+          <div className="f">
+            <label htmlFor="feedbackText">क्या ठीक करना है — अपने शब्दों में लिखें</label>
+            <textarea
+              id="feedbackText"
+              ref={feedbackTextRef}
+              rows="5"
+              placeholder="जैसे: भूमि तालिका में ग्राम का खाना छोटा है, या — बिल में GST अपने आप 18% रहे"
+              value={feedbackText}
+              onChange={(event) => setFeedbackText(event.target.value)}
+            />
+          </div>
+          <div className="hint feedback-hint">लिखते समय आप जिस चरण पर हैं, वह अपने आप जुड़ जाएगा — दोबारा समझाना नहीं पड़ेगा।</div>
+        </div>
+
+        <div
+          className="feedback-content feedback-list"
+          id="feedback-content-l"
+          role="tabpanel"
+          aria-labelledby="feedback-tab-l"
+          hidden={feedbackTab !== 'l'}
+        >
+          {feedbackNotes.length ? feedbackNotes.map((note) => (
+            <article className={`feedback-note${note.kind === 'गड़बड़ी है' ? ' bug' : note.kind === 'नया चाहिए' ? ' idea' : ''}`} key={note.id}>
+              <div>{note.text}</div>
+              <div className="feedback-note-meta">
+                <span>{note.kind}</span>
+                <span>{note.where}</span>
+                <time>{note.time}</time>
+                <button type="button" aria-label="सुझाव हटाएँ" onClick={() => deleteFeedbackNote(note.id)}>×</button>
+              </div>
+            </article>
+          )) : (
+            <div className="empty">अभी कोई सुझाव नहीं लिखा। बाईं ओर "सुझाव लिखें" में लिखें।</div>
+          )}
+        </div>
+
+        <div
+          className="feedback-content feedback-list"
+          id="feedback-content-d"
+          role="tabpanel"
+          aria-labelledby="feedback-tab-d"
+          hidden={feedbackTab !== 'd'}
+        >
+          {feedbackLog.length ? feedbackLog.map((entry) => (
+            <div className="feedback-logline" key={entry.id}>
+              <span className={`feedback-log-kind kind-${entry.kind}`}>{entry.kind}</span>
+              <time>{entry.time}</time>
+              <span>{entry.message}</span>
+            </div>
+          )) : <div className="empty">अभी कोई गतिविधि दर्ज नहीं है।</div>}
+        </div>
+
+        <div className="feedback-footer">
+          <div className="btnrow">
+            <button className="btn water sm" type="button" onClick={addFeedbackNote} disabled={feedbackTab !== 'w'}>सुझाव जोड़ें</button>
+            <button className="btn ghost sm" type="button" onClick={copyFeedbackReport}>पूरी रिपोर्ट कॉपी करें</button>
+            <button className="btn ghost sm" type="button" onClick={saveFeedbackReport}>फाइल में सहेजें</button>
+            <span className="hint feedback-message" role="status">{feedbackMessage}</span>
+          </div>
+        </div>
+      </div>
 
       {/* Firm Panel Modal */}
       <div className="firmpanel-backdrop" hidden={!showFirmPanel}>
@@ -162,7 +584,10 @@ const PMKSY = () => {
               role="tab"
               data-s={step.id}
               aria-selected={activeStep === step.id}
-              onClick={() => setActiveStep(step.id)}
+              onClick={() => {
+                setActiveStep(step.id);
+                logFeedbackEvent('चरण', `खोला — ${step.no} ${step.nm}`);
+              }}
             >
               <span className="no">{step.no}</span>
               <span className="nm">{step.nm} {step.id === 7 && <span className="mono" id="cnt"></span>}</span>
@@ -207,7 +632,7 @@ const PMKSY = () => {
                 <div className="flag ok" id="recall" style={{ display: 'none' }}></div>
                 <div className="btnrow sample-toolbar" style={{ marginBottom: '12px' }}>
                   <button className="btn water sm" type="button">🧪 पूरा भरा हुआ किसान Sample देखें</button>
-                  <button className="btn ghost sm" type="button">🖨️ Sample के सभी 6 प्रपत्र प्रिंट</button>
+                  <button className="btn ghost sm" type="button" onClick={() => setSamplePrintReady(true)}>🖨️ Sample के सभी 6 प्रपत्र प्रिंट</button>
                   <span className="hint">Apple · Drip · 2×2 m · 0.20 हे० — सभी 6 प्रपत्रों की testing के लिए demo data भरेगा; रजिस्टर में save नहीं होगा।</span>
                 </div>
                 <div className="grid">
@@ -590,8 +1015,150 @@ const PMKSY = () => {
         <option value="ताऊ" />
       </datalist>
       <datalist id="dlCrop"></datalist>
-      <div id="printArea" aria-label="प्रिंट पूर्वावलोकन"></div>
     </div>
+      <div id="printArea" aria-label="प्रिंट पूर्वावलोकन">
+        {samplePrintReady && SAMPLE_PRINT_DOCUMENTS.map((document, index) => (
+          <article className={`sheet${index === 1 ? ' application-page' : ''}${index === 4 ? ' pmksy-company-bill avani-pdf-invoice' : ''}`} key={document.title}>
+            {(index === 0 || index === 6) && (
+              <header className="hdr">
+                <div className="t1">प्रधानमंत्री कृषि सिंचाई योजना (PMKSY) — प्रति बूँद अधिक फसल (PDMC)</div>
+                <div className="t2">उद्यान एवं खाद्य प्रसंस्करण विभाग, उत्तराखण्ड</div>
+                <div className="t2">कार्यालय उद्यान विशेषज्ञ, कोटद्वार, पौड़ी गढ़वाल, उत्तराखण्ड</div>
+              </header>
+            )}
+            {index === 0 && (
+              <>
+                <div className="application-title">सूक्ष्म सिंचाई — आवेदन-सह-संयुक्त सर्वेक्षण प्रपत्र</div>
+                <div className="photobox">पासपोर्ट साइज़<br />फोटो चिपकाएँ</div>
+                <h3 className="part">भाग – 1 : लाभार्थी द्वारा भरा जाने वाला विवरण</h3>
+              </>
+            )}
+            {index === 1 && <h3 className="part">भाग – 2 : संयुक्त सर्वेक्षण के समय भरा जाने वाला विवरण</h3>}
+            {(index === 2 || index === 3) && (
+              <>
+                <div className="document-spacer"></div>
+                <div className="document-title">{document.title === 'लाभार्थी स्व-घोषणा एवं शपथ पत्र' ? 'लाभार्थी स्व-घोषणा एवं शपथ पत्र (Affidavit / Self-Declaration)' : 'आपूर्तिकर्ता फर्म चयन एवं स्वैच्छिक सहमति पत्र'}</div>
+              </>
+            )}
+            {index === 4 && (
+              <>
+                <table className="avani-head">
+                  <tbody>
+                    <tr className="head-row"><td>GSTIN No.: 05COWPD8094K1Z6</td><td className="invoice-title">TAX INVOICE / BILL</td><td className="right">Mob.: 9536462212</td></tr>
+                    <tr><td className="company-name" colSpan="3">AVANI ENTERPRISES</td></tr>
+                    <tr><td className="dealer-name" colSpan="3">Authorised Dealer — भारत ड्रिप इरिगेशन एंड एग्रो</td></tr>
+                    <tr><td className="company-address" colSpan="3">Lakhera Bhawan, Vill. Shibonagar, Near Nayan Gaon, Kotdwar, Garhwal (Uttarakhand) - 246155</td></tr>
+                  </tbody>
+                </table>
+                <table className="avani-billing">
+                  <tbody>
+                    <tr className="section-blue"><td colSpan="3">BILL TO / FARMER DETAILS</td><td colSpan="3">INVOICE DETAILS</td></tr>
+                    <tr><td className="lbl">Farmer / M/s Name:</td><td colSpan="2">श्री सुरेश सिंह</td><td className="lbl">Invoice No.:</td><td colSpan="2"><b>DEMO-APPLE-0001</b></td></tr>
+                    <tr><td className="lbl">Village / Centre:</td><td colSpan="2">शिबूनगर / कोटद्वार</td><td className="lbl">Date:</td><td colSpan="2"><b>20-09-2026</b></td></tr>
+                    <tr><td className="lbl">Khasra No.:</td><td colSpan="2">—</td><td className="lbl">System Proposed:</td><td colSpan="2">ड्रिप</td></tr>
+                    <tr><td className="lbl">Spacing:</td><td colSpan="2"><b>2x2</b></td><td className="lbl">Area (Hectare):</td><td colSpan="2"><b>0.20 हे०</b></td></tr>
+                    <tr><td className="lbl">Crop:</td><td colSpan="2">सेब</td><td className="lbl">Date of Installation:</td><td colSpan="2"><b>18-09-2026</b></td></tr>
+                    <tr><td className="lbl">Work / Reference No.:</td><td colSpan="5">PMKSY-DEMO-APPLE-0001</td></tr>
+                  </tbody>
+                </table>
+                <table className="avani-items">
+                  <colgroup><col style={{ width: '6%' }} /><col style={{ width: '28%' }} /><col style={{ width: '25%' }} /><col style={{ width: '9%' }} /><col style={{ width: '8%' }} /><col style={{ width: '11%' }} /><col style={{ width: '13%' }} /></colgroup>
+                  <thead><tr className="item-head"><th>S.No</th><th>Description of Goods</th><th>BIS / Standard</th><th>Qty</th><th>Unit</th><th>Rate/Unit<br />(₹)</th><th>Taxable Value<br />(₹)</th></tr></thead>
+                  <tbody>
+                    {SAMPLE_INVOICE_ITEMS.map((item, itemIndex) => (
+                      <tr key={item[0]}>
+                        <td className="center">{itemIndex + 1}</td>
+                        <td className="desc">{item[0]}</td>
+                        <td className="std">{item[1]}</td>
+                        <td className="center">{item[2]}</td>
+                        <td className="center">{item[3]}</td>
+                        <td className="num">{sampleInvoiceCurrency(Number(sampleInvoiceRate(item[4].replace(/,/g, ''))))}</td>
+                        <td className="num">{sampleInvoiceCurrency(sampleInvoiceLineTotal(item))}</td>
+                      </tr>
+                    ))}
+                    <tr className="subtotal"><td className="num" colSpan="6"><b>Sub Total</b></td><td className="num"><b>{sampleInvoiceCurrency(sampleInvoiceSubtotal)}</b></td></tr>
+                    <tr><td className="num" colSpan="6">Installation / Labour Charges @ <b>5%</b></td><td className="num">{sampleInvoiceCurrency(SAMPLE_INVOICE_GRAND - sampleInvoiceSubtotal)}</td></tr>
+                    <tr className="grand"><td className="num" colSpan="6"><b>GRAND TOTAL (₹)</b></td><td className="num"><b>32,308.00</b></td></tr>
+                    <tr><td colSpan="2"><b>Amount in Words:</b></td><td colSpan="5">Thirty Two Thousand Three Hundred Eight Only</td></tr>
+                  </tbody>
+                </table>
+              </>
+            )}
+            {index === 5 && (
+              <>
+                <div className="document-spacer"></div>
+                <div className="sample-receipt">
+                  <div className="receipt-top"><span>GSTIN : 05COWPD8094K1Z6</span><span>मो० : 9536462212</span></div>
+                  <h1>नकद प्राप्ति रसीद</h1>
+                  <h2>Avani Enterprises</h2>
+                  <div className="receipt-center">Lakhera Bhawan, Vill. Shibonagar, Kotdwar, Garhwal (Uttarakhand)</div>
+                  <div className="receipt-top receipt-date"><span>नं० 001</span><span>दिनांक 20-09-2026</span></div>
+                  <p>नाम श्री/श्रीमती <b>श्री सुरेश सिंह</b> पुत्र/पति श्री <b>पुत्र श्री मोहन सिंह</b>, ग्राम <b>शिबूनगर</b>, विकासखंड <b>नगर निगम कोटद्वार</b> से <b>ड्रिप (2×2 m, 0.2 हे०)</b> की स्थापना हेतु आपूर्तिकर्ता फर्म को देय <b>पूर्ण वास्तविक बिल राशि</b> के रूप में <b>₹32,308.00</b> नकद प्राप्त किया।</p>
+                  <div className="receipt-sign"><span>कुल बिल सं० DEMO-APPLE-0001 · कुल बिल राशि ₹32,308</span><span>For Avani Enterprises<br />हस्ताक्षर (Authorised Signatory)</span></div>
+                </div>
+              </>
+            )}
+            {document.sections.filter(() => index !== 4).map((section) => (
+              <section className="sample-print-section" key={section.title}>
+                <h4 className="sec">{section.title}</h4>
+                {section.fields && (
+                  <div className="fl">
+                    {section.fields.map(([label, value]) => (
+                      <div className="fi" key={label}>
+                        <b>{label} :</b> {value}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {section.table && (
+                  <table className="pf">
+                    <thead><tr>{section.table.headings.map((heading) => <th key={heading}>{heading}</th>)}</tr></thead>
+                    <tbody>
+                      {section.table.rows.map((row, rowIndex) => (
+                        <tr className={rowIndex === section.table.rows.length - 1 ? 'tot' : ''} key={`${section.title}-${rowIndex}`}>{row.map((cell, cellIndex) => <td key={`${cell}-${cellIndex}`}>{cell}</td>)}</tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+                {section.paragraphs?.map((paragraph) => <div className="box" key={paragraph}>{paragraph}</div>)}
+              </section>
+            ))}
+            {index === 4 && (
+              <>
+                <div className="sample-invoice-stamps">
+                  <div>PMKSY-PDMC<br />किसान का अंश<br /><b>₹5,983</b><br />श्री सुरेश सिंह<br />लाभार्थी हस्ताक्षर</div>
+                  <div>कार्यालय उद्यान विशेषज्ञ<br />कोटद्वार<br />₹32,308<br />अधिकृत अधिकारी<br />हस्ताक्षर एवं मुहर</div>
+                </div>
+                <table className="avani-bottom">
+                  <tbody>
+                    <tr className="section-blue"><td colSpan="3">BANK DETAILS FOR PAYMENT</td></tr>
+                    <tr><td className="bank-left"><b>Bank Name:</b> Almora Urban Co-operative Bank</td><td className="bank-mid"><b>Account Number:</b> 025110100000143</td><td className="bank-right"><b>IFSC Code:</b> AUCB0000026</td></tr>
+                    <tr><td className="bank-left"><b>Account Holder:</b> M/S Avani Enterprises</td><td className="bank-mid"><b>Branch:</b> Kotdwar</td><td className="bank-right"><b>GSTIN:</b> 05COWPD8094K1Z6</td></tr>
+                    <tr><td className="terms" colSpan="3"><b>Terms &amp; Conditions</b><br />1. All disputes shall be subject to Kotdwar jurisdiction.<br />2. Goods supplied as per approved BOQ / work requirement.<br />3. Quantity and rate are subject to the approved bill and applicable scheme norms.<br />4. Interest will be charged at 18% p.a. on overdue payments.</td></tr>
+                    <tr><td className="customer-sign">Customer's Signature</td><td className="auth-sign" colSpan="2">For AVANI ENTERPRISES<br /><br />(Authorised Signatory)</td></tr>
+                  </tbody>
+                </table>
+              </>
+            )}
+            {index === 6 && (
+              <div className="sigrow">
+                <div>लाभार्थी कृषक के हस्ताक्षर<br />दिनांक : ……………</div>
+                <div>निरीक्षण अधिकारी<br />श्री अनिल कुमार, प्रभारी</div>
+                <div>प्रभारी, उद्यान सचल दल केंद्र कोटद्वार</div>
+              </div>
+            )}
+            <div className="pgno">
+              {index === 0 ? 'आवेदन · पृष्ठ 1 / 2'
+                : index === 1 ? 'आवेदन · पृष्ठ 2 / 2'
+                  : index === 2 ? 'शपथ पत्र'
+                    : index === 3 ? 'फर्म चयन'
+                      : index === 4 ? 'कंपनी बिल'
+                        : index === 5 ? 'नकद रसीद' : 'भौतिक सत्यापन'}
+            </div>
+          </article>
+        ))}
+      </div>
+    </>
   );
 };
 

@@ -780,9 +780,447 @@ h4.subh {
   font-size: 13.5px;
 }
 
+/* ══ सुझाव एवं अनुभव रिपोर्ट ══ */
+.feedback-button {
+  position: fixed;
+  right: 16px;
+  bottom: 120px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 24px;
+  background: var(--ink);
+  color: #fff;
+  box-shadow: 0 6px 20px -6px rgba(20, 35, 44, 0.55);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+.feedback-button:hover {
+  background: #1c3a4a;
+}
+.feedback-button:focus-visible {
+  outline: 2px solid var(--water);
+  outline-offset: 2px;
+}
+.feedback-dot {
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--alert);
+  color: #fff;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10.5px;
+}
+.feedback-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 120px;
+  z-index: 61;
+  display: none;
+  flex-direction: column;
+  width: min(430px, calc(100vw - 32px));
+  max-height: min(74vh, 620px);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--paper);
+  box-shadow: 0 18px 46px -14px rgba(20, 35, 44, 0.5);
+}
+.feedback-panel.on {
+  display: flex;
+}
+.feedback-panel > h3 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  padding: 11px 14px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 13px;
+}
+.feedback-subtitle {
+  opacity: 0.6;
+  font-size: 11px;
+  font-weight: 400;
+}
+.feedback-panel > h3 button {
+  margin-left: auto;
+  padding: 0 3px;
+  border: 0;
+  background: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: 19px;
+  line-height: 1;
+}
+.feedback-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 14px;
+  background: var(--ink);
+}
+.feedback-tab {
+  flex: 1;
+  padding: 7px 4px;
+  border: 0;
+  border-radius: 5px 5px 0 0;
+  background: #26424f;
+  color: #cfe3e8;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+.feedback-tab[aria-selected="true"] {
+  background: var(--paper);
+  color: var(--ink);
+}
+.feedback-count {
+  margin-left: 4px;
+  opacity: 0.7;
+}
+.feedback-content {
+  overflow-y: auto;
+  padding: 12px 14px;
+}
+.feedback-content[hidden] {
+  display: none;
+}
+.feedback-field {
+  margin-bottom: 9px;
+}
+.feedback-kinds {
+  gap: 6px;
+}
+.feedback-kinds label {
+  padding: 5px 10px;
+  font-size: 11.5px;
+}
+.feedback-hint {
+  margin-top: 6px;
+}
+.feedback-list {
+  min-height: 150px;
+}
+.feedback-note {
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--water);
+  border-radius: 5px;
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+.feedback-note.bug {
+  border-left-color: var(--alert);
+}
+.feedback-note.idea {
+  border-left-color: var(--gold);
+}
+.feedback-note-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  color: var(--ink2);
+  font-size: 10.5px;
+  flex-wrap: wrap;
+}
+.feedback-note-meta button {
+  margin-left: auto;
+  border: 0;
+  background: none;
+  color: var(--alert);
+  cursor: pointer;
+  font-size: 14px;
+}
+.feedback-logline {
+  display: flex;
+  gap: 8px;
+  padding: 3px 0;
+  border-bottom: 1px dashed var(--line);
+  font-size: 11.5px;
+}
+.feedback-logline time {
+  flex: none;
+  color: var(--ink2);
+  font-size: 10.5px;
+}
+.feedback-log-kind {
+  flex: none;
+  height: 15px;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--waterlt);
+  color: var(--water);
+  font-size: 10px;
+  line-height: 15px;
+}
+.feedback-log-kind.kind-नोट {
+  background: #fdf7e8;
+  color: var(--gold);
+}
+.feedback-footer {
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--grain);
+}
+.feedback-footer .btnrow {
+  gap: 6px;
+}
+.feedback-message {
+  margin-left: auto;
+}
+
 /* ══ प्रिंट शीट ══ */
 #printArea {
   display: none;
+}
+.sheet {
+  position: relative;
+  width: 210mm;
+  min-height: 296mm;
+  margin: 12px auto 18px;
+  padding: 11mm 12mm;
+  background: #fff;
+  color: #000;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  font-family: "Noto Sans Devanagari", serif;
+  font-size: 9.2pt;
+  line-height: 1.38;
+}
+.sheet .hdr {
+  margin: 0 0 5mm;
+  padding: 0 0 3mm;
+  border-bottom: 1.4pt solid #111;
+  text-align: center;
+}
+.sheet .hdr .t1 {
+  font-size: 12pt;
+  font-weight: 800;
+}
+.sheet .hdr .t2 {
+  font-size: 9.8pt;
+  font-weight: 700;
+}
+.sheet .part {
+  margin: 4mm 0 2.5mm;
+  padding: 2.2mm 3mm;
+  border: 1pt solid #222;
+  border-left: 4pt solid #111;
+  background: #e9ecef;
+  color: #111;
+  font-size: 9.7pt;
+  font-weight: 800;
+}
+.sheet .sec {
+  margin: 3mm 0 0;
+  padding: 1.7mm 2.5mm;
+  border: 1pt solid #555;
+  border-bottom: 0;
+  background: #f4f5f6;
+  font-size: 9pt;
+  font-weight: 800;
+}
+.sheet .fl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  margin: 0;
+  border: 1pt solid #555;
+  border-top: 0;
+}
+.sheet .fi {
+  min-width: 0;
+  padding: 2.1mm 2.4mm;
+  border-top: 1pt solid #777;
+  border-right: 1pt solid #777;
+  overflow-wrap: anywhere;
+}
+.sheet .fi:nth-child(even) {
+  border-right: 0;
+}
+.sheet .fi.full {
+  grid-column: 1 / -1;
+  border-right: 0;
+}
+.sheet table.pf {
+  width: 100%;
+  margin: 2.5mm 0;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 8.25pt;
+}
+.sheet table.pf th,
+.sheet table.pf td {
+  padding: 1.8mm 2mm;
+  border: 1pt solid #444;
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+.sheet table.pf th {
+  background: #eceeef;
+  font-weight: 800;
+  text-align: center;
+}
+.sheet table.pf tr.tot td {
+  background: #f1f2f3;
+  font-weight: 800;
+}
+.sheet .box {
+  margin: 2.5mm 0;
+  padding: 3.5mm 4mm;
+  border: 1pt solid #444;
+  font-size: 8.35pt;
+  line-height: 1.52;
+  text-align: justify;
+}
+.sheet .sigrow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 7mm;
+  margin-top: 10mm;
+  text-align: center;
+  font-size: 8.8pt;
+}
+.sheet .sigrow div {
+  min-height: 16mm;
+  padding-top: 2mm;
+  border-top: 1pt solid #222;
+}
+.sheet .pgno {
+  position: absolute;
+  right: 10mm;
+  bottom: 5mm;
+  font-size: 7.5pt;
+}
+.sheet .application-title,
+.sheet .document-title {
+  margin: 3mm 0;
+  padding: 1.5mm 2mm;
+  border: 1pt solid #222;
+  text-align: center;
+  font-size: 10.5pt;
+  font-weight: 700;
+}
+.sheet .photobox {
+  position: absolute;
+  top: 9mm;
+  right: 10mm;
+  display: grid;
+  width: 27mm;
+  height: 34mm;
+  place-items: center;
+  border: 1pt solid #222;
+  background: #fff;
+  text-align: center;
+  font-size: 7pt;
+}
+.sheet.application-page {
+  padding-top: 7mm;
+  padding-bottom: 7mm;
+}
+.sheet.application-page .sec {
+  margin: 3.5mm 0 1.8mm;
+}
+.sheet.application-page .part {
+  margin: 4mm 0 2mm;
+  padding: 2mm 5mm;
+  font-size: 9.1pt;
+}
+.sheet.application-page .box {
+  padding: 2.2mm 3mm;
+  margin: 1.5mm 0;
+  font-size: 7.7pt;
+  line-height: 1.35;
+}
+.sheet.application-page table.pf {
+  margin: 1.5mm 0;
+  font-size: 7.45pt;
+}
+.sheet.application-page table.pf th,
+.sheet.application-page table.pf td {
+  padding: 1.05mm 1.25mm;
+}
+.sheet.application-page .sigrow {
+  margin-top: 3.5mm;
+  gap: 5mm;
+}
+.sheet.application-page .sigrow div {
+  min-height: 9mm;
+  padding-top: 1.2mm;
+}
+.sheet .document-spacer {
+  height: 26mm;
+}
+.sample-receipt {
+  position: relative;
+  padding: 9mm 10mm;
+  border: 2pt solid #000;
+  border-radius: 6px;
+}
+.sample-receipt h1 {
+  margin: 2mm 0;
+  text-align: center;
+  font-size: 12pt;
+  text-decoration: underline;
+}
+.sample-receipt h2 {
+  margin: 1mm 0;
+  text-align: center;
+  font-size: 16pt;
+}
+.sample-receipt .receipt-center {
+  text-align: center;
+  font-size: 9.5pt;
+  font-weight: 600;
+}
+.sample-receipt .receipt-top,
+.sample-receipt .receipt-sign {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9pt;
+}
+.sample-receipt .receipt-date {
+  margin-top: 5mm;
+}
+.sample-receipt p {
+  margin: 5mm 0;
+  font-size: 10.5pt;
+  line-height: 1.8;
+  text-align: justify;
+}
+.sample-receipt .receipt-sign {
+  align-items: flex-end;
+  margin-top: 5mm;
+  padding-top: 3mm;
+  border-top: 0.7pt dashed #000;
+  font-size: 8.6pt;
+}
+.sample-receipt .receipt-sign span:last-child {
+  text-align: right;
+}
+.sheet .sample-invoice-stamps {
+  display: flex;
+  justify-content: center;
+  gap: 7mm;
+  min-height: 28mm;
+  align-items: center;
+}
+.sample-invoice-stamps > div {
+  width: 42%;
+  padding: 3mm;
+  border: 1.5pt solid #1428c7;
+  color: #1428c7;
+  text-align: center;
+  font-size: 7.7pt;
+  font-weight: 700;
+  line-height: 1.4;
 }
 
 @media print {
@@ -796,15 +1234,204 @@ h4.subh {
     display: block !important;
   }
   .sheet {
-    box-shadow: none;
-    margin: 0;
-    width: auto;
-    min-height: auto;
-    page-break-after: always;
-    padding: 9mm 11mm;
+    width: 210mm !important;
+    min-height: 297mm !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 9mm 10mm 12mm !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    color: #111 !important;
+    font-size: 9.2pt !important;
+    line-height: 1.38 !important;
+    overflow: visible !important;
+    page-break-after: always !important;
+    break-after: page !important;
   }
   .sheet:last-child {
-    page-break-after: auto;
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+  .sheet .hdr {
+    margin: 0 0 5mm !important;
+    padding: 0 0 3mm !important;
+    border-bottom: 1.4pt solid #111 !important;
+  }
+  .sheet .hdr .t1 {
+    font-size: 12pt !important;
+    font-weight: 800 !important;
+  }
+  .sheet .hdr .t2 {
+    font-size: 9.8pt !important;
+    font-weight: 700 !important;
+  }
+  .sheet .part {
+    margin: 4mm 0 2.5mm !important;
+    padding: 2.2mm 3mm !important;
+    border: 1pt solid #222 !important;
+    border-left: 4pt solid #111 !important;
+    background: #e9ecef !important;
+    color: #111 !important;
+    font-size: 9.7pt !important;
+    font-weight: 800 !important;
+  }
+  .sheet .sec {
+    margin: 3mm 0 0 !important;
+    padding: 1.7mm 2.5mm !important;
+    border: 1pt solid #555 !important;
+    border-bottom: 0 !important;
+    background: #f4f5f6 !important;
+    font-size: 9pt !important;
+    font-weight: 800 !important;
+  }
+  .sheet .fl {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0 !important;
+    margin: 0 !important;
+    border: 1pt solid #555 !important;
+    border-top: 0 !important;
+  }
+  .sheet .fi {
+    min-width: 0 !important;
+    width: auto !important;
+    padding: 2.1mm 2.4mm !important;
+    margin: 0 !important;
+    border-right: 1pt solid #777 !important;
+    border-top: 1pt solid #777 !important;
+    background: #fff !important;
+    overflow-wrap: anywhere !important;
+  }
+  .sheet .fi:nth-child(even) {
+    border-right: 0 !important;
+  }
+  .sheet .fi.full {
+    grid-column: 1 / -1 !important;
+    border-right: 0 !important;
+  }
+  .sheet .photobox {
+    top: 9mm !important;
+    right: 10mm !important;
+    width: 27mm !important;
+    height: 34mm !important;
+    border: 1pt solid #222 !important;
+    background: #fff !important;
+  }
+  .sheet table.pf {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    table-layout: fixed !important;
+    margin: 2.5mm 0 !important;
+    font-size: 8.25pt !important;
+  }
+  .sheet table.pf th,
+  .sheet table.pf td {
+    border: 1pt solid #444 !important;
+    padding: 1.8mm 2mm !important;
+    vertical-align: middle !important;
+    overflow-wrap: anywhere !important;
+  }
+  .sheet table.pf th {
+    background: #eceeef !important;
+    color: #111 !important;
+    font-weight: 800 !important;
+    text-align: center !important;
+  }
+  .sheet table.pf tr.tot td {
+    background: #f1f2f3 !important;
+    font-weight: 800 !important;
+  }
+  .sheet .box {
+    border: 1pt solid #444 !important;
+    background: #fff !important;
+    padding: 3.5mm 4mm !important;
+    margin: 2.5mm 0 !important;
+    font-size: 8.35pt !important;
+    line-height: 1.52 !important;
+    text-align: justify !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  .sheet .sigrow {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr !important;
+    gap: 7mm !important;
+    margin-top: 10mm !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  .sheet .sigrow div {
+    min-height: 16mm !important;
+    padding-top: 2mm !important;
+    border-top: 1pt solid #222 !important;
+  }
+  .sheet table thead {
+    display: table-header-group !important;
+  }
+  .sheet table tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  .sheet .pgno {
+    position: absolute !important;
+    bottom: 5mm !important;
+    right: 10mm !important;
+    font-size: 7.5pt !important;
+  }
+  .sheet.application-page {
+    padding-top: 7mm !important;
+    padding-bottom: 7mm !important;
+  }
+  .sheet.application-page .sec {
+    margin: 3.5mm 0 1.8mm !important;
+  }
+  .sheet.application-page .part {
+    margin: 4mm 0 2mm !important;
+    padding: 2mm 5mm !important;
+    font-size: 9.1pt !important;
+  }
+  .sheet.application-page .box {
+    padding: 2.2mm 3mm !important;
+    margin: 1.5mm 0 !important;
+    font-size: 7.7pt !important;
+    line-height: 1.35 !important;
+  }
+  .sheet.application-page table.pf {
+    margin: 1.5mm 0 !important;
+    font-size: 7.45pt !important;
+  }
+  .sheet.application-page table.pf th,
+  .sheet.application-page table.pf td {
+    padding: 1.05mm 1.25mm !important;
+  }
+  .sheet.application-page .sigrow {
+    margin-top: 3.5mm !important;
+    gap: 5mm !important;
+  }
+  .sheet.application-page .sigrow div {
+    min-height: 9mm !important;
+    padding-top: 1.2mm !important;
+  }
+  .sample-receipt {
+    border: 1.5pt solid #111 !important;
+    border-radius: 0 !important;
+    padding: 7mm 8mm !important;
+  }
+  .sheet .sample-invoice-stamps,
+  .avani-bottom {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  .sheet.pmksy-company-bill.avani-pdf-invoice {
+    width: 210mm !important;
+    min-height: 297mm !important;
+    padding: 6mm 8mm 9mm !important;
+    font-size: 7.7pt !important;
+  }
+  @page {
+    size: A4 portrait;
+    margin: 0;
   }
   @page {
     size: A4;
@@ -876,6 +1503,14 @@ h4.subh {
   }
   .btnrow {
     gap: 6px;
+  }
+  #printArea .sheet {
+    width: 100%;
+    min-height: auto;
+    padding: 20px !important;
+  }
+  #printArea .sheet .fl {
+    grid-template-columns: 1fr;
   }
 }
 @media (prefers-reduced-motion: reduce) {
