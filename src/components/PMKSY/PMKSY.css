@@ -469,28 +469,36 @@ input[readonly],
 }
 .ledger .row {
   display: flex;
-  gap: 22px;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: flex-start;
+  gap: 16px;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+}
+.amt-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: nowrap;
 }
 .amt {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 .amt .k {
-  font-size: 10px;
+  font-size: 9.5px;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.6px;
   opacity: 0.62;
 }
 .amt .v {
   font-family: "IBM Plex Mono", monospace;
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
+  white-space: nowrap;
 }
 .amt.big .v {
-  font-size: 26px;
+  font-size: 18px;
   color: #6fdfe6;
 }
 .amt.far .v {
