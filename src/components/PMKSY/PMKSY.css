@@ -846,6 +846,34 @@ h4.subh {
     transform: none;
     left: 0;
   }
+  .firmswitch {
+    order: 3;
+    width: 100%;
+    margin-top: 8px;
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-start;
+  }
+  .firmswitch label {
+    width: 100%;
+    margin-bottom: 4px;
+  }
+  .firmswitch select {
+    max-width: none;
+    width: 100%;
+  }
+  .firmswitch .btnrow {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .btnrow {
+    gap: 6px;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   * {

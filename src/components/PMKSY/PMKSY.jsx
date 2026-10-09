@@ -26,6 +26,7 @@ const PMKSY = () => {
   const vidhans = ["कोटद्वार", "थालीसैन", "पौड़ी"];
   const socialOpts = ["सामान्य", "अनुसूचित जाति", "अनुसूचित जनजाति", "ओबीसी"];
   const fclassOpts = ["सामान्य", "सीमांत", "लघु", "बड़ा"];
+  const genderOpts = ["पुरुष", "महिला", "अन्य"];
   const subOverrideOpts = ["स्वतः (किसान वर्ग से)", "35%", "45%", "55%", "70%"];
   const btypeOpts = ["स्वतंत्र", "सहकारी", "समूह", "स्वसहायता समूह"];
   const sourceOpts = ["नहर", "नलकूप", "ट्यूबवेल", "नदी/नाला", "तालाब", "अन्य"];
@@ -62,9 +63,11 @@ const PMKSY = () => {
           <select id="activeFirmSel">
             {firms.map((f, i) => <option key={i} value={f}>{f}</option>)}
           </select>
-          <button className="btn ghost sm" type="button" onClick={() => setShowFirmPanel(true)}>फर्म जोड़ें/हटाएँ</button>
-          <button className="btn ghost sm" type="button" onClick={() => setShowAllRecPanel(true)}>सभी फर्मों का रिकॉर्ड</button>
-          <button className="btn ghost sm" type="button" onClick={() => setShowOfficePanel(true)}>कार्यालय सेटिंग</button>
+          <div className="btnrow">
+            <button className="btn ghost sm" type="button" onClick={() => setShowFirmPanel(true)}>फर्म जोड़ें/हटाएँ</button>
+            <button className="btn ghost sm" type="button" onClick={() => setShowAllRecPanel(true)}>सभी फर्मों का रिकॉर्ड</button>
+            <button className="btn ghost sm" type="button" onClick={() => setShowOfficePanel(true)}>कार्यालय सेटिंग</button>
+          </div>
         </div>
         <div className="btnrow">
           <select id="quickFarmer" style={{ minWidth: '190px', fontSize: '13px' }}>
@@ -210,7 +213,12 @@ const PMKSY = () => {
                 <div className="grid">
                   <div className="f"><label><span className="n">1</span>किसान का नाम</label><input list="dlF" autoComplete="off" placeholder="नाम लिखें" /><datalist id="dlF"></datalist><div className="hint">पुराना किसान हो तो पूरा रिकॉर्ड अपने आप भर जाएगा</div></div>
                   <div className="f"><label><span className="n">2</span>पिता / पति का नाम</label><input id="rel" /></div>
-                  <div className="f"><label><span className="n">3</span>लिंग</label><div className="chips" id="gender"></div></div>
+                  <div className="f"><label><span className="n">3</span>लिंग</label>
+                    <select id="gender">
+                      <option value="">चुनें</option>
+                      {genderOpts.map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
+                  </div>
                   <div className="f"><label><span className="n">4</span>सामाजिक श्रेणी</label>
                     <select id="social">
                       <option value="">चुनें</option>
