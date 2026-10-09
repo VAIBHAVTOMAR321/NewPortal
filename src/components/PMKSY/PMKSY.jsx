@@ -1,147 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import './PMKSY.css';
-
-const FEEDBACK_KEY = 'pmksy:feedback:v1';
-const FEEDBACK_WHERE = [
-  'चरण 01 — आवेदन प्रपत्र',
-  'चरण 01 — भूमि विवरण / मिलान',
-  'चरण 01 — प्रणाली पंक्ति एवं अनुदान',
-  'चरण 02 — शपथ पत्र',
-  'चरण 03 — फर्म चयन',
-  'चरण 04 — भौतिक सत्यापन',
-  'चरण 05 — कंपनी बिल / BoQ',
-  'किसान रजिस्टर / सहेजना',
-  'प्रिंट एवं छपाई',
-  'दरें / गणना सही नहीं',
-  'केंद्र–विकासखंड सूची',
-  'अन्य / पूरी प्रणाली',
-];
-const FEEDBACK_KINDS = ['गड़बड़ी है', 'ऐसा बदलो', 'नया चाहिए'];
-const SAMPLE_INVOICE_ITEMS = [
-  ['Screen Filter 10 m3/hr / Disc Filter', 'IS 12785:1994', '1', 'Nos', '3,580'],
-  ['Venturi & Manifold (1.5 in)', 'IS 14483 (Part 1):1997', '1', 'Nos', '1,718'],
-  ['Air Release Valve 1 in', 'Mfr. Assured Quality (Para 15.7)', '1', 'Nos', '430'],
-  ['Non Return Valve 1.5 in', 'Mfr. Assured Quality (Para 15.7)', '1', 'Nos', '573'],
-  ['By-Pass Assembly 1.5x1.5 in', 'Mfr. Assured Quality (Para 15.7)', '1', 'Nos', '716'],
-  ['HDPE Pipe 50 mm; 4 kg/cm2', 'IS 4984:2016', '54', 'Meter', '115'],
-  ['Lateral 12 mm, Class II; 2.5 kg/cm2', 'IS 12786:1989', '1010', 'Meter', '11'],
-  ['Pressure Regulating Emitter/Dripper 2/4/8 lph', 'IS 13487:1992', '1020', 'Nos', '3'],
-  ['Control Valve 50 mm', 'IS 18286:2023', '1', 'Nos', '573'],
-  ['Control Valve 63 mm', 'IS 18286:2023', '1', 'Nos', '859'],
-  ['Flush Valve 50 mm', 'IS 18286:2023', '2', 'Nos', '501'],
-  ['Throttle Valve 1.5 in', 'IS 18286:2023', '1', 'Nos', '644'],
-];
-const SAMPLE_INVOICE_GRAND = 32308;
-const sampleInvoiceRate = (rate) => (
-  Number(String(rate).replace(/,/g, '')) * (SAMPLE_INVOICE_GRAND / (30475 + 1523.75))
-);
-const sampleInvoiceLineTotal = (item) => (
-  Number(item[2]) * Number(sampleInvoiceRate(item[4]).toFixed(2))
-);
-const sampleInvoiceSubtotal = SAMPLE_INVOICE_ITEMS.reduce((sum, item) => sum + sampleInvoiceLineTotal(item), 0);
-const sampleInvoiceCurrency = (amount) => amount.toLocaleString('en-IN', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-const SAMPLE_PRINT_DOCUMENTS = [
-  {
-    title: 'सूक्ष्म सिंचाई — आवेदन-सह-संयुक्त सर्वेक्षण प्रपत्र',
-    sections: [
-      { title: 'क — क्षेत्र विवरण', fields: [['जनपद', 'पौड़ी गढ़वाल'], ['उद्यान सचल दल केंद्र', 'कोटद्वार'], ['विकासखंड', 'नगर निगम कोटद्वार'], ['विधान सभा', 'कोटद्वार'], ['ग्राम पंचायत', 'कोटद्वार'], ['ग्राम', 'शिबूनगर']] },
-      { title: 'ख — किसान एवं बैंक विवरण (DBT हेतु)', fields: [['किसान का नाम', 'श्री सुरेश सिंह'], ['पिता का नाम', 'पुत्र श्री मोहन सिंह'], ['लिंग / सामाजिक श्रेणी', 'पुरुष / सामान्य'], ['मोबाइल', '9876543210'], ['आधार संख्या', 'XXXX-XXXX-1234'], ['बैंक खाता सं०', '123456789012'], ['बैंक एवं शाखा', 'भारतीय स्टेट बैंक — कोटद्वार शाखा'], ['IFSC', 'SBIN0001234'], ['उद्यान कार्ड सं०', 'HK-2026-00125']] },
-      { title: 'ग — भूमि एवं प्रस्तावित प्रणाली', fields: [['खाता / खसरा सं०', '00056 / 125/2'], ['भूमि क्षेत्रफल', '0.20 हे०'], ['जल स्रोत / भूमि प्रकृति', 'निजी भूमि / समतल'], ['प्रस्तावित प्रणाली', 'ड्रिप — सेब — 2×2 m'], ['प्रस्तावित क्षेत्र', '0.20 हे०']] },
-      { title: 'घ — फर्म एवं वित्तीय विवरण', fields: [['अधिकृत फर्म', 'Avani Enterprises'], ['पंजीकरण सं०', 'UK-PDMC-AVANI-2026'], ['अनुमानित इकाई लागत', '₹29,915'], ['आवेदन दिनांक', '10-09-2026']] },
-    ],
-    footer: 'लाभार्थी के हस्ताक्षर ____________________    अधिकृत अधिकारी ____________________',
-  },
-  {
-    title: 'आवेदन · पृष्ठ 2 / 2',
-    sections: [
-      { title: 'ङ — लाभार्थी की घोषणा', paragraphs: ['मैं, श्री सुरेश सिंह, सत्यनिष्ठा से घोषित करता हूँ कि इस प्रपत्र में दी गई समस्त सूचनाएँ पूर्णतः सत्य एवं सही हैं। मैं योजना के दिशा-निर्देशों के अनुसार अपने प्रक्षेत्र में सूक्ष्म सिंचाई प्रणाली स्थापित कराने हेतु सहमत हूँ तथा उसके रख-रखाव एवं सुचारु संचालन की पूर्ण जिम्मेदारी लेता हूँ। मैं स्वीकृत अनुदान DBT के माध्यम से सीधे अपने आधार-लिंक बैंक खाते में प्राप्त करने हेतु सहमत हूँ। मैंने विगत 07 वर्षों में इस भूमि खंड पर सूक्ष्म सिंचाई हेतु किसी भी सरकारी योजना से अनुदान प्राप्त नहीं किया है।'], fields: [['नाम', 'श्री सुरेश सिंह'], ['दिनांक', '10-09-2026']] },
-      { title: 'भाग – 2 : संयुक्त सर्वेक्षण के समय भरा जाने वाला विवरण', fields: [['अक्षांश / देशांतर', '29.750000 / 78.525000'], ['कृषि मैपर एप ID', 'PMKSY-DEMO-APPLE-0001'], ['भूमि की प्रकृति', 'समतल'], ['जल स्रोत की दूरी / ऊँचाई अंतर', '80 मी० / 12 मी०'], ['जल गुणवत्ता / पंप', 'अच्छी / सबमर्सिबल'], ['पंप क्षमता', '2 HP']] },
-      { title: 'छ — प्रस्तावित प्रणाली एवं अनुदान की गणना', table: { headings: ['क्र.', 'प्रणाली', 'फसल', 'स्पेसिंग', 'क्षेत्र (हे०)', 'इकाई लागत (₹)', 'दर', 'अनुदान (₹)', 'कृषक अंश (₹)'], rows: [['1', 'ड्रिप', 'सेब', '2×2 m', '0.20', '29,915', '80%', '23,932', '5,983'], ['', '', '', 'योग', '0.20', '29,915', '80%', '23,932', '5,983']] } },
-      { title: 'ज — पात्रता एवं स्थल परीक्षण जाँच सूची', fields: [['पूर्व अनुदान नहीं', '☑ हाँ'], ['निर्धारित क्षेत्र में स्थापना', '☑ हाँ'], ['सिंचाई जल स्रोत उपलब्ध', '☑ हाँ'], ['लाभार्थी दस्तावेज़ सत्यापित', '☑ हाँ']] },
-      { title: 'झ — प्रमाणीकरण एवं संस्तुति', paragraphs: ['प्रमाणित किया जाता है कि उपरोक्त प्रक्षेत्र का संयुक्त रूप से स्थलीय निरीक्षण किया गया, अभिलेखों का परीक्षण किया गया तथा लाभार्थी दिशा-निर्देशों के अनुसार पात्र पाया गया। प्रकरण संस्तुत किया जाता है।'], fields: [['संस्तुति / टिप्पणी', '0.20 हे० क्षेत्र हेतु ड्रिप प्रणाली की स्थापना संस्तुत। कुल लागत ₹29,915, देय अनुदान ₹23,932, कृषक अंश ₹5,983।']] },
-    ],
-    footer: 'फर्म प्रतिनिधि ____________________    प्रभारी, उद्यान सचल दल केंद्र ____________________',
-  },
-  {
-    title: 'लाभार्थी स्व-घोषणा एवं शपथ पत्र',
-    sections: [
-      { title: 'लाभार्थी का विवरण', fields: [['नाम', 'श्री सुरेश सिंह'], ['पिता का नाम', 'श्री मोहन सिंह'], ['ग्राम / विकासखंड', 'शिबूनगर / नगर निगम कोटद्वार'], ['भूमि खाता / खसरा', '00056 / 125/2'], ['कुल क्षेत्र', '0.20 हे०']] },
-      { title: 'घोषणा', paragraphs: ['मैं सत्यनिष्ठा से घोषणा करता हूँ कि मैंने अपनी 0.20 हेक्टेयर कृषि भूमि पर PMKSY-PDMC के अंतर्गत 0.20 हेक्टेयर क्षेत्र में ड्रिप सिंचाई प्रणाली (सेब, 2×2 m) स्थापित कराई है।', 'मैंने विगत सात वर्षों में इस भू-खंड पर सूक्ष्म सिंचाई हेतु केंद्र अथवा राज्य सरकार की किसी योजना से दोहरा अनुदान प्राप्त नहीं किया है। प्रणाली के रख-रखाव एवं सुरक्षा की जिम्मेदारी मेरी होगी तथा विभागीय भौतिक सत्यापन एवं जियो-टैगिंग के लिए मेरी सहमति है।', 'मैं प्रमाणित करता हूँ कि इस शपथ पत्र में दी गई जानकारी मेरे ज्ञान एवं विश्वास के अनुसार सत्य है। गलत जानकारी पाए जाने पर नियमानुसार कार्यवाही एवं अनुदान राशि की वसूली स्वीकार होगी।'], fields: [['स्वीकृत प्रणाली', 'ड्रिप — सेब'], ['क्षेत्रफल', '0.20 हे०'], ['स्थान / दिनांक', 'कोटद्वार / 10-09-2026'], ['शपथ आयुक्त', 'शपथ आयुक्त, कोटद्वार']] },
-    ],
-    footer: 'लाभार्थी के हस्ताक्षर ____________________    शपथ आयुक्त की मुहर ____________________',
-  },
-  {
-    title: 'फर्म सहमति एवं स्थापना प्रमाण-पत्र',
-    sections: [
-      { title: 'लाभार्थी एवं फर्म', fields: [['लाभार्थी', 'श्री सुरेश सिंह'], ['फर्म', 'Avani Enterprises'], ['फर्म पंजीकरण', 'UK-PDMC-AVANI-2026'], ['GSTIN', '05COWPD8094K1Z6'], ['मोबाइल', '9536462212'], ['स्थापना स्थल', 'ग्राम शिबूनगर, कोटद्वार, पौड़ी गढ़वाल']] },
-      { title: 'स्थापित प्रणाली का विवरण', fields: [['प्रणाली / फसल', 'ड्रिप / सेब'], ['स्पेसिंग', '2×2 m'], ['स्थापित क्षेत्र', '0.20 हे०'], ['स्थापना दिनांक', '18-09-2026'], ['वारंटी अवधि', '1 वर्ष']] },
-      { title: 'फर्म का प्रमाणन', paragraphs: ['प्रमाणित किया जाता है कि उपर्युक्त लाभार्थी के खेत में उल्लिखित सूक्ष्म सिंचाई प्रणाली निर्धारित तकनीकी मानकों के अनुसार स्थापित की गई है। प्रणाली की जानकारी एवं स्थापना विवरण सही हैं।'] },
-    ],
-    footer: 'लाभार्थी के हस्ताक्षर ____________________    फर्म प्रतिनिधि एवं मुहर ____________________',
-  },
-  {
-    title: 'कंपनी बिल / Tax Invoice एवं BoQ',
-    sections: [
-      { title: 'बिल विवरण', fields: [['फर्म', 'Avani Enterprises'], ['GSTIN', '05COWPD8094K1Z6'], ['बिल संख्या', 'DEMO-APPLE-0001'], ['बिल दिनांक', '20-09-2026'], ['लाभार्थी', 'श्री सुरेश सिंह'], ['स्थापना दिनांक', '18-09-2026']] },
-      { title: 'BoQ — ड्रिप प्रणाली (सेब, 2×2 m, 0.20 हे०)', table: { headings: ['क्र.', 'विवरण', 'क्षेत्र / राशि (₹)'], rows: [['1', 'कुल गाइडलाइन लागत', '0.20 हे० / 29,915'], ['2', 'कंपनी बिल राशि (मार्कअप सहित)', '32,308']] } },
-      { title: 'भुगतान एवं प्रमाणन', fields: [['कुल बिल राशि', '₹32,308'], ['GST', 'कुल राशि में अलग से देय नहीं'], ['भुगतान स्थिति', 'लाभार्थी द्वारा भुगतान प्राप्त']] },
-    ],
-    footer: 'लाभार्थी के हस्ताक्षर ____________________    अधिकृत फर्म प्रतिनिधि ____________________',
-  },
-  {
-    title: 'नकद प्राप्ति रसीद',
-    sections: [
-      { title: 'रसीद विवरण', fields: [['रसीद संख्या', '001'], ['रसीद दिनांक', '20-09-2026'], ['प्राप्तकर्ता फर्म', 'Avani Enterprises'], ['लाभार्थी का नाम', 'श्री सुरेश सिंह'], ['ग्राम', 'शिबूनगर, कोटद्वार'], ['कार्य', 'ड्रिप सिंचाई प्रणाली — सेब — 0.20 हे०']] },
-      { title: 'प्राप्त धनराशि', table: { headings: ['विवरण', 'राशि (₹)'], rows: [['ड्रिप प्रणाली एवं स्थापना — बिल DEMO-APPLE-0001', '32,308'], ['कुल प्राप्त राशि', '32,308']] }, paragraphs: ['रुपये बत्तीस हजार तीन सौ आठ मात्र। उपर्युक्त राशि लाभार्थी से प्राप्त हुई।'] },
-    ],
-    footer: 'लाभार्थी के हस्ताक्षर ____________________    प्राप्तकर्ता के हस्ताक्षर एवं मुहर ____________________',
-  },
-  {
-    title: 'भौतिक सत्यापन एवं स्थापना निरीक्षण रिपोर्ट',
-    sections: [
-      { title: 'निरीक्षण विवरण', fields: [['निरीक्षण दिनांक', '19-09-2026'], ['लाभार्थी', 'श्री सुरेश सिंह'], ['ग्राम / केंद्र', 'शिबूनगर / कोटद्वार'], ['जियो-टैग / QR', 'PMKSY-DEMO-APPLE-0001'], ['निरीक्षण अधिकारी', 'श्री अनिल कुमार, प्रभारी']] },
-      { title: 'स्थापित प्रणाली का सत्यापन', fields: [['प्रणाली / फसल', 'ड्रिप / सेब'], ['स्पेसिंग / क्षेत्रफल', '2×2 m / 0.20 हे०'], ['फिल्टर / फर्टिगेशन', 'स्क्रीन फिल्टर / वेंचुरी'], ['प्रणाली परीक्षण', 'सफल'], ['स्थल परिणाम', 'सन्तोषजनक']] },
-      { title: 'निरीक्षण टिप्पणी', paragraphs: ['स्थल निरीक्षण एवं अभिलेखों के आधार पर प्रणाली स्थापित पाई गई। उपलब्ध दस्तावेज़ों, क्षेत्रफल, बिल एवं स्थापना विवरण का परीक्षण किया गया। प्रकरण संस्तुति योग्य है।'] },
-    ],
-    footer: 'लाभार्थी के हस्ताक्षर ____________________    निरीक्षण अधिकारी के हस्ताक्षर ____________________',
-  },
-];
-
-function loadFeedbackNotes() {
-  if (typeof window === 'undefined') return { notes: [], error: '' };
-
-  try {
-    const stored = window.localStorage.getItem(FEEDBACK_KEY);
-    if (!stored) return { notes: [], error: '' };
-
-    const notes = JSON.parse(stored).notes;
-    if (!Array.isArray(notes)) throw new Error('सहेजे गए सुझावों का प्रारूप सही नहीं है।');
-    return {
-      notes: notes.map((note, index) => {
-        if (!note || typeof note !== 'object' || typeof note.text !== 'string') {
-          throw new Error('सहेजे गए सुझावों का प्रारूप सही नहीं है।');
-        }
-        return {
-          ...note,
-          id: note.id ?? `legacy-${index}`,
-          time: note.time ?? note.t ?? '',
-          where: note.where ?? 'अन्य / पूरी प्रणाली',
-          kind: note.kind ?? FEEDBACK_KINDS[1],
-          step: note.step ?? '',
-        };
-      }),
-      error: '',
-    };
-  } catch (error) {
-    return {
-      notes: [],
-      error: `सहेजे गए सुझाव पढ़े नहीं जा सके: ${error.message}`,
-    };
-  }
-}
+import React, { useEffect, useRef, useState } from "react";
+import "./PMKSY.css";
 
 const PMKSY = () => {
   const [activeStep, setActiveStep] = useState(1);
@@ -149,1014 +7,1742 @@ const PMKSY = () => {
   const [showOfficePanel, setShowOfficePanel] = useState(false);
   const [showAllRecPanel, setShowAllRecPanel] = useState(false);
   const [samplePrintReady, setSamplePrintReady] = useState(false);
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
-  const [feedbackTab, setFeedbackTab] = useState('w');
-  const [feedbackWhere, setFeedbackWhere] = useState(FEEDBACK_WHERE[0]);
-  const [feedbackKind, setFeedbackKind] = useState(FEEDBACK_KINDS[1]);
-  const [feedbackText, setFeedbackText] = useState('');
-  const [feedbackLog, setFeedbackLog] = useState([]);
-  const [feedbackLoaded] = useState(loadFeedbackNotes);
-  const [feedbackNotes, setFeedbackNotes] = useState(feedbackLoaded.notes);
-  const [feedbackMessage, setFeedbackMessage] = useState(feedbackLoaded.error);
-  const feedbackTextRef = useRef(null);
-  const feedbackPanelRef = useRef(null);
+
+  const steps = [
+    { id: 1, no: "चरण 01", nm: "आवेदन प्रपत्र" },
+    { id: 2, no: "चरण 02", nm: "शपथ पत्र" },
+    { id: 3, no: "चरण 03", nm: "फर्म चयन" },
+    { id: 4, no: "चरण 04", nm: "भौतिक सत्यापन" },
+    { id: 5, no: "चरण 05", nm: "कंपनी बिल / BoQ" },
+    { id: 6, no: "चरण 06", nm: "नकद रसीद" },
+    { id: 7, no: "रजिस्टर", nm: "सभी किसान" },
+    { id: 8, no: "प्रबंधन", nm: "दर तालिका" },
+  ];
 
   useEffect(() => {
     if (!samplePrintReady) return undefined;
-
     const printTimer = window.setTimeout(() => window.print(), 350);
     const handleAfterPrint = () => setSamplePrintReady(false);
-    window.addEventListener('afterprint', handleAfterPrint);
+    window.addEventListener("afterprint", handleAfterPrint);
     return () => {
       window.clearTimeout(printTimer);
-      window.removeEventListener('afterprint', handleAfterPrint);
+      window.removeEventListener("afterprint", handleAfterPrint);
     };
   }, [samplePrintReady]);
 
-  const steps = [
-    { id: 1, no: 'चरण 01', nm: 'आवेदन प्रपत्र' },
-    { id: 2, no: 'चरण 02', nm: 'शपथ पत्र' },
-    { id: 3, no: 'चरण 03', nm: 'फर्म चयन' },
-    { id: 4, no: 'चरण 04', nm: 'भौतिक सत्यापन' },
-    { id: 5, no: 'चरण 05', nm: 'कंपनी बिल / BoQ' },
-    { id: 6, no: 'चरण 06', nm: 'नकद रसीद' },
-    { id: 7, no: 'रजिस्टर', nm: 'सभी किसान' },
-    { id: 8, no: 'प्रबंधन', nm: 'दर तालिका' },
-  ];
-
-  // Mock data for Dropdowns
-  const firms = ["गंगा एंटरप्राइजेज", "बडोला मशरूम फार्म", "जय जवाहर ड्रिप"];
-  const farmers = ["रामेश्वर प्रसाद", "सुरेश कुमार", "मोहन सिंह"];
-  const kendras = ["कोटद्वार", "लैंसडाउन", "पौड़ी", "श्रीनगर"];
-  const blocks = ["दुगड्डा", "यमकेश्वर", "कोटद्वार", "पौड़ी"];
-  const vidhans = ["कोटद्वार", "थालीसैन", "पौड़ी"];
-  const socialOpts = ["सामान्य", "अनुसूचित जाति", "अनुसूचित जनजाति", "ओबीसी"];
-  const fclassOpts = ["सामान्य", "सीमांत", "लघु", "बड़ा"];
-  const genderOpts = ["पुरुष", "महिला", "अन्य"];
-  const subOverrideOpts = ["स्वतः (किसान वर्ग से)", "35%", "45%", "55%", "70%"];
-  const btypeOpts = ["स्वतंत्र", "सहकारी", "समूह", "स्वसहायता समूह"];
-  const sourceOpts = ["नहर", "नलकूप", "ट्यूबवेल", "नदी/नाला", "तालाब", "अन्य"];
-  const terrainOpts = ["समतल", "ढालू", "अत्यधिक ढालू"];
-  const wqualOpts = ["अच्छी", "मध्यम", "खराब"];
-  const pumpOpts = ["सबमर्सिबल", "मोनोब्लॉक", "सौर", "अन्य"];
-  const verdictOpts = ["अनुमोदित", "अस्वीकृत", "लंबित"];
-  const stampOpts = ["10", "20", "50", "100"];
-  const warrantyOpts = ["1 वर्ष", "3 वर्ष", "5 वर्ष", "7 वर्ष"];
-  const filterOpts = ["स्क्रीन फिल्टर", "डिस्क फिल्टर", "हाइड्रोसाइक्लोन"];
-  const fertOpts = ["वेंचुरी", "फर्टिगेशन टैंक", "इंजेक्टर पंप"];
-  const trialOpts = ["सफल", "असफल", "लंबित"];
-  const resultOpts = ["पास", "फेल", "लंबित"];
-  const rowOpts = ["पंक्ति 1", "पंक्ति 2"];
-  const gstOpts = ["0%", "5%", "12%", "18%"];
-
-  const logFeedbackEvent = (kind, message) => {
-    setFeedbackLog((entries) => [
-      ...entries,
-      { id: `${Date.now()}-${entries.length}`, time: new Date().toLocaleString('hi-IN'), kind, message },
-    ]);
-  };
-
-  const closeFeedback = () => setFeedbackOpen(false);
-
-  useEffect(() => {
-    if (!feedbackOpen) return undefined;
-
-    if (feedbackTab === 'w') feedbackTextRef.current?.focus();
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') setFeedbackOpen(false);
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [feedbackOpen, feedbackTab]);
-
-  const persistFeedbackNotes = (notes) => {
-    try {
-      window.localStorage.setItem(FEEDBACK_KEY, JSON.stringify({ notes }));
-      setFeedbackNotes(notes);
-      return true;
-    } catch (error) {
-      setFeedbackMessage(`सुझाव सहेजे नहीं जा सके: ${error.message}`);
-      return false;
-    }
-  };
-
-  const addFeedbackNote = () => {
-    const text = feedbackText.trim();
-    if (!text) {
-      setFeedbackMessage('पहले कुछ लिखें।');
-      feedbackTextRef.current?.focus();
-      return;
-    }
-
-    const note = {
-      id: `${Date.now()}-${feedbackNotes.length}`,
-      time: new Date().toLocaleString('hi-IN'),
-      where: feedbackWhere,
-      kind: feedbackKind,
-      text,
-      step: steps.find((step) => step.id === activeStep)?.nm ?? '',
-    };
-    const notes = [...feedbackNotes, note];
-    if (!persistFeedbackNotes(notes)) return;
-
-    setFeedbackText('');
-    setFeedbackMessage(`जुड़ गया (${notes.length})`);
-    logFeedbackEvent('नोट', `${note.kind} — ${note.where}`);
-  };
-
-  const deleteFeedbackNote = (noteId) => {
-    const notes = feedbackNotes.filter((note) => note.id !== noteId);
-    if (!persistFeedbackNotes(notes)) return;
-    setFeedbackMessage('सुझाव हटाया गया।');
-    logFeedbackEvent('नोट', 'सहेजा गया सुझाव हटाया');
-  };
-
-  const createFeedbackReport = () => {
-    const lines = [
-      'PMKSY–PDMC · अनुभव रिपोर्ट',
-      `तैयार किया गया: ${new Date().toLocaleString('hi-IN')}`,
-      '',
-      `── सुझाव (${feedbackNotes.length}) ──`,
-      ...(feedbackNotes.length
-        ? feedbackNotes.flatMap((note, index) => [
-            `${index + 1}. [${note.kind}] ${note.where}`,
-            `   ${note.text.replace(/\n/g, '\n   ')}`,
-            `   (समय ${note.time}${note.step ? ` · चरण ${note.step}` : ''})`,
-          ])
-        : ['(कोई सुझाव नहीं लिखा गया)']),
-      '',
-      '── कार्य डायरी ──',
-      ...(feedbackLog.length
-        ? feedbackLog.map((entry) => `${entry.time}  [${entry.kind}]  ${entry.message}`)
-        : ['(अभी कोई गतिविधि दर्ज नहीं है)']),
-    ];
-    return lines.join('\n');
-  };
-
-  const copyFeedbackReport = async () => {
-    try {
-      await navigator.clipboard.writeText(createFeedbackReport());
-      setFeedbackMessage('कॉपी हो गया — चैट में चिपकाएँ।');
-    } catch (error) {
-      setFeedbackMessage(`रिपोर्ट कॉपी नहीं हो सकी: ${error.message}`);
-    }
-  };
-
-  const saveFeedbackReport = () => {
-    try {
-      const blob = new Blob([`\ufeff${createFeedbackReport()}`], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'PMKSY_अनुभव_रिपोर्ट.txt';
-      link.click();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1500);
-      setFeedbackMessage('फाइल बन गई।');
-    } catch (error) {
-      setFeedbackMessage(`रिपोर्ट फाइल नहीं बन सकी: ${error.message}`);
-    }
-  };
-
   return (
     <>
-    <div className="noprint">
-      <header className="mast">
-        <div className="crest">उ</div>
-        <div>
-          <h1>PMKSY–PDMC · सम्पूर्ण प्रपत्र प्रणाली</h1>
-          <div className="sub">
-            उद्यान एवं खाद्य प्रसंस्करण विभाग, उत्तराखण्ड ·{' '}
-            <span id="officeNameTop">कार्यालय उद्यान विशेषज्ञ, कोटद्वार, पौड़ी गढ़वाल, उत्तराखण्ड</span>{' '}
-            <span style={{ background: '#0d7680', color: '#fff', padding: '1px 7px', borderRadius: '9px', fontSize: '10.5px', fontWeight: 700, marginLeft: '6px' }}>
-              संस्करण 8 · 23-08-2026
-            </span>
+      <div className="noprint">
+        <header className="mast">
+          <div className="crest">उ</div>
+          <div>
+            <h1>PMKSY–PDMC · सम्पूर्ण प्रपत्र प्रणाली</h1>
+            <div className="sub">
+              उद्यान एवं खाद्य प्रसंस्करण विभाग, उत्तराखण्ड ·{" "}
+              <span id="officeNameTop">
+                कार्यालय उद्यान विशेषज्ञ, कोटद्वार, पौड़ी गढ़वाल, उत्तराखण्ड
+              </span>{" "}
+              <span
+                style={{
+                  background: "#0d7680",
+                  color: "#fff",
+                  padding: "1px 7px",
+                  borderRadius: "9px",
+                  fontSize: "10.5px",
+                  fontWeight: 700,
+                  marginLeft: "6px",
+                }}
+              >
+                संस्करण 8 · 23-08-2026
+              </span>
+            </div>
           </div>
-        </div>
-        <div className="sp"></div>
-        <div className="firmswitch">
-          <label htmlFor="activeFirmSel">सक्रिय फर्म</label>
-          <select id="activeFirmSel">
-            {firms.map((f, i) => <option key={i} value={f}>{f}</option>)}
-          </select>
-          <div className="btnrow">
-            <button className="btn ghost sm" type="button" onClick={() => setShowFirmPanel(true)}>फर्म जोड़ें/हटाएँ</button>
-            <button className="btn ghost sm" type="button" onClick={() => setShowAllRecPanel(true)}>सभी फर्मों का रिकॉर्ड</button>
-            <button className="btn ghost sm" type="button" onClick={() => setShowOfficePanel(true)}>कार्यालय सेटिंग</button>
-          </div>
-        </div>
-        <div className="btnrow">
-          <select id="quickFarmer" style={{ minWidth: '190px', fontSize: '13px' }}>
-            <option value="">— सहेजा किसान खोलें —</option>
-            {farmers.map((f, i) => <option key={i} value={f}>{f}</option>)}
-          </select>
-          <button className="btn ghost sm" type="button">नया आवेदन</button>
-          <button className="btn water sm" type="button">वर्तमान प्रपत्र प्रिंट</button>
-        </div>
-      </header>
-
-      <button
-        className="feedback-button"
-        type="button"
-        title="सुझाव लिखें / रिपोर्ट बनाएँ"
-        aria-expanded={feedbackOpen}
-        aria-controls="feedbackPanel"
-        onClick={() => {
-          setFeedbackOpen((open) => !open);
-          if (!feedbackOpen) {
-            setFeedbackTab('w');
-            logFeedbackEvent('नोट', 'सुझाव पैनल खोला');
-          }
-        }}
-      >
-        ✎ सुझाव{feedbackNotes.length > 0 && <span className="feedback-dot">{feedbackNotes.length}</span>}
-      </button>
-      <div
-        className={`feedback-panel${feedbackOpen ? ' on' : ''}`}
-        id="feedbackPanel"
-        ref={feedbackPanelRef}
-        role="dialog"
-        aria-label="सुझाव एवं रिपोर्ट"
-        aria-modal="false"
-        aria-hidden={!feedbackOpen}
-      >
-        <h3>
-          अनुभव रिपोर्ट
-          <span className="feedback-subtitle">सब कुछ इसी फाइल में — कहीं नहीं भेजा जाता</span>
-          <button type="button" onClick={closeFeedback} aria-label="बंद करें">×</button>
-        </h3>
-        <div className="feedback-tabs" role="tablist" aria-label="अनुभव रिपोर्ट">
-          {[
-            { id: 'w', label: 'सुझाव लिखें' },
-            { id: 'l', label: 'मेरे सुझाव', count: feedbackNotes.length },
-            { id: 'd', label: 'कार्य डायरी' },
-          ].map((tab) => (
-            <button
-              className="feedback-tab"
-              id={`feedback-tab-${tab.id}`}
-              key={tab.id}
-              type="button"
-              role="tab"
-              aria-selected={feedbackTab === tab.id}
-              aria-controls={`feedback-content-${tab.id}`}
-              onClick={() => {
-                setFeedbackTab(tab.id);
-                setFeedbackMessage('');
-              }}
-            >
-              {tab.label}{tab.count > 0 && <span className="feedback-count">{tab.count}</span>}
-            </button>
-          ))}
-        </div>
-
-        <div
-          className="feedback-content"
-          id="feedback-content-w"
-          role="tabpanel"
-          aria-labelledby="feedback-tab-w"
-          hidden={feedbackTab !== 'w'}
-        >
-          <div className="f feedback-field">
-            <label htmlFor="feedbackWhere">यह किस बारे में है?</label>
-            <select id="feedbackWhere" value={feedbackWhere} onChange={(event) => setFeedbackWhere(event.target.value)}>
-              {FEEDBACK_WHERE.map((item) => <option key={item} value={item}>{item}</option>)}
+          <div className="sp"></div>
+          <div className="firmswitch">
+            <label htmlFor="activeFirmSel">सक्रिय फर्म</label>
+            <select id="activeFirmSel">
+              <option>गंगा एंटरप्राइजेज</option>
             </select>
-          </div>
-          <div className="f feedback-field">
-            <label>किस तरह की बात है?</label>
-            <div className="chips feedback-kinds">
-              {FEEDBACK_KINDS.map((kind, index) => (
-                <React.Fragment key={kind}>
-                  <input
-                    type="radio"
-                    name="feedbackKind"
-                    id={`feedback-kind-${index}`}
-                    value={kind}
-                    checked={feedbackKind === kind}
-                    onChange={() => setFeedbackKind(kind)}
-                  />
-                  <label htmlFor={`feedback-kind-${index}`}>{kind}</label>
-                </React.Fragment>
-              ))}
-            </div>
-          </div>
-          <div className="f">
-            <label htmlFor="feedbackText">क्या ठीक करना है — अपने शब्दों में लिखें</label>
-            <textarea
-              id="feedbackText"
-              ref={feedbackTextRef}
-              rows="5"
-              placeholder="जैसे: भूमि तालिका में ग्राम का खाना छोटा है, या — बिल में GST अपने आप 18% रहे"
-              value={feedbackText}
-              onChange={(event) => setFeedbackText(event.target.value)}
-            />
-          </div>
-          <div className="hint feedback-hint">लिखते समय आप जिस चरण पर हैं, वह अपने आप जुड़ जाएगा — दोबारा समझाना नहीं पड़ेगा।</div>
-        </div>
-
-        <div
-          className="feedback-content feedback-list"
-          id="feedback-content-l"
-          role="tabpanel"
-          aria-labelledby="feedback-tab-l"
-          hidden={feedbackTab !== 'l'}
-        >
-          {feedbackNotes.length ? feedbackNotes.map((note) => (
-            <article className={`feedback-note${note.kind === 'गड़बड़ी है' ? ' bug' : note.kind === 'नया चाहिए' ? ' idea' : ''}`} key={note.id}>
-              <div>{note.text}</div>
-              <div className="feedback-note-meta">
-                <span>{note.kind}</span>
-                <span>{note.where}</span>
-                <time>{note.time}</time>
-                <button type="button" aria-label="सुझाव हटाएँ" onClick={() => deleteFeedbackNote(note.id)}>×</button>
-              </div>
-            </article>
-          )) : (
-            <div className="empty">अभी कोई सुझाव नहीं लिखा। बाईं ओर "सुझाव लिखें" में लिखें।</div>
-          )}
-        </div>
-
-        <div
-          className="feedback-content feedback-list"
-          id="feedback-content-d"
-          role="tabpanel"
-          aria-labelledby="feedback-tab-d"
-          hidden={feedbackTab !== 'd'}
-        >
-          {feedbackLog.length ? feedbackLog.map((entry) => (
-            <div className="feedback-logline" key={entry.id}>
-              <span className={`feedback-log-kind kind-${entry.kind}`}>{entry.kind}</span>
-              <time>{entry.time}</time>
-              <span>{entry.message}</span>
-            </div>
-          )) : <div className="empty">अभी कोई गतिविधि दर्ज नहीं है।</div>}
-        </div>
-
-        <div className="feedback-footer">
-          <div className="btnrow">
-            <button className="btn water sm" type="button" onClick={addFeedbackNote} disabled={feedbackTab !== 'w'}>सुझाव जोड़ें</button>
-            <button className="btn ghost sm" type="button" onClick={copyFeedbackReport}>पूरी रिपोर्ट कॉपी करें</button>
-            <button className="btn ghost sm" type="button" onClick={saveFeedbackReport}>फाइल में सहेजें</button>
-            <span className="hint feedback-message" role="status">{feedbackMessage}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Firm Panel Modal */}
-      <div className="firmpanel-backdrop" hidden={!showFirmPanel}>
-        <div className="firmpanel" role="dialog" aria-label="फर्म प्रबंधन">
-          <div className="firmpanel-head">
-            <h2>फर्म प्रबंधन — जोड़ें, हटाएँ, सक्रिय फर्म चुनें</h2>
-            <button className="btn ghost sm" type="button" onClick={() => setShowFirmPanel(false)}>बंद करें ✕</button>
-          </div>
-          <div className="firmpanel-body">
-            <div className="flag info">हर फर्म का किसान-रजिस्टर अलग-अलग सहेजा जाता है। ऊपर "सक्रिय फर्म" बदलते ही सिर्फ़ उसी फर्म के सहेजे किसान दिखेंगे, नए आवेदन भी उसी फर्म के नाम से बनेंगे। "हटाएँ" करने से फर्म सूची से छिप जाती है — उसका पुराना डेटा सुरक्षित रहता है, मिटता नहीं।</div>
-            <h4 className="subh" style={{ marginTop: '4px' }}>नई फर्म जोड़ें</h4>
-            <div className="grid">
-              <div className="f"><label>फर्म का नाम *</label><input placeholder="जैसे: Ganga Enterprises" /></div>
-              <div className="f"><label>निर्माता / मैन्युफैक्चरर</label><input placeholder="जैसे: भारत ड्रिप इरिगेशन एंड एग्रो" /></div>
-              <div className="f wide"><label>पता</label><input placeholder="पूरा पता" /></div>
-              <div className="f"><label>मोबाइल</label><input inputMode="numeric" /></div>
-              <div className="f"><label>GSTIN</label><input className="mono" /></div>
-              <div className="f"><label>बैंक का नाम</label><input /></div>
-              <div className="f"><label>खाता संख्या</label><input className="mono" /></div>
-              <div className="f"><label>IFSC</label><input className="mono" /></div>
-            </div>
-            <div className="btnrow" style={{ marginTop: '10px' }}>
-              <button className="btn water sm" type="button">फर्म जोड़ें</button>
-              <span className="hint"></span>
-            </div>
-            <h4 className="subh">सभी फर्में <span className="tag"></span></h4>
-            <input placeholder="फर्म खोजें…" style={{ marginBottom: '9px' }} />
-            <div style={{ maxHeight: '280px', overflowY: 'auto', border: '1px solid var(--line)', borderRadius: 'var(--r-sm)' }}></div>
-          </div>
-        </div>
-      </div>
-
-      {/* Office Panel Modal */}
-      <div className="firmpanel-backdrop" hidden={!showOfficePanel}>
-        <div className="firmpanel" role="dialog" aria-label="कार्यालय सेटिंग">
-          <div className="firmpanel-head">
-            <h2>कार्यालय नाम प्रबंधन — जोड़ें, चुनें, हटाएँ</h2>
-            <button className="btn ghost sm" type="button" onClick={() => setShowOfficePanel(false)}>बंद करें ✕</button>
-          </div>
-          <div className="firmpanel-body">
-            <div className="flag info">यहाँ चुना गया कार्यालय नाम सिस्टम के मुख्य शीर्षक और प्रिंट होने वाले आवेदन/प्रपत्रों के कार्यालय शीर्षक में स्वतः दिखाई देगा। अलग-अलग कार्यालयों के नाम सुरक्षित करके जरूरत के अनुसार बदले जा सकते हैं।</div>
-            <div className="f" style={{ marginTop: '10px' }}><label>सक्रिय कार्यालय</label><select></select></div>
-            <h4 className="subh" style={{ marginTop: '12px' }}>नया कार्यालय जोड़ें</h4>
-            <div className="grid">
-              <div className="f wide"><label>कार्यालय का पूरा नाम *</label><input placeholder="जैसे: कार्यालय उद्यान विशेषज्ञ, कोटद्वार, पौड़ी गढ़वाल, उत्तराखण्ड" /></div>
-            </div>
-            <div className="btnrow" style={{ marginTop: '10px' }}>
-              <button className="btn water sm" type="button">कार्यालय जोड़ें</button>
-              <span className="hint"></span>
-            </div>
-            <h4 className="subh">सभी कार्यालय <span className="tag"></span></h4>
-            <div style={{ maxHeight: '280px', overflowY: 'auto', border: '1px solid var(--line)', borderRadius: 'var(--r-sm)' }}></div>
-          </div>
-        </div>
-      </div>
-
-      {/* All Records Modal */}
-      <div className="firmpanel-backdrop" hidden={!showAllRecPanel}>
-        <div className="firmpanel" role="dialog" aria-label="सभी फर्मों का रिकॉर्ड" style={{ maxWidth: '1080px' }}>
-          <div className="firmpanel-head">
-            <h2>सभी फर्मों के दस्तावेज़ — एक साथ देखें</h2>
-            <button className="btn ghost sm" type="button" onClick={() => setShowAllRecPanel(false)}>बंद करें ✕</button>
-          </div>
-          <div className="firmpanel-body">
-            <div className="flag info">हर किसान के सभी 6 प्रपत्र (आवेदन, शपथ पत्र, फर्म सहमति, बिल, रसीद, भौतिक सत्यापन) यहीं से "प्रिंट सभी" दबाकर खोले जा सकते हैं — भले वह किसी भी फर्म के अंतर्गत सहेजा गया हो।</div>
-            <div className="grid" style={{ gridTemplateColumns: '1fr 2fr', marginBottom: '10px' }}>
-              <div className="f"><label>फर्म अनुसार फ़िल्टर</label><select></select></div>
-              <div className="f"><label>किसान/ग्राम/केंद्र खोजें</label><input placeholder="नाम, ग्राम, केंद्र टाइप करें…" /></div>
-            </div>
-            <div className="hint" style={{ marginBottom: '8px' }}></div>
-            <div></div>
-          </div>
-        </div>
-      </div>
-
-      <div className="wrap">
-        <div className="steps" role="tablist" id="stepbar">
-          {steps.map((step) => (
-            <button
-              key={step.id}
-              className={`step ${activeStep === step.id ? 'active' : ''}`}
-              role="tab"
-              data-s={step.id}
-              aria-selected={activeStep === step.id}
-              onClick={() => {
-                setActiveStep(step.id);
-                logFeedbackEvent('चरण', `खोला — ${step.no} ${step.nm}`);
-              }}
-            >
-              <span className="no">{step.no}</span>
-              <span className="nm">{step.nm} {step.id === 7 && <span className="mono" id="cnt"></span>}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* STEP 1 */}
-        {activeStep === 1 && (
-          <section id="S1">
-            <div className="card">
-              <h2><span className="kh">क</span> क्षेत्र विवरण <span className="en">Location</span></h2>
-              <div className="body"><div className="grid">
-                <div className="f"><label><span className="n">1</span>जनपद</label><input className="auto" value="पौड़ी गढ़वाल" readOnly /></div>
-                <div className="f"><label><span className="n">2</span>उद्यान सचल दल केंद्र</label>
-                  <select id="kendra">
-                    <option value="">चुनें</option>
-                    {kendras.map(k => <option key={k} value={k}>{k}</option>)}
-                  </select>
-                  <div className="hint">केंद्र चुनते ही विकासखंड एवं विधान सभा स्वतः भर जाएँगे</div>
-                </div>
-                <div className="f"><label><span className="n">3</span>विकासखंड</label>
-                  <select id="block" className="auto">
-                    <option value="">चुनें</option>
-                    {blocks.map(b => <option key={b} value={b}>{b}</option>)}
-                  </select>
-                </div>
-                <div className="f"><label><span className="n">4</span>विधान सभा</label>
-                  <select id="vidhan" className="auto">
-                    <option value="">चुनें</option>
-                    {vidhans.map(v => <option key={v} value={v}>{v}</option>)}
-                  </select>
-                </div>
-                <div className="f"><label><span className="n">5</span>ग्राम पंचायत</label><input list="dlPan" /><datalist id="dlPan"></datalist></div>
-                <div className="f"><label><span className="n">6</span>ग्राम</label><input list="dlVil" /><datalist id="dlVil"></datalist></div>
-              </div></div>
-            </div>
-
-            <div className="card">
-              <h2><span className="kh">ख</span> किसान एवं बैंक विवरण <span className="en">Farmer &amp; Bank — DBT</span></h2>
-              <div className="body">
-                <div className="flag ok" id="recall" style={{ display: 'none' }}></div>
-                <div className="btnrow sample-toolbar" style={{ marginBottom: '12px' }}>
-                  <button className="btn water sm" type="button">🧪 पूरा भरा हुआ किसान Sample देखें</button>
-                  <button className="btn ghost sm" type="button" onClick={() => setSamplePrintReady(true)}>🖨️ Sample के सभी 6 प्रपत्र प्रिंट</button>
-                  <span className="hint">Apple · Drip · 2×2 m · 0.20 हे० — सभी 6 प्रपत्रों की testing के लिए demo data भरेगा; रजिस्टर में save नहीं होगा।</span>
-                </div>
-                <div className="grid">
-                  <div className="f"><label><span className="n">1</span>किसान का नाम</label><input list="dlF" autoComplete="off" placeholder="नाम लिखें" /><datalist id="dlF"></datalist><div className="hint">पुराना किसान हो तो पूरा रिकॉर्ड अपने आप भर जाएगा</div></div>
-                  <div className="f"><label><span className="n">2</span>पिता / पति का नाम</label><input id="rel" /></div>
-                  <div className="f"><label><span className="n">3</span>लिंग</label>
-                    <select id="gender">
-                      <option value="">चुनें</option>
-                      {genderOpts.map(g => <option key={g} value={g}>{g}</option>)}
-                    </select>
-                  </div>
-                  <div className="f"><label><span className="n">4</span>सामाजिक श्रेणी</label>
-                    <select id="social">
-                      <option value="">चुनें</option>
-                      {socialOpts.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </div>
-                  <div className="f"><label><span className="n">5</span>किसान वर्ग <span className="tag">कुल भूमि से स्वतः</span></label>
-                    <select id="fclass">
-                      <option value="">चुनें</option>
-                      {fclassOpts.map(f => <option key={f} value={f}>{f}</option>)}
-                    </select>
-                    <div className="hint" id="fcHint"></div>
-                  </div>
-                  <div className="f"><label>अनुदान दर <span className="tag">बदलना हो तो चुनें</span></label>
-                    <select id="subOverride">
-                      <option value="">स्वतः (किसान वर्ग से)</option>
-                      {subOverrideOpts.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                    <div className="hint">डिफ़ॉल्ट किसान वर्ग से स्वतः तय होती है — किसी विशेष प्रकरण में दर स्वयं तय करनी हो तो यहाँ चुन लें</div>
-                  </div>
-                  <div className="f"><label><span className="n">6</span>लाभार्थी प्रकार</label>
-                    <select id="btype">
-                      <option value="">चुनें</option>
-                      {btypeOpts.map(b => <option key={b} value={b}>{b}</option>)}
-                    </select>
-                  </div>
-                  <div className="f"><label><span className="n">7</span>आधार संख्या</label><input className="mono" inputMode="numeric" maxLength="14" placeholder="XXXX XXXX XXXX" /><div className="errtxt" id="e_aadhaar"></div></div>
-                  <div className="f"><label><span className="n">8</span>मोबाइल नंबर</label><input className="mono" inputMode="numeric" maxLength="10" /><div className="errtxt" id="e_mobile"></div></div>
-                  <div className="f"><label><span className="n">9</span>बैंक खाता सं० (आधार लिंक)</label><input className="mono" /></div>
-                  <div className="f"><label><span className="n">11</span>IFSC कोड</label><input className="mono" maxLength="11" style={{ textTransform: 'uppercase' }} placeholder="ABCD0123456" /><div className="errtxt" id="e_ifsc"></div></div>
-                  <div className="f wide"><label><span className="n">10</span>बैंक का नाम एवं शाखा</label><input list="dlBank" /><datalist id="dlBank"></datalist></div>
-                  <div className="f"><label><span className="n">12</span>उद्यान कार्ड / पंजीकरण सं०</label><input className="mono" /></div>
-                  <div className="f wide"><label><span className="n">13</span>पूरा पता <span className="tag">स्वतः</span></label><input className="auto" /></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="card">
-              <h2><span className="kh">ग</span> भूमि, जल स्रोत एवं प्रस्तावित प्रणाली <span className="en">Land &amp; System</span></h2>
-              <div className="body">
-                <div id="landFlags"></div>
-                <h4 className="subh" style={{ borderTop: 'none', paddingTop: '0', marginTop: '2px' }}>प्रस्तावित प्रणाली — अधिकतम 2 पंक्तियाँ (प्रपत्र का भाग «छ»)</h4>
-                <div id="sysRows"></div>
-                <div className="btnrow" style={{ marginTop: '9px' }}>
-                  <button className="btn ghost sm">+ प्रणाली पंक्ति जोड़ें</button>
-                  <span className="hint">प्रणाली → फसल → स्पेसिंग → क्षेत्र चुनते ही लागत एवं अनुदान PDMC Table 3/4/5/6 से स्वतः</span>
-                </div>
-
-                <h4 className="subh">भूमि विवरण — उपरोक्त क्षेत्रफल किस-किस की भूमि से पूरा हो रहा है</h4>
-                <div className="hint" style={{ marginBottom: '8px' }}>पहली पंक्ति कृषक की स्वयं की भूमि है (विवरण ऊपर से स्वतः)। अपनी भूमि कम पड़े तो नीचे रक्त-संबंधी सह-खाताधारक जोड़ें — यही तालिका शपथ पत्र में छपेगी।</div>
-                <div style={{ overflowX: 'auto' }}><table className="dt landtbl" id="landTable"></table></div>
-                <div className="btnrow" style={{ marginTop: '8px' }}>
-                  <button className="btn ghost sm">+ सह-खाताधारक जोड़ें</button>
-                  <span className="hint">रक्त-संबंध (पिता, भाई, पुत्र आदि) होना आवश्यक है</span>
-                </div>
-                <div id="landSrcFlag" style={{ marginTop: '12px' }}></div>
-
-                <h4 className="subh">भूमि स्वामित्व, जल स्रोत एवं फर्म</h4>
-                <div className="grid">
-                  <div className="f"><label><span className="n">4</span>भूमि स्वामित्व</label><select id="tenure"><option value="">चुनें</option><option>स्वयं की</option><option>पट्टे की</option></select></div>
-                  <div className="f"><label><span className="n">5</span>पट्टा अवधि (वर्ष)</label><input type="number" min="0" className="mono" placeholder="न्यूनतम 07" /><div className="errtxt" id="e_lease"></div></div>
-                  <div className="f"><label><span className="n">8</span>गत 07 वर्षों में पूर्व अनुदान?</label><div className="chips" id="prevsub"></div></div>
-                  <div className="f"><label><span className="n">9</span>जल स्रोत</label>
-                    <select id="source">
-                      <option value="">चुनें</option>
-                      {sourceOpts.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </div>
-                  <div className="f" id="srcOtherWrap" style={{ display: 'none' }}><label>अन्य जल स्रोत का विवरण</label><input placeholder="जल स्रोत का नाम / प्रकार लिखें" /></div>
-                  <div className="f wide"><label><span className="n">11</span>चयनित / अधिकृत डीलर</label><input list="dlDealer" placeholder="डीलर का नाम टाइप करें — 177 अधिकृत डीलरों में से खोजें" /><datalist id="dlDealer"></datalist><div className="hint">चुनते ही फर्म का पता, मोबाइल एवं GSTIN चरण 03 में स्वतः भर जाएँगे</div></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="card">
-              <h2><span className="kh">च</span> स्थलीय सत्यापन एवं प्रक्षेत्र विवरण <span className="en">Joint Survey</span></h2>
-              <div className="body"><div className="grid">
-                <div className="f"><label><span className="n">1</span>अक्षांश</label><input className="mono" placeholder="29.7xxxxx" /></div>
-                <div className="f"><label><span className="n">2</span>देशांतर</label><input className="mono" placeholder="78.5xxxxx" /></div>
-                <div className="f wide"><div className="btnrow"><button className="btn ghost sm">मौजूदा लोकेशन भरें</button><span className="hint" id="geoMsg"></span></div></div>
-                <div className="f"><label><span className="n">3</span>कृषि मैपर एप ID</label><input className="mono" /></div>
-                <div className="f"><label><span className="n">4</span>भूमि की प्रकृति</label>
-                  <select id="terrain">
-                    <option value="">चुनें</option>
-                    {terrainOpts.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-                <div className="f"><label><span className="n">5</span>जल स्रोत की दूरी (मी०)</label><input type="number" min="0" className="mono" /></div>
-                <div className="f"><label><span className="n">6</span>ऊर्ध्वाधर ऊँचाई अंतर (मी०)</label><input type="number" min="0" className="mono" /><div className="hint" id="valveHint"></div></div>
-                <div className="f"><label><span className="n">7</span>जल उपलब्धता (ली०/घंटा)</label><input type="number" min="0" className="mono" /><div className="errtxt" id="e_water"></div></div>
-                <div className="f"><label><span className="n">8</span>जल की गुणवत्ता</label>
-                  <select id="wqual">
-                    <option value="">चुनें</option>
-                    {wqualOpts.map(w => <option key={w} value={w}>{w}</option>)}
-                  </select>
-                </div>
-                <div className="f"><label><span className="n">9</span>पंप</label>
-                  <select id="pump">
-                    <option value="">चुनें</option>
-                    {pumpOpts.map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                </div>
-                <div className="f"><label><span className="n">10</span>पंप क्षमता (HP)</label><input type="number" step="0.5" min="0" className="mono" /></div>
-              </div></div>
-            </div>
-
-            <div className="card"><h2><span className="kh">घ</span> संलग्न दस्तावेज़ <span className="en">Enclosures</span></h2><div className="body" id="encList"></div></div>
-            <div className="card"><h2><span className="kh">ज</span> पात्रता एवं स्थल परीक्षण जाँच सूची <span className="en">Eligibility Checklist</span></h2><div className="body"><div className="hint" style={{ marginBottom: '8px' }}>भरी हुई सूचना से जो बिंदु तय हो सकते हैं वे <span className="tag">स्वतः</span> चिह्नित हैं — बदल सकते हैं।</div><div id="chkList"></div></div></div>
-            <div className="card"><h2><span className="kh">झ</span> प्रमाणीकरण एवं संस्तुति</h2><div className="body"><div className="grid">
-              <div className="f"><label>प्रकरण</label>
-                <select id="verdict">
-                  <option value="">चुनें</option>
-                  {verdictOpts.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-              </div>
-              <div className="f"><label>आवेदन दिनांक</label><input id="appdate" type="date" /></div>
-              <div className="f wide"><label>संस्तुति / टिप्पणी <span className="tag">खाली छोड़ें तो स्वतः</span></label><textarea id="remark" rows="2"></textarea></div>
-            </div></div></div>
-          </section>
-        )}
-
-        {/* STEP 2 */}
-        {activeStep === 2 && (
-          <section id="S2">
-            <div className="card"><h2><span className="kh">२</span> लाभार्थी स्व-घोषणा एवं शपथ पत्र <span className="en">Affidavit / Self-Declaration</span></h2>
-              <div className="body">
-                <div className="flag info">कृषक, भूमि, फर्म एवं वित्तीय विवरण चरण 01 से स्वतः आते हैं। इस प्रपत्र में <b>शीर्षक, स्थान एवं दिनांक जानबूझकर रिक्त</b> छोड़े जाते हैं — विभागीय लेटरहेड/स्टाम्प पर हाथ से भरे जाएँ।</div>
-                <div className="grid">
-                  <div className="f"><label>स्टाम्प पत्र मूल्य (₹)</label>
-                    <select id="af_stamp">
-                      <option value="">चुनें</option>
-                      {stampOpts.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </div>
-                  <div className="f"><label>नोटरी / शपथ आयुक्त</label><input placeholder="नाम एवं पंजीकरण सं०" /></div>
-                </div>
-                <div className="grid" style={{ marginTop: '12px' }}>
-                  <div className="f wide"><div className="flag info" style={{ margin: '0' }}>सह-खाताधारकों की भूमि का विवरण अब <b>चरण 01 → भूमि स्रोत</b> में भरा जाता है; शपथ पत्र में वही अपने आप छपेगा।</div></div>
-                </div>
-                <div className="flag warn" style={{ marginTop: '14px' }}>शपथ पत्र में «कार्य पूर्ण करा लिया है» लिखा है — इसे स्थापना पूर्ण होने के बाद ही निष्पादित कराएँ।</div>
-              </div>
-            </div>
-            <div className="card"><h2><span className="kh">₹</span> शपथ पत्र का वित्तीय विवरण <span className="en">auto</span></h2><div className="body"><div style={{ overflowX: 'auto' }}><table className="dt" id="afMoney"></table></div></div></div>
-          </section>
-        )}
-
-        {/* STEP 3 */}
-        {activeStep === 3 && (
-          <section id="S3">
-            <div className="card"><h2><span className="kh">३</span> फर्म चयन एवं स्वैच्छिक सहमति <span className="en">Firm Selection</span></h2>
-              <div className="body">
-                <div className="grid">
-                  <div className="f wide"><label>चयनित पंजीकृत / अधिकृत डीलर <span className="tag">चरण 01 से</span></label><input list="dlDealer" placeholder="डीलर का नाम" /></div>
-                  <div className="f"><label>फर्म पंजीकरण / empanelment सं०</label><input className="mono" /></div>
-                  <div className="f"><label>GSTIN</label><input className="mono" maxLength="15" style={{ textTransform: 'uppercase' }} /><div className="errtxt" id="e_fm_gst"></div></div>
-                  <div className="f"><label>अधिकृत डीलर / प्रतिनिधि</label><input /></div>
-                  <div className="f"><label>प्रतिनिधि मोबाइल</label><input className="mono" maxLength="10" /></div>
-                  <div className="f wide"><label>फर्म का पता</label><input /></div>
-                  <div className="f"><label>चयन दिनांक</label><input type="date" /></div>
-                  <div className="f"><label>प्रस्तावित स्थापना अवधि (दिन)</label><input type="number" min="1" defaultValue="30" className="mono" /></div>
-                  <div className="f"><label>वारंटी अवधि (वर्ष)</label>
-                    <select id="fm_warr">
-                      <option value="">चुनें</option>
-                      {warrantyOpts.map(w => <option key={w} value={w}>{w}</option>)}
-                    </select>
-                  </div>
-                  <div className="f"><label>निःशुल्क सेवा भ्रमण (प्रति वर्ष)</label><input type="number" min="0" defaultValue="3" className="mono" /></div>
-                </div>
-                <h4 style={{ fontSize: '11.5px', color: 'var(--ink2)', margin: '16px 0 6px', borderTop: '1px solid var(--line)', paddingTop: '13px' }}>कृषक की स्वैच्छिक घोषणा</h4>
-                <div id="fmChk"></div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* STEP 4 */}
-        {activeStep === 4 && (
-          <section id="S4">
-            <div className="card"><h2><span className="kh">४</span> भौतिक सत्यापन रिपोर्ट <span className="en">Physical Verification Report</span></h2>
-              <div className="body">
-                <div className="flag info">कृषक, फर्म, प्रणाली एवं वित्तीय विवरण चरण 01/03 से स्वतः। यहाँ केवल मौके पर पाई गई स्थिति भरें।</div>
-                <div className="grid">
-                  <div className="f"><label>सत्यापन दिनांक</label><input type="date" /></div>
-                  <div className="f"><label>QR Code / Unique ID</label><input className="mono" /></div>
-                  <div className="f"><label>मौके पर मापा गया क्षेत्रफल (हे०)</label><input type="number" step="0.01" className="mono" /><div className="errtxt" id="e_pv_area"></div></div>
-                  <div className="f"><label>फिल्टर प्रकार</label>
-                    <select id="pv_filter">
-                      <option value="">चुनें</option>
-                      {filterOpts.map(f => <option key={f} value={f}>{f}</option>)}
-                    </select>
-                  </div>
-                  <div className="f"><label>फर्टिगेशन उपकरण</label>
-                    <select id="pv_fert">
-                      <option value="">चुनें</option>
-                      {fertOpts.map(f => <option key={f} value={f}>{f}</option>)}
-                    </select>
-                  </div>
-                  <div className="f"><label>Trial Run</label>
-                    <select id="pv_trial">
-                      <option value="">चुनें</option>
-                      {trialOpts.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </div>
-                  <div className="f"><label>सत्यापन परिणाम</label>
-                    <select id="pv_result">
-                      <option value="">चुनें</option>
-                      {resultOpts.map(r => <option key={r} value={r}>{r}</option>)}
-                    </select>
-                  </div>
-                  <div className="f"><label>सत्यापन अधिकारी</label><input placeholder="नाम एवं पदनाम" /></div>
-                  <div className="f wide"><label>सत्यापित कुल लागत (₹) <span className="tag">बिल से स्वतः</span></label><input className="auto mono" readOnly /></div>
-                </div>
-                <h4 style={{ fontSize: '11.5px', color: 'var(--ink2)', margin: '16px 0 6px', borderTop: '1px solid var(--line)', paddingTop: '13px' }}>BIS मानक अनुपालन (मौके पर जाँचा)</h4>
-                <div id="pvChk"></div>
-                <div className="grid" style={{ marginTop: '12px' }}><div className="f wide"><label>सत्यापन टिप्पणी <span className="tag">खाली छोड़ें तो स्वतः</span></label><textarea rows="2"></textarea></div></div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* STEP 5 */}
-        {activeStep === 5 && (
-          <section id="S5">
-            <div className="card"><h2><span className="kh">५</span> कंपनी बिल — सामग्री-वार BoQ <span className="en">Item-wise Bill</span></h2>
-              <div className="body">
-                <div className="grid" style={{ marginBottom: '12px' }}>
-                  <div className="f"><label>बिल किस प्रणाली पंक्ति का?</label>
-                    <select id="bl_row">
-                      <option value="">चुनें</option>
-                      {rowOpts.map(r => <option key={r} value={r}>{r}</option>)}
-                    </select>
-                  </div>
-                  <div className="f"><label>बिल संख्या</label><div className="btnrow"><input className="mono" style={{ flex: '1' }} /><button className="btn ghost sm" type="button" title="अगला बिल नंबर अपने आप ले लें">नया नंबर</button></div></div>
-                  <div className="f"><label>बिल दिनांक</label><input type="date" /></div>
-                  <div className="f"><label>स्थापना दिनांक</label><input type="date" /><div className="hint">यह बिल दिनांक से स्वतंत्र है और इसे अलग से बदला जा सकता है।</div></div>
-                  <div className="f"><label>GST दर (कुल बिल में शामिल)</label>
-                    <select id="bl_gst">
-                      <option value="">चुनें</option>
-                      {gstOpts.map(g => <option key={g} value={g}>{g}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div className="btnrow" style={{ marginBottom: '10px' }}>
-                  <button className="btn water sm" type="button">🧪 Apple 0.20 हे० / 2×2 m पूरा Sample देखें</button>
-                  <span className="hint">यह Demo केवल देखने/Testing के लिए है; इसे रजिस्टर में स्वतः Save नहीं किया जाएगा।</span>
-                </div>
-                <div className="stamp-options">
-                  <div className="stamp-options-title">केवल कंपनी Tax Invoice पर नीली मुहर — प्रिंट विकल्प</div>
-                  <label><input type="checkbox" defaultChecked /> कृषक हस्ताक्षर वाली मुहर</label>
-                  <label><input type="checkbox" defaultChecked /> प्रभारी की संस्तुति वाली मुहर</label>
-                  <span className="hint">ये दोनों मुहरें केवल प्रिंट किए जाने वाले कंपनी बिल में दिखाई देंगी। दोनों या किसी एक मुहर को रखना/हटाना चुन सकते हैं।</span>
-                </div>
-                <div id="blFlags"></div>
-                <div style={{ overflowX: 'auto' }}><table className="dt" id="blTable"></table></div>
-                <div className="btnrow" style={{ marginTop: '10px' }}>
-                  <button className="btn ghost sm">मानक दरें पुनः लगाएँ</button>
-                  <span className="hint">मात्राएँ PDMC Annexure की spacing/area-wise BoQ से स्वतः आती हैं। प्रारंभिक कंपनी दरें guideline × निर्धारित वृद्धि से automatic हैं; manual बदलाव करने पर total लक्ष्य से अलग हो सकता है।</span>
-                </div>
-              </div>
-            </div>
-            <div className="card"><h2><span className="kh">₹</span> कंपनी बिल — गाइडलाइन दर + स्वीकृत वृद्धि <span className="en">Guideline-linked Dealer Bill</span></h2>
-              <div className="body">
-                <div className="flag info"><b>महत्वपूर्ण:</b> सामग्री-वार BoQ की मात्राएँ चयनित <b>प्रणाली + फसल/स्पेसिंग + क्षेत्रफल</b> से स्वतः आती हैं। कंपनी बिल का मूल लक्ष्य अब उसी चयन की <b>PDMC इकाई लागत × निर्धारित वृद्धि</b> होगा — ड्रिप +8%, स्प्रिंकलर-परिवार +6.4%। इसलिए उदाहरणतः 0.20 हे०, 2×2 मी० ड्रिप में ₹29,915 × 1.08 = <b>₹32,308</b> (राउंडेड) बेस कंपनी बिल बनेगा; GST यदि अलग से चुना गया है तो वह इसके ऊपर दिखेगा।</div>
-                <div style={{ overflowX: 'auto' }}><table className="dt" id="pkgTable"></table></div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* STEP 6 */}
-        {activeStep === 6 && (
-          <section id="S6">
-            <div className="card"><h2><span className="kh">६</span> नकद प्राप्ति रसीद <span className="en">Cash Receipt</span></h2>
-              <div className="body">
-                <div className="flag info">कृषक द्वारा कंपनी को पूर्ण वास्तविक बिल राशि का भुगतान होने पर यह रसीद बनाइए। DBT राजसहायता की राशि विभाग द्वारा कृषक के बैंक खाते में अलग से भुगतान की जाएगी।</div>
-                <div className="grid">
-                  <div className="f"><label>रसीद संख्या</label><div className="btnrow"><input className="mono" style={{ flex: '1' }} /><button className="btn ghost sm" type="button" title="अगला रसीद नंबर अपने आप ले लें">नया नंबर</button></div></div>
-                  <div className="f"><label>रसीद दिनांक</label><input type="date" /></div>
-                  <div className="f"><label>कंपनी को प्राप्त पूर्ण बिल राशि (₹) <span className="tag">डिफ़ॉल्ट वास्तविक बिल</span></label><input type="number" min="0" className="mono" /></div>
-                </div>
-                <div id="rcPreview" style={{ marginTop: '10px' }}></div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* STEP 7 */}
-        {activeStep === 7 && (
-          <section id="S7">
-            <div className="card"><h2>किसान रजिस्टर</h2><div className="body">
-              <div className="btnrow" style={{ marginBottom: '12px' }}>
-                <input placeholder="नाम / ग्राम / केंद्र / आधार से खोजें" style={{ maxWidth: '280px' }} />
-                <button className="btn ghost sm">CSV निर्यात</button>
-                <button className="btn ghost sm">बैकअप (JSON)</button>
-                <label className="btn ghost sm" style={{ cursor: 'pointer', margin: '0' }}>बैकअप आयात<input type="file" accept=".json" hidden /></label>
-                <label className="btn water sm" style={{ cursor: 'pointer', margin: '0' }}>Excel से बल्क आयात<input type="file" accept=".xlsx" hidden /></label>
-                <a className="btn ghost sm" href="#" style={{ textDecoration: 'none' }}>बल्क टेम्पलेट (.xlsx)</a>
-              </div>
-              <div id="recTable"></div>
-            </div></div>
-          </section>
-        )}
-
-        {/* STEP 8 */}
-        {activeStep === 8 && (
-          <section id="S8">
-            <div className="card">
-              <h2><span className="kh">₹</span> दर तालिका — प्रबंधन <span className="en">Rate Management</span></h2>
-              <div className="body">
-                <div className="flag info">यहाँ दी गई दरें ही «प्रस्तावित प्रणाली» की सारी गणना (इकाई लागत, अनुदान, कृषक अंश) में उपयोग होती हैं। दिशा-निर्देश भविष्य में बदलें तो असली फ़ाइल छेड़े बिना यहीं से नई दर लागू कर दीजिए — तुरंत हर नए एवं खुले हुए आवेदन में वही नई दर से गणना होगी। मूल गाइडलाइन दर हमेशा साथ में दिखती रहेगी, तुलना के लिए।</div>
-                <div className="btnrow" style={{ marginBottom: '12px' }}>
-                  <button className="btn water sm">दर तालिका डाउनलोड (.xlsx)</button>
-                  <label className="btn water sm" style={{ cursor: 'pointer', margin: '0' }}>Excel से दरें अपडेट करें<input type="file" accept=".xlsx" hidden /></label>
-                  <button className="btn ghost sm">तालिका में किए बदलाव सहेजें</button>
-                  <button className="btn danger sm">सभी को मूल दर पर लौटाएँ</button>
-                  <span className="hint" id="rateMsg" style={{ marginLeft: 'auto' }}></span>
-                </div>
-                <div id="rateOverrideCount" className="hint" style={{ marginBottom: '8px' }}></div>
-                <div style={{ overflowX: 'auto' }}><table className="dt" id="rateTable"></table></div>
-
-                <h3 className="subh">कंपनी दर मार्कअप — गाइडलाइन दर से कितना % ऊपर <span className="en">Company Rate Markup</span></h3>
-                <div className="flag info">यह वही प्रतिशत है जिससे गाइडलाइन दर पर <b>कंपनी की वास्तविक बिल राशि</b> बनती है (कंपनी बिल, नीली मुहर, नकद रसीद — सभी जगह)। गाइडलाइन दर ऊपर बदलें या यहाँ का % — दोनों स्वतंत्र हैं; % बदलने पर गाइडलाइन दर पर कोई असर नहीं पड़ेगा, केवल कंपनी की दर ऊपर/नीचे होगी।</div>
-                <div className="btnrow" style={{ marginBottom: '10px' }}>
-                  <button className="btn water sm">मार्कअप % सहेजें</button>
-                  <button className="btn danger sm">सभी को मूल % पर लौटाएँ</button>
-                  <span className="hint" id="markupMsg" style={{ marginLeft: 'auto' }}></span>
-                </div>
-                <div style={{ overflowX: 'auto' }}><table className="dt" id="markupTable"></table></div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        <div className="ledger">
-          <div className="row">
             <div className="btnrow">
-              <button className="btn ghost sm" id="btnSave">अभी सहेजें</button><span className="savemsg" id="saveMsg"></span>
-              <button className="btn water sm" id="btnPrint2">वर्तमान प्रपत्र प्रिंट</button>
-              <button className="btn water sm" id="btnPrintAll">सभी 6 प्रपत्र प्रिंट</button>
-                <div className="amt-group">
-              <div className="amt big"><span className="k">देय अनुदान</span><span className="v mono" id="L_sub">₹0</span></div>
-              <div className="amt far"><span className="k">कृषक अंश</span><span className="v mono" id="L_far">₹0</span></div>
-              <div className="amt"><span className="k">दर</span><span className="v mono" id="L_pct">—</span></div>
-              <div className="amt"><span className="k">कुल क्षेत्र</span><span className="v mono" id="L_area">0 हे०</span></div>
+              <button
+                className="btn ghost sm"
+                type="button"
+                onClick={() => setShowFirmPanel(true)}
+              >
+                फर्म जोड़ें/हटाएँ
+              </button>
+              <button
+                className="btn ghost sm"
+                type="button"
+                onClick={() => setShowAllRecPanel(true)}
+              >
+                सभी फर्मों का रिकॉर्ड
+              </button>
+              <button
+                className="btn ghost sm"
+                type="button"
+                onClick={() => setShowOfficePanel(true)}
+              >
+                कार्यालय सेटिंग
+              </button>
             </div>
-            </div>
-          
           </div>
-          <div className="bar"><span id="B_goi" style={{ background: '#2f9aa3' }}></span><span id="B_st" style={{ background: '#5cc4cb' }}></span><span id="B_tp" style={{ background: '#a9e4e8' }}></span><span id="B_fr" style={{ background: '#f0c46a' }}></span></div>
-          <div className="legend">
-            <span><i style={{ background: '#2f9aa3' }}></i>भा०स० अंश <b className="mono" id="L_goi">₹0</b></span>
-            <span><i style={{ background: '#5cc4cb' }}></i>राज्यांश <b className="mono" id="L_st">₹0</b></span>
-            <span><i style={{ background: '#a9e4e8' }}></i>राज्य टॉप-अप 25% <b className="mono" id="L_tp">₹0</b></span>
-            <span><i style={{ background: '#f0c46a' }}></i>कृषक अंश</span>
+          <div className="btnrow">
+            <select
+              id="quickFarmer"
+              style={{ minWidth: "190px", fontSize: "13px" }}
+            >
+              <option value="">— सहेजा किसान खोलें —</option>
+            </select>
+            <button className="btn ghost sm" type="button">
+              नया आवेदन
+            </button>
+            <button className="btn water sm" type="button">
+              वर्तमान प्रपत्र प्रिंट
+            </button>
+          </div>
+        </header>
+
+        {/* Modals */}
+        <div className="firmpanel-backdrop" hidden={!showFirmPanel}>
+          <div className="firmpanel" role="dialog" aria-label="फर्म प्रबंधन">
+            <div className="firmpanel-head">
+              <h2>फर्म प्रबंधन — जोड़ें, हटाएँ, सक्रिय फर्म चुनें</h2>
+              <button
+                className="btn ghost sm"
+                type="button"
+                onClick={() => setShowFirmPanel(false)}
+              >
+                बंद करें ✕
+              </button>
+            </div>
+            <div className="firmpanel-body">
+              <div className="flag info">
+                हर फर्म का किसान-रजिस्टर अलग-अलग सहेजा जाता है।
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="firmpanel-backdrop" hidden={!showOfficePanel}>
+          <div className="firmpanel" role="dialog" aria-label="कार्यालय सेटिंग">
+            <div className="firmpanel-head">
+              <h2>कार्यालय नाम प्रबंधन</h2>
+              <button
+                className="btn ghost sm"
+                type="button"
+                onClick={() => setShowOfficePanel(false)}
+              >
+                बंद करें ✕
+              </button>
+            </div>
+            <div className="firmpanel-body">
+              <div className="flag info">
+                यहाँ चुना गया कार्यालय नाम सिस्टम के मुख्य शीर्षक में स्वतः
+                दिखाई देगा।
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="firmpanel-backdrop" hidden={!showAllRecPanel}>
+          <div
+            className="firmpanel"
+            role="dialog"
+            aria-label="सभी फर्मों का रिकॉर्ड"
+            style={{ maxWidth: "1080px" }}
+          >
+            <div className="firmpanel-head">
+              <h2>सभी फर्मों के दस्तावेज़ — एक साथ देखें</h2>
+              <button
+                className="btn ghost sm"
+                type="button"
+                onClick={() => setShowAllRecPanel(false)}
+              >
+                बंद करें ✕
+              </button>
+            </div>
+            <div className="firmpanel-body">
+              <div className="flag info">
+                हर किसान के सभी 6 प्रपत्र यहीं से खोले जा सकते हैं।
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="wrap">
+          <div className="steps" role="tablist" id="stepbar">
+            {steps.map((step) => (
+              <button
+                key={step.id}
+                className={`step ${activeStep === step.id ? "active" : ""}`}
+                role="tab"
+                aria-selected={activeStep === step.id}
+                onClick={() => setActiveStep(step.id)}
+              >
+                <span className="no">{step.no}</span>
+                <span className="nm">{step.nm}</span>
+              </button>
+            ))}
+          </div>
+
+          {activeStep === 1 && (
+            <section id="S1">
+              <div className="card">
+                <h2>
+                  <span className="kh">क</span> किसान एवं बैंक विवरण
+                </h2>
+                <div className="body">
+                  <div
+                    className="btnrow sample-toolbar"
+                    style={{ marginBottom: "12px" }}
+                  >
+                    <button className="btn water sm" type="button">
+                      🧪 पूरा भरा हुआ किसान Sample देखें
+                    </button>
+                    <button
+                      className="btn ghost sm"
+                      type="button"
+                      onClick={() => setSamplePrintReady(true)}
+                    >
+                      🖨️ Sample के सभी 6 प्रपत्र प्रिंट
+                    </button>
+                  </div>
+                  <div className="grid">
+                    <div className="f">
+                      <label>किसान का नाम</label>
+                      <input placeholder="नाम लिखें" />
+                    </div>
+                    <div className="f">
+                      <label>पिता का नाम</label>
+                      <input />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {activeStep === 2 && (
+            <section id="S2">
+              <div className="card">
+                <h2>
+                  <span className="kh">२</span> शपथ पत्र
+                </h2>
+                <div className="body"></div>
+              </div>
+            </section>
+          )}
+          {activeStep === 3 && (
+            <section id="S3">
+              <div className="card">
+                <h2>
+                  <span className="kh">३</span> फर्म चयन
+                </h2>
+                <div className="body"></div>
+              </div>
+            </section>
+          )}
+          {activeStep === 4 && (
+            <section id="S4">
+              <div className="card">
+                <h2>
+                  <span className="kh">४</span> भौतिक सत्यापन
+                </h2>
+                <div className="body"></div>
+              </div>
+            </section>
+          )}
+          {activeStep === 5 && (
+            <section id="S5">
+              <div className="card">
+                <h2>
+                  <span className="kh">५</span> कंपनी बिल
+                </h2>
+                <div className="body"></div>
+              </div>
+            </section>
+          )}
+          {activeStep === 6 && (
+            <section id="S6">
+              <div className="card">
+                <h2>
+                  <span className="kh">६</span> नकद रसीद
+                </h2>
+                <div className="body"></div>
+              </div>
+            </section>
+          )}
+          {activeStep === 7 && (
+            <section id="S7">
+              <div className="card">
+                <h2>किसान रजिस्टर</h2>
+                <div className="body"></div>
+              </div>
+            </section>
+          )}
+          {activeStep === 8 && (
+            <section id="S8">
+              <div className="card">
+                <h2>दर तालिका</h2>
+                <div className="body"></div>
+              </div>
+            </section>
+          )}
+
+          <div className="ledger">
+            <div className="row">
+              <div className="btnrow">
+                <button className="btn ghost sm">अभी सहेजें</button>
+                <button
+                  className="btn water sm"
+                  onClick={() => setSamplePrintReady(true)}
+                >
+                  सभी 6 प्रपत्र प्रिंट
+                </button>
+                <div className="amt-group">
+                  <div className="amt big">
+                    <span className="k">देय अनुदान</span>
+                    <span className="v mono">₹0</span>
+                  </div>
+                  <div className="amt far">
+                    <span className="k">कृषक अंश</span>
+                    <span className="v mono">₹0</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-
-      <datalist id="dlRel">
-        <option value="पिता" />
-        <option value="माता" />
-        <option value="भाई" />
-        <option value="बहन" />
-        <option value="पुत्र" />
-        <option value="पुत्री" />
-        <option value="पति" />
-        <option value="पत्नी" />
-        <option value="चाचा" />
-        <option value="ताऊ" />
-      </datalist>
-      <datalist id="dlCrop"></datalist>
-    </div>
+      {/* ========================================== */}
+      /* PRINT AREA - EXACTLY MATCHING PDF STRUCTURE */
+      {/* ========================================== */}
       <div id="printArea" aria-label="प्रिंट पूर्वावलोकन">
-        {samplePrintReady && SAMPLE_PRINT_DOCUMENTS.map((document, index) => (
-          <article className={`sheet${index === 1 ? ' application-page' : ''}${index === 4 ? ' pmksy-company-bill avani-pdf-invoice' : ''}`} key={document.title}>
-            {(index === 0 || index === 6) && (
+        {samplePrintReady && (
+          <>
+            {/* PAGE 1: APPLICATION PART 1 */}
+            <article className="sheet">
               <header className="hdr">
-                <div className="t1">प्रधानमंत्री कृषि सिंचाई योजना (PMKSY) — प्रति बूँद अधिक फसल (PDMC)</div>
-                <div className="t2">उद्यान एवं खाद्य प्रसंस्करण विभाग, उत्तराखण्ड</div>
-                <div className="t2">कार्यालय उद्यान विशेषज्ञ, कोटद्वार, पौड़ी गढ़वाल, उत्तराखण्ड</div>
+                <div className="t1">
+                  प्रधानमंत्री कृषि सिंचाई योजना (PMKSY) — प्रति बूँद अधिक फसल
+                  (PDMC)
+                </div>
+                <div className="t2">
+                  उद्यान एवं खाद्य प्रसंस्करण विभाग, उत्तराखण्ड
+                </div>
+                <div className="t2">
+                  कार्यालय उद्यान विशेषज्ञ, कोटद्वार, पौड़ी गढ़वाल, उत्तराखण्ड
+                </div>
               </header>
-            )}
-            {index === 0 && (
-              <>
-                <div className="application-title">सूक्ष्म सिंचाई — आवेदन-सह-संयुक्त सर्वेक्षण प्रपत्र</div>
-                <div className="photobox">पासपोर्ट साइज़<br />फोटो चिपकाएँ</div>
-                <h3 className="part">भाग – 1 : लाभार्थी द्वारा भरा जाने वाला विवरण</h3>
-              </>
-            )}
-            {index === 1 && <h3 className="part">भाग – 2 : संयुक्त सर्वेक्षण के समय भरा जाने वाला विवरण</h3>}
-            {(index === 2 || index === 3) && (
-              <>
-                <div className="document-spacer"></div>
-                <div className="document-title">{document.title === 'लाभार्थी स्व-घोषणा एवं शपथ पत्र' ? 'लाभार्थी स्व-घोषणा एवं शपथ पत्र (Affidavit / Self-Declaration)' : 'आपूर्तिकर्ता फर्म चयन एवं स्वैच्छिक सहमति पत्र'}</div>
-              </>
-            )}
-            {index === 4 && (
-              <>
-                <table className="avani-head">
-                  <tbody>
-                    <tr className="head-row"><td>GSTIN No.: 05COWPD8094K1Z6</td><td className="invoice-title">TAX INVOICE / BILL</td><td className="right">Mob.: 9536462212</td></tr>
-                    <tr><td className="company-name" colSpan="3">AVANI ENTERPRISES</td></tr>
-                    <tr><td className="dealer-name" colSpan="3">Authorised Dealer — भारत ड्रिप इरिगेशन एंड एग्रो</td></tr>
-                    <tr><td className="company-address" colSpan="3">Lakhera Bhawan, Vill. Shibonagar, Near Nayan Gaon, Kotdwar, Garhwal (Uttarakhand) - 246155</td></tr>
-                  </tbody>
-                </table>
-                <table className="avani-billing">
-                  <tbody>
-                    <tr className="section-blue"><td colSpan="3">BILL TO / FARMER DETAILS</td><td colSpan="3">INVOICE DETAILS</td></tr>
-                    <tr><td className="lbl">Farmer / M/s Name:</td><td colSpan="2">श्री सुरेश सिंह</td><td className="lbl">Invoice No.:</td><td colSpan="2"><b>DEMO-APPLE-0001</b></td></tr>
-                    <tr><td className="lbl">Village / Centre:</td><td colSpan="2">शिबूनगर / कोटद्वार</td><td className="lbl">Date:</td><td colSpan="2"><b>20-09-2026</b></td></tr>
-                    <tr><td className="lbl">Khasra No.:</td><td colSpan="2">—</td><td className="lbl">System Proposed:</td><td colSpan="2">ड्रिप</td></tr>
-                    <tr><td className="lbl">Spacing:</td><td colSpan="2"><b>2x2</b></td><td className="lbl">Area (Hectare):</td><td colSpan="2"><b>0.20 हे०</b></td></tr>
-                    <tr><td className="lbl">Crop:</td><td colSpan="2">सेब</td><td className="lbl">Date of Installation:</td><td colSpan="2"><b>18-09-2026</b></td></tr>
-                    <tr><td className="lbl">Work / Reference No.:</td><td colSpan="5">PMKSY-DEMO-APPLE-0001</td></tr>
-                  </tbody>
-                </table>
-                <table className="avani-items">
-                  <colgroup><col style={{ width: '6%' }} /><col style={{ width: '28%' }} /><col style={{ width: '25%' }} /><col style={{ width: '9%' }} /><col style={{ width: '8%' }} /><col style={{ width: '11%' }} /><col style={{ width: '13%' }} /></colgroup>
-                  <thead><tr className="item-head"><th>S.No</th><th>Description of Goods</th><th>BIS / Standard</th><th>Qty</th><th>Unit</th><th>Rate/Unit<br />(₹)</th><th>Taxable Value<br />(₹)</th></tr></thead>
-                  <tbody>
-                    {SAMPLE_INVOICE_ITEMS.map((item, itemIndex) => (
-                      <tr key={item[0]}>
-                        <td className="center">{itemIndex + 1}</td>
-                        <td className="desc">{item[0]}</td>
-                        <td className="std">{item[1]}</td>
-                        <td className="center">{item[2]}</td>
-                        <td className="center">{item[3]}</td>
-                        <td className="num">{sampleInvoiceCurrency(Number(sampleInvoiceRate(item[4].replace(/,/g, ''))))}</td>
-                        <td className="num">{sampleInvoiceCurrency(sampleInvoiceLineTotal(item))}</td>
-                      </tr>
-                    ))}
-                    <tr className="subtotal"><td className="num" colSpan="6"><b>Sub Total</b></td><td className="num"><b>{sampleInvoiceCurrency(sampleInvoiceSubtotal)}</b></td></tr>
-                    <tr><td className="num" colSpan="6">Installation / Labour Charges @ <b>5%</b></td><td className="num">{sampleInvoiceCurrency(SAMPLE_INVOICE_GRAND - sampleInvoiceSubtotal)}</td></tr>
-                    <tr className="grand"><td className="num" colSpan="6"><b>GRAND TOTAL (₹)</b></td><td className="num"><b>32,308.00</b></td></tr>
-                    <tr><td colSpan="2"><b>Amount in Words:</b></td><td colSpan="5">Thirty Two Thousand Three Hundred Eight Only</td></tr>
-                  </tbody>
-                </table>
-              </>
-            )}
-            {index === 5 && (
-              <>
-                <div className="document-spacer"></div>
-                <div className="sample-receipt">
-                  <div className="receipt-top"><span>GSTIN : 05COWPD8094K1Z6</span><span>मो० : 9536462212</span></div>
-                  <h1>नकद प्राप्ति रसीद</h1>
-                  <h2>Avani Enterprises</h2>
-                  <div className="receipt-center">Lakhera Bhawan, Vill. Shibonagar, Kotdwar, Garhwal (Uttarakhand)</div>
-                  <div className="receipt-top receipt-date"><span>नं० 001</span><span>दिनांक 20-09-2026</span></div>
-                  <p>नाम श्री/श्रीमती <b>श्री सुरेश सिंह</b> पुत्र/पति श्री <b>पुत्र श्री मोहन सिंह</b>, ग्राम <b>शिबूनगर</b>, विकासखंड <b>नगर निगम कोटद्वार</b> से <b>ड्रिप (2×2 m, 0.2 हे०)</b> की स्थापना हेतु आपूर्तिकर्ता फर्म को देय <b>पूर्ण वास्तविक बिल राशि</b> के रूप में <b>₹32,308.00</b> नकद प्राप्त किया।</p>
-                  <div className="receipt-sign"><span>कुल बिल सं० DEMO-APPLE-0001 · कुल बिल राशि ₹32,308</span><span>For Avani Enterprises<br />हस्ताक्षर (Authorised Signatory)</span></div>
+              <div className="application-title">
+                सूक्ष्म सिंचाई — आवेदन-सह-संयुक्त सर्वेक्षण प्रपत्र
+              </div>
+              <div className="photobox">
+                पासपोर्ट साइज़
+                <br />
+                फोटो चिपकाएँ
+              </div>
+              <h3 className="part">
+                भाग – 1 : लाभार्थी द्वारा भरा जाने वाला विवरण
+              </h3>
+
+              <h4 className="sec">क — क्षेत्र विवरण</h4>
+              <div className="fl">
+                <div className="fi">
+                  1. जनपद : <span className="val">पौड़ी गढ़वाल</span>
                 </div>
-              </>
-            )}
-            {document.sections.filter(() => index !== 4).map((section) => (
-              <section className="sample-print-section" key={section.title}>
-                <h4 className="sec">{section.title}</h4>
-                {section.fields && (
-                  <div className="fl">
-                    {section.fields.map(([label, value]) => (
-                      <div className="fi" key={label}>
-                        <b>{label} :</b> {value}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {section.table && (
-                  <table className="pf">
-                    <thead><tr>{section.table.headings.map((heading) => <th key={heading}>{heading}</th>)}</tr></thead>
-                    <tbody>
-                      {section.table.rows.map((row, rowIndex) => (
-                        <tr className={rowIndex === section.table.rows.length - 1 ? 'tot' : ''} key={`${section.title}-${rowIndex}`}>{row.map((cell, cellIndex) => <td key={`${cell}-${cellIndex}`}>{cell}</td>)}</tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-                {section.paragraphs?.map((paragraph) => <div className="box" key={paragraph}>{paragraph}</div>)}
-              </section>
-            ))}
-            {index === 4 && (
-              <>
-                <div className="sample-invoice-stamps">
-                  <div>PMKSY-PDMC<br />किसान का अंश<br /><b>₹5,983</b><br />श्री सुरेश सिंह<br />लाभार्थी हस्ताक्षर</div>
-                  <div>कार्यालय उद्यान विशेषज्ञ<br />कोटद्वार<br />₹32,308<br />अधिकृत अधिकारी<br />हस्ताक्षर एवं मुहर</div>
+                <div className="fi">
+                  2. उद्यान सचल दल केंद्र :{" "}
+                  <span className="val">कोटद्वार</span>
                 </div>
-                <table className="avani-bottom">
-                  <tbody>
-                    <tr className="section-blue"><td colSpan="3">BANK DETAILS FOR PAYMENT</td></tr>
-                    <tr><td className="bank-left"><b>Bank Name:</b> Almora Urban Co-operative Bank</td><td className="bank-mid"><b>Account Number:</b> 025110100000143</td><td className="bank-right"><b>IFSC Code:</b> AUCB0000026</td></tr>
-                    <tr><td className="bank-left"><b>Account Holder:</b> M/S Avani Enterprises</td><td className="bank-mid"><b>Branch:</b> Kotdwar</td><td className="bank-right"><b>GSTIN:</b> 05COWPD8094K1Z6</td></tr>
-                    <tr><td className="terms" colSpan="3"><b>Terms &amp; Conditions</b><br />1. All disputes shall be subject to Kotdwar jurisdiction.<br />2. Goods supplied as per approved BOQ / work requirement.<br />3. Quantity and rate are subject to the approved bill and applicable scheme norms.<br />4. Interest will be charged at 18% p.a. on overdue payments.</td></tr>
-                    <tr><td className="customer-sign">Customer's Signature</td><td className="auth-sign" colSpan="2">For AVANI ENTERPRISES<br /><br />(Authorised Signatory)</td></tr>
-                  </tbody>
-                </table>
-              </>
-            )}
-            {index === 6 && (
+                <div className="fi">
+                  3. विकासखंड : <span className="val">नगर निगम कोटद्वार</span>
+                </div>
+                <div className="fi">
+                  4. विधान सभा : <span className="val">कोटद्वार</span>
+                </div>
+                <div className="fi">
+                  5. ग्राम पंचायत : <span className="val">कोटद्वार</span>
+                </div>
+                <div className="fi">
+                  6. ग्राम : <span className="val">शिबूनगर</span>
+                </div>
+              </div>
+
+              <h4 className="sec">ख — किसान एवं बैंक विवरण (DBT हेतु)</h4>
+              <div className="fl">
+                <div className="fi">
+                  1. किसान का नाम : <span className="val">श्री सुरेश सिंह</span>
+                </div>
+                <div className="fi">
+                  2. पिता/पति का नाम :{" "}
+                  <span className="val">पुत्र श्री मोहन सिंह</span>
+                </div>
+                <div className="fi">
+                  3. लिंग :{" "}
+                  <span className="val">
+                    पुरुष ☑ &nbsp; महिला ☐ &nbsp; अन्य ☐
+                  </span>
+                </div>
+                <div className="fi">
+                  4. सामाजिक श्रेणी :{" "}
+                  <span className="val">
+                    सामान्य ☑ &nbsp; अ.जा. (SC) ☐ &nbsp; अ.ज.जा. (ST) ☐ &nbsp;
+                    अ.प.व. (OBC) ☐
+                  </span>
+                </div>
+                <div className="fi">
+                  5. किसान वर्ग :{" "}
+                  <span className="val">
+                    सीमांत (&lt;1 हे०) ☑ &nbsp; लघु (1-2 हे०) ☐ &nbsp; अन्य
+                    (&gt;2 हे०) ☐
+                  </span>
+                </div>
+                <div className="fi">
+                  6. लाभार्थी प्रकार :{" "}
+                  <span className="val">
+                    व्यक्तिगत ☑ &nbsp; समूह / SHG ☐ &nbsp; FPO ☐
+                  </span>
+                </div>
+                <div className="fi">
+                  7. आधार संख्या : <span className="val">XXXX-XXXX-1234</span>
+                </div>
+                <div className="fi">
+                  8. मोबाइल : <span className="val">9876543210</span>
+                </div>
+                <div className="fi">
+                  9. बैंक खाता सं० : <span className="val">123456789012</span>
+                </div>
+                <div className="fi">
+                  10. बैंक एवं शाखा :{" "}
+                  <span className="val">भारतीय स्टेट बैंक — कोटद्वार शाखा</span>
+                </div>
+                <div className="fi">
+                  11. IFSC : <span className="val">SBIN0001234</span>
+                </div>
+                <div className="fi">
+                  12. उद्यान कार्ड सं० :{" "}
+                  <span className="val">HK-2026-00125</span>
+                </div>
+                <div className="fi full">
+                  13. पूरा पता :{" "}
+                  <span className="val lg">
+                    शिबूनगर, ग्रा०पं० कोटद्वार, वि०ख० नगर निगम कोटद्वार, जनपद
+                    पौड़ी गढ़वाल, उत्तराखण्ड
+                  </span>
+                </div>
+              </div>
+
+              <h4 className="sec">ग — भूमि, जल स्रोत एवं प्रस्तावित प्रणाली</h4>
+              <div className="fl">
+                <div className="fi">
+                  1. खाता सं० : <span className="val">00056</span> खसरा सं० :{" "}
+                  <span className="val">125/2</span>
+                </div>
+                <div className="fi">
+                  2. प्रस्तावित भूमि (हे०) : <span className="val">0.20</span>
+                </div>
+                <div className="fi">
+                  3. प्रस्तावित क्षेत्र (हे०) :{" "}
+                  <span className="val">0.20</span>
+                </div>
+                <div className="fi">
+                  4. भूमि स्वामित्व :{" "}
+                  <span className="val">स्वयं ☑ &nbsp; पट्टा / अनुबंध ☐</span>
+                </div>
+                <div className="fi">
+                  5. पट्टा अवधि (न्यू० 07 वर्ष) : <span className="val"></span>
+                </div>
+                <div className="fi">
+                  6. मुख्य फसल : <span className="val">सेब</span>
+                </div>
+                <div className="fi">
+                  7. रोपण दूरी / स्पेसिंग : <span className="val">2x2</span>
+                </div>
+                <div className="fi">
+                  8. गत 07 वर्षों में पूर्व अनुदान ?{" "}
+                  <span className="val">हाँ ☐ &nbsp; ☑ नहीं</span>
+                </div>
+                <div className="fi full">
+                  9. जल स्रोत :{" "}
+                  <span className="val lg">
+                    कुआँ ☐ &nbsp; नलकूप / बोरवेल ☐ &nbsp; नहर ☐ &nbsp; तालाब /
+                    हौज ☐ &nbsp; नदी / खोला / गदेरा ☐ &nbsp; वर्षा जल संचयन टैंक
+                    ☐ &nbsp; स्प्रिंग / प्राकृतिक स्रोत (धारा/नौला) ☐ &nbsp;
+                    लिफ्ट इरिगेशन ☐ &nbsp; अन्य ☐
+                  </span>
+                </div>
+                <div className="fi full">
+                  10. प्रणाली का प्रकार :{" "}
+                  <span className="val lg">
+                    ड्रिप ☑ &nbsp; माइक्रो स्प्रिंकलर ☐ &nbsp; मिनी स्प्रिंकलर ☐
+                    &nbsp; पोर्टेबल स्प्रिंकलर ☐ &nbsp; सेमी-परमानेंट ☐ &nbsp;
+                    रेनगन ☐
+                  </span>
+                </div>
+                <div className="fi full">
+                  11. चयनित/अधिकृत फर्म :{" "}
+                  <span className="val lg">
+                    Avani Enterprises — भारत ड्रिप इरिगेशन एंड एग्रो (Garhwal
+                    (Uttarakhand) - 246155)
+                  </span>
+                </div>
+              </div>
+
+              <h4 className="sec">घ — संलग्न दस्तावेज़ की सूची</h4>
+              <table className="pf">
+                <thead>
+                  <tr>
+                    <th>क्र.</th>
+                    <th>दस्तावेज़ संलग्न</th>
+                    <th>हाँ / नहीं</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1</td>
+                    <td>आधार कार्ड की प्रति (eKYC सत्यापित)</td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>2</td>
+                    <td>भूमि अभिलेख — नवीनतम खसरा / खतौनी</td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>3</td>
+                    <td>
+                      बैंक पासबुक / रद्द चेक की प्रति (आधार सीडेड, DBT सक्षम)
+                    </td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>4</td>
+                    <td>सिंचाई जल स्रोत उपलब्धता संबंधी प्रमाण</td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>5</td>
+                    <td>
+                      पट्टा / अनुबंध पत्र — न्यूनतम 07 वर्ष (यदि भूमि पट्टे पर
+                      हो)
+                    </td>
+                    <td>हाँ ☐ &nbsp; ☑ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>6</td>
+                    <td>पूर्व में अनुदान न लेने संबंधी स्व-घोषणा पत्र</td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>7</td>
+                    <td>पासपोर्ट साइज़ फोटोग्राफ</td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>8</td>
+                    <td>उद्यान कार्ड / कृषि मैपर एप डेटा</td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div className="pgno">आवेदन · पृष्ठ 1 / 2</div>
+            </article>
+
+            {/* PAGE 2: APPLICATION PART 2 */}
+            <article className="sheet">
+              <h4 className="sec">ङ — लाभार्थी की घोषणा</h4>
+              <div className="box">
+                मैं, श्री सुरेश सिंह, सत्यनिष्ठा से घोषित करता हूँ कि — (1) इस
+                प्रपत्र में दी गई समस्त सूचनाएँ पूर्णतः सत्य एवं सही हैं; असत्य
+                पाए जाने पर मेरा आवेदन निरस्त किया जा सकेगा तथा मैं वैधानिक
+                कार्यवाही का उत्तरदायी रहूँगा। (2) मैं योजना के दिशा-निर्देशों
+                के अनुसार अपने प्रक्षेत्र में सूक्ष्म सिंचाई प्रणाली स्थापित
+                कराने हेतु सहमत हूँ तथा उसके रख-रखाव एवं सुचारु संचालन की पूर्ण
+                जिम्मेदारी लेता हूँ। (3) मैं स्वीकृत अनुदान DBT के माध्यम से
+                सीधे अपने आधार-लिंक बैंक खाते में प्राप्त करने हेतु सहमत हूँ।
+                (4) मैंने विगत 07 वर्षों में इस भूमि खंड पर सूक्ष्म सिंचाई हेतु
+                किसी भी सरकारी योजना से अनुदान प्राप्त नहीं किया है। (5) मैंने
+                पंजीकृत फर्म का चयन स्वेच्छा से किया है तथा नियमानुसार देय कृषक
+                अंश जमा करने हेतु सहमत हूँ। (6) मैं विभाग द्वारा निर्धारित
+                निरीक्षण एवं भौतिक सत्यापन हेतु सदैव सहयोग करूँगा।
+              </div>
+              <div className="fl">
+                <div className="fi">
+                  नाम : <span className="val">श्री सुरेश सिंह</span>
+                </div>
+                <div className="fi">
+                  दिनांक : <span className="val">10/9/2026</span>
+                </div>
+              </div>
               <div className="sigrow">
-                <div>लाभार्थी कृषक के हस्ताक्षर<br />दिनांक : ……………</div>
-                <div>निरीक्षण अधिकारी<br />श्री अनिल कुमार, प्रभारी</div>
+                <div>लाभार्थी के हस्ताक्षर</div>
+              </div>
+
+              <h3 className="part">
+                भाग – 2 : संयुक्त सर्वेक्षण के समय भरा जाने वाला विवरण
+              </h3>
+              <h4 className="sec">च — स्थलीय सत्यापन एवं प्रक्षेत्र विवरण</h4>
+              <div className="fl">
+                <div className="fi">
+                  1. अक्षांश : <span className="val"></span>
+                </div>
+                <div className="fi">
+                  2. देशांतर : <span className="val"></span>
+                </div>
+                <div className="fi">
+                  3. कृषि मैपर एप ID : <span className="val"></span>
+                </div>
+                <div className="fi">
+                  4. भूमि की प्रकृति :{" "}
+                  <span className="val">
+                    समतल ☑ &nbsp; सीढ़ीदार ☐ &nbsp; ढालदार ☐
+                  </span>
+                </div>
+                <div className="fi">
+                  5. जल स्रोत की दूरी (मी०) : <span className="val">80</span>
+                </div>
+                <div className="fi">
+                  6. ऊर्ध्वाधर ऊँचाई अंतर (मी०) :{" "}
+                  <span className="val">12</span>
+                </div>
+                <div className="fi">
+                  7. जल उपलब्धता (ली०/घंटा) : <span className="val"></span>
+                </div>
+                <div className="fi">
+                  8. जल की गुणवत्ता :{" "}
+                  <span className="val">
+                    स्वच्छ ☐ &nbsp; गादयुक्त ☐ &nbsp; लौहयुक्त ☐
+                  </span>
+                </div>
+                <div className="fi">
+                  9. पंप :{" "}
+                  <span className="val">
+                    विद्युत ☐ &nbsp; डीजल ☐ &nbsp; सौर ☐ &nbsp; उपलब्ध नहीं ☐
+                  </span>
+                </div>
+                <div className="fi">
+                  10. पंप क्षमता (HP) : <span className="val"></span>
+                </div>
+              </div>
+
+              <h4 className="sec">छ — प्रस्तावित प्रणाली एवं अनुदान की गणना</h4>
+              <table className="pf">
+                <thead>
+                  <tr>
+                    <th>क्र.</th>
+                    <th>प्रणाली</th>
+                    <th>फसल</th>
+                    <th>स्पेसिंग</th>
+                    <th>क्षेत्र (हे०)</th>
+                    <th>इकाई लागत (₹)</th>
+                    <th>दर</th>
+                    <th>देय अनुदान (₹)</th>
+                    <th>कृषक अंश (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1</td>
+                    <td>ड्रिप</td>
+                    <td>सेब</td>
+                    <td>2x2</td>
+                    <td>0.2</td>
+                    <td>29,915</td>
+                    <td>80%</td>
+                    <td>23,932</td>
+                    <td>5,983</td>
+                  </tr>
+                  <tr>
+                    <td>2</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <tr className="tot">
+                    <td colSpan="4">योग</td>
+                    <td>0.20</td>
+                    <td>29,915</td>
+                    <td>80%</td>
+                    <td>23,932</td>
+                    <td>5,983</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <h4 className="sec">ज — पात्रता एवं स्थल परीक्षण जाँच सूची</h4>
+              <table className="pf">
+                <thead>
+                  <tr>
+                    <th>क्र.</th>
+                    <th>परीक्षण बिंदु</th>
+                    <th>हाँ / नहीं</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1</td>
+                    <td>
+                      लाभार्थी ने विगत 07 वर्षों में उसी भूमि पर सूक्ष्म सिंचाई
+                      का अनुदान प्राप्त नहीं किया है।
+                    </td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>2</td>
+                    <td>
+                      लाभार्थी का कुल आयुक्त क्षेत्रफल 05 हेक्टेयर की अधिकतम
+                      सीमा से अधिक नहीं है।
+                    </td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>3</td>
+                    <td>
+                      एक ही स्थान की भूमि को एक ही फसल हेतु छोटे-छोटे भागों में
+                      विभाजित नहीं किया गया है।
+                    </td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>4</td>
+                    <td>बैंक खाता आधार सीडेड, DBT सक्षम एवं सक्रिय है।</td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>5</td>
+                    <td>
+                      पट्टे/अनुबंध कृषक की दशा में न्यूनतम 07 वर्ष का पट्टा
+                      अनुबंध संलग्न है।
+                    </td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>6</td>
+                    <td>
+                      प्रक्षेत्र की जियो-टैगिंग कृषि मैपर एप से पूर्ण तथा
+                      फोटो/वीडियो प्राप्त कर लए गए हैं।
+                    </td>
+                    <td>हाँ ☐ &nbsp; ☑ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>7</td>
+                    <td>
+                      प्रस्तावित प्रणाली में फर्टिगेशन उपकरण (वेंचुरी/उर्वरक
+                      टैंक) समाविष्ट है।
+                    </td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>8</td>
+                    <td>
+                      लाभार्थी द्वारा पंजीकृत फर्म का चयन स्वेच्छा से किया गया
+                      है, किसी प्रकार का दबाव नहीं है।
+                    </td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>9</td>
+                    <td>
+                      प्रक्षेत्र पर जल स्रोत उपलब्ध तथा प्रस्तावित क्षेत्रफल
+                      हेतु जल की मात्रा पर्याप्त है।
+                    </td>
+                    <td>हाँ ☐ &nbsp; ☑ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>10</td>
+                    <td>
+                      पर्वतीय ढाल की दशा में प्रत्येक 04 मी० ऊर्ध्वाधर गरावट पर
+                      कंट्रोल वाल्व का प्रावधान किया गया है।
+                    </td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <h4 className="sec">झ — प्रमाणीकरण एवं संस्तुति</h4>
+              <div className="box">
+                प्रमाणित किया जाता है कि उपरोक्त प्रक्षेत्र का संयुक्त रूप से
+                स्थलीय निरीक्षण किया गया, अभिलेखों का परीक्षण किया गया तथा
+                लाभार्थी दिशा-निर्देशों के अनुसार पात्र पाया गया। प्रकरण संस्तुत
+                ☑ / असंस्तुत ☐ किया जाता है।
+                <br />
+                संस्तुत / टिप्पणी : स्थल निरीक्षण एवं अभिलेखों के आधार पर प्रकरण
+                संस्तुत योग्य है।
+              </div>
+              <div className="sigrow">
+                <div>फर्म / अधिकृत डीलर प्रतिनिधि</div>
                 <div>प्रभारी, उद्यान सचल दल केंद्र कोटद्वार</div>
               </div>
-            )}
-            <div className="pgno">
-              {index === 0 ? 'आवेदन · पृष्ठ 1 / 2'
-                : index === 1 ? 'आवेदन · पृष्ठ 2 / 2'
-                  : index === 2 ? 'शपथ पत्र'
-                    : index === 3 ? 'फर्म चयन'
-                      : index === 4 ? 'कंपनी बिल'
-                        : index === 5 ? 'नकद रसीद' : 'भौतिक सत्यापन'}
-            </div>
-          </article>
-        ))}
+
+              <h3 className="part">भाग – 3 : कार्यालय प्रयोगार्थ</h3>
+              <div className="fl">
+                <div className="fi">परीक्षणोपरांत — स्वीकृत ☐ / अस्वीकृत ☐</div>
+              </div>
+              <div className="sigrow">
+                <div>उद्यान विशेषज्ञ, कोटद्वार गढ़वाल</div>
+              </div>
+              <div className="pgno">आवेदन · पृष्ठ 2 / 2</div>
+            </article>
+
+            {/* PAGE 3: AFFIDAVIT */}
+            <article className="sheet">
+              <div className="application-title">
+                लाभार्थी स्व-घोषणा एवं शपथ पत्र
+              </div>
+              <div className="fl">
+                <div className="fi full">
+                  (स्थापना कार्य पूर्ण होने के पश्चात — स्वयं की पूर्ण भूमि की
+                  स्थिति में) · स्टाम्प : ₹10/-
+                </div>
+              </div>
+              <div className="box">
+                मैं श्री/श्रीमती श्री सुरेश सिंह, पुत्र श्री पुत्र श्री मोहन
+                सिंह, निवासी ग्राम शिबूनगर, ग्राम पंचायत कोटद्वार, विकासखंड नगर
+                निगम कोटद्वार, उद्यान सचल दल केंद्र कोटद्वार, जिला पौड़ी गढ़वाल,
+                उत्तराखण्ड, सत्यनिष्ठा से शपथपूर्वक निम्नलिखित घोषणा करता/करती
+                हूँ कि —
+              </div>
+              <ul className="decl">
+                <li>
+                  1. यह कि मेरी स्वयं के स्वामित्व एवं कब्जे की भूमि का विवरण
+                  निम्नानुसार है — खाता संख्या 00056, खसरा संख्या 125/2, कुल
+                  क्षेत्रफल 0.20 हे०, भूमि का स्वामित्व : स्वयं, फसल सेब,
+                  सूक्ष्म सिंचाई प्रणाली ड्रिप, स्पेसिंग 2x2। उक्त संपूर्ण भूमि
+                  मेरी स्वयं की है तथा PMKSY-PDMC के अंतर्गत सूक्ष्म सिंचाई
+                  प्रणाली के स्थापना हेतु प्रस्तावित क्षेत्रफल इसी भूमि से
+                  संबंधित है।
+                </li>
+                <li>
+                  2. यह कि उक्त भूमि पर PMKSY-PDMC के अंतर्गत ड्रिप सूक्ष्म
+                  सिंचाई प्रणाली की स्थापना का कार्य मेसर्स Avani Enterprises —
+                  भारत ड्रिप इरिगेशन एंड एग्रो (Garhwal (Uttarakhand) - 246155)
+                  द्वारा विभागीय निर्धारित मानकों एवं स्वीकृत तकनीकी विवरण के
+                  अनुसार पूर्ण किया गया है। स्थापना के पश्चात मैंने मौके पर
+                  प्रणाली एवं सामग्री का निरीक्षण कर लिया है तथा स्थापना कार्य
+                  से संतुष्ट हूँ।
+                </li>
+                <li>
+                  3. यह कि स्थापना कार्य पूर्ण होने के पश्चात आपूर्तिकर्ता फर्म
+                  द्वारा प्रस्तुत अंतिम वास्तविक बिल राशि ₹32,308/- है। योजना के
+                  प्रावधानों के अनुसार उक्त स्थापना हेतु अनुदान गणना के लिए
+                  मान्य लागत ₹29,915/- है।
+                </li>
+                <li>
+                  4. मान्य लागत पर योजना में निर्धारित दर (80%) के अनुसार
+                  ₹23,932/- राजसहायता देय है, जिसका भुगतान नियमानुसार DBT के
+                  माध्यम से मेरे बैंक खाते (123456789012, SBIN0001234) में किया
+                  जाना है।
+                </li>
+                <li>
+                  5. वास्तविक बिल राशि तथा विभाग द्वारा अनुमन्य राजसहायता के
+                  पश्चात शेष राशि ₹8,376/- मेरे द्वारा स्वयं वहन की जाएगी। मान्य
+                  विभागीय लागत से अधिक ₹2,393/- की राशि पर राजसहायता देय नहीं
+                  होगी और उसका वहन मेरे द्वारा किया जाएगा।
+                </li>
+                <li>
+                  6. मैं स्वीकार करता हूँ कि आपूर्तिकर्ता फर्म को स्थापना कार्य
+                  के संबंध में देय राशि का भुगतान मेरी जिम्मेदारी है तथा विभागीय
+                  राजसहायता नियमानुसार DBT के माध्यम से मेरे खाते में प्राप्त
+                  होगी।
+                </li>
+                <li>
+                  7. मैं घोषित करता हूँ कि उपरोक्त भूमि पर सूक्ष्म सिंचाई
+                  स्थापना हेतु विगत 07 वर्षों में किसी अन्य सरकारी योजना/विभाग
+                  से ऐसा अनुदान प्राप्त नहीं किया गया है, जिससे एक ही कार्य पर
+                  दोहरा सरकारी लाभ प्राप्त हो।
+                </li>
+                <li>
+                  8. मेरे द्वारा प्रस्तुत भूमि अभिलेख, खाता/खसरा विवरण,
+                  क्षेत्रफल, फसल, स्थापना, बिल एवं योजना से संबंधित अन्य जानकारी
+                  मेरे ज्ञान एवं विश्वास के अनुसार सही है।
+                </li>
+                <li>
+                  9. मैं विभाग द्वारा किए जाने वाले स्थलीय निरीक्षण, भौतिक
+                  सत्यापन एवं आवश्यक जाँच में सहयोग करता/करूँगी तथा स्थापित
+                  सूक्ष्म सिंचाई प्रणाली के उचित उपयोग, सुरक्षा एवं निर्धारित
+                  अवधि तक रख-रखाव की जिम्मेदारी स्वयं निभाऊँगा।
+                </li>
+                <li>
+                  10. यदि मेरे द्वारा प्रस्तुत कोई विवरण भविष्य में असत्य, नामक
+                  अथवा योजना के नियमों के विपरीत पाया जाता है, तो प्राप्त
+                  राजसहायता की वसूली एवं नियमानुसार विभागीय/कानूनी कार्यवाही के
+                  लिए मैं स्वयं उत्तरदायी रहूँगा।
+                </li>
+              </ul>
+              <div className="box">
+                मैंने यह शपथ-पत्र बिना किसी दबाव, भय अथवा प्रलोभन के अपनी
+                स्वतंत्र इच्छा से दिया है तथा इसमें वर्णित सभी तथ्य मेरे ज्ञान
+                एवं विश्वास के अनुसार सत्य एवं सही हैं।
+              </div>
+
+              <h4 className="sec">अंतिम वित्तीय विवरण</h4>
+              <table className="pf">
+                <thead>
+                  <tr>
+                    <th>क्र.</th>
+                    <th>विवरण</th>
+                    <th>धनराशि (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1</td>
+                    <td>स्वयं के स्वामित्व की कुल भूमि</td>
+                    <td>0.20 हे०</td>
+                  </tr>
+                  <tr>
+                    <td>2</td>
+                    <td>आपूर्तिकर्ता फर्म का अंतिम वास्तविक बिल</td>
+                    <td>₹32,308</td>
+                  </tr>
+                  <tr>
+                    <td>3</td>
+                    <td>अनुदान हेतु मान्य लागत</td>
+                    <td>₹29,915</td>
+                  </tr>
+                  <tr>
+                    <td>4</td>
+                    <td>देय राजसहायता</td>
+                    <td>₹23,932</td>
+                  </tr>
+                  <tr>
+                    <td>5</td>
+                    <td>फर्म को कृषक द्वारा किया गया/देय भुगतान</td>
+                    <td>₹32,308</td>
+                  </tr>
+                  <tr>
+                    <td>6</td>
+                    <td>DBT के पश्चात कृषक की प्रभावी स्वयं वहन लागत</td>
+                    <td>₹8,376</td>
+                  </tr>
+                  <tr>
+                    <td>7</td>
+                    <td>मान्य लागत से अधिक राशि, कृषक द्वारा वहन</td>
+                    <td>₹2,393</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div className="sigrow">
+                <div>
+                  शपथकता / कृषक
+                  <br />
+                  नाम : श्री सुरेश सिंह
+                  <br />
+                  मो० : 9876543210
+                </div>
+                <div>
+                  स्थान : __________________
+                  <br />
+                  दिनांक : __________________
+                </div>
+              </div>
+              <div className="pgno">शपथ पत्र · TEMPLATE-A</div>
+            </article>
+
+            {/* PAGE 4: FIRM SELECTION */}
+            <article className="sheet">
+              <div className="application-title">
+                आपूर्तिकर्ता फर्म चयन एवं स्वैकल्पिक सहमति पत्र
+              </div>
+
+              <h4 className="sec">1 — कृषक विवरण</h4>
+              <div className="fl">
+                <div className="fi">
+                  कृषक का नाम : <span className="val">श्री सुरेश सिंह</span>
+                </div>
+                <div className="fi">
+                  पिता/पति : <span className="val">पुत्र श्री मोहन सिंह</span>
+                </div>
+                <div className="fi">
+                  ग्राम / पंचायत :{" "}
+                  <span className="val">शिबूनगर / कोटद्वार</span>
+                </div>
+                <div className="fi">
+                  विकासखंड / केंद्र :{" "}
+                  <span className="val">नगर निगम कोटद्वार / कोटद्वार</span>
+                </div>
+                <div className="fi">
+                  मोबाइल : <span className="val">9876543210</span>
+                </div>
+                <div className="fi">
+                  खसरा सं० : <span className="val">125/2</span>
+                </div>
+              </div>
+
+              <h4 className="sec">2 — चयनित फर्म का विवरण</h4>
+              <div className="fl">
+                <div className="fi full">
+                  फर्म का नाम :{" "}
+                  <span className="val lg">
+                    Avani Enterprises — भारत ड्रिप इरिगेशन एंड एग्रो (Garhwal
+                    (Uttarakhand) - 246155)
+                  </span>
+                </div>
+                <div className="fi">
+                  पंजीकरण / Empanelment सं० :{" "}
+                  <span className="val">UK-PDMC-AVANI-2026</span>
+                </div>
+                <div className="fi">
+                  GSTIN : <span className="val">05COWPD8094K1Z6</span>
+                </div>
+                <div className="fi">
+                  अधिकृत डीलर / प्रतिनिधि :{" "}
+                  <span className="val">Avani Enterprises</span>
+                </div>
+                <div className="fi">
+                  प्रतिनिधि मोबाइल : <span className="val">9536462212</span>
+                </div>
+                <div className="fi full">
+                  फर्म का पता :{" "}
+                  <span className="val lg">
+                    Lakhera Bhawan, Vill. Shibonagar, near Nayan Gaon, Kotdwar,
+                    Garhwal (Uttarakhand) - 246155
+                  </span>
+                </div>
+                <div className="fi">
+                  चयन दिनांक : <span className="val">12/9/2026</span>
+                </div>
+                <div className="fi">
+                  प्रस्तावित स्थापना अवधि : <span className="val">30 दिन</span>
+                </div>
+                <div className="fi">
+                  वारंटी अवधि : <span className="val">3 वर्ष</span>
+                </div>
+                <div className="fi">
+                  निःशुल्क सेवा भ्रमण :{" "}
+                  <span className="val">3 प्रति वर्ष</span>
+                </div>
+              </div>
+
+              <h4 className="sec">
+                3 — विभागीय गाइडलाइन एवं फर्म की कोटेशन के अनुसार वित्तीय सारांश
+              </h4>
+              <table className="pf">
+                <thead>
+                  <tr>
+                    <th>क्र.</th>
+                    <th>प्रणाली / फसल / स्पेसिंग</th>
+                    <th>क्षेत्र (हे०)</th>
+                    <th>विभागीय मानक लागत (₹)</th>
+                    <th>फर्म कोटेशन (₹)</th>
+                    <th>देय DBT अनुदान (₹)</th>
+                    <th>फर्म को कृषक द्वारा भुगतान (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1</td>
+                    <td>ड्रिप / सेब / 2x2</td>
+                    <td>0.2</td>
+                    <td>29,915</td>
+                    <td>32,308</td>
+                    <td>23,932</td>
+                    <td>32,308</td>
+                  </tr>
+                  <tr className="tot">
+                    <td colSpan="2">योग</td>
+                    <td>0.20</td>
+                    <td>29,915</td>
+                    <td>32,308</td>
+                    <td>23,932</td>
+                    <td>32,308</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <h4 className="sec">4 — कृषक की स्वैकल्पिक घोषणा</h4>
+              <table className="pf">
+                <thead>
+                  <tr>
+                    <th>क्र.</th>
+                    <th>घोषणा</th>
+                    <th>सहमत</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1</td>
+                    <td>
+                      मैंने उपरोक्त पंजीकृत फर्म का चयन पूर्णतः स्वेच्छा से किया
+                      है; विभाग अथवा किसी अन्य का कोई दबाव नहीं है।
+                    </td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>2</td>
+                    <td>
+                      फर्म ने मुझे प्रणाली की तकनीकी विशेषताएँ, BIS मानक एवं
+                      इकाई लागत का विवरण स्पष्ट रूप से बता दिया है।
+                    </td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>3</td>
+                    <td>
+                      मैं आपूर्तिकर्ता फर्म को उसके वास्तविक/कोटेशन बिल की पूर्ण
+                      राशि अपने स्तर से भुगतान करने हेतु सहमत हूँ तथा गाइडलाइन
+                      के अनुसार देय राजसहायता DBT के माध्यम से अपने बैंक खाते
+                      में प्राप्त करने हेतु सहमत हूँ।
+                    </td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>4</td>
+                    <td>
+                      फर्म द्वारा वारंटी कार्ड, संचालन पुस्तिका एवं निःशुल्क
+                      सेवा भ्रमण की शर्तें मुझे बता दी गई हैं।
+                    </td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>5</td>
+                    <td>
+                      स्थापना के उपरांत ट्रायल रन मेरी उपस्थिति में निःशुल्क
+                      कराया जाएगा।
+                    </td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div className="box">
+                <b>स्वैकल्पिक सहमति :</b> मुझे विभागीय मानक लागत, चयनित फर्म की
+                कोटेशन/प्रस्तावित बिल राशि, गाइडलाइन के अनुसार अपेक्षित DBT
+                राजसहायता तथा यह स्पष्ट रूप से बता दिया गया है कि स्थापना पूर्ण
+                होने पर मैं फर्म को पूर्ण वास्तविक बिल राशि का भुगतान
+                करूँगा/करूँगी और देय राजसहायता विभाग द्वारा मेरे बैंक खाते में
+                DBT के माध्यम से अलग से प्राप्त होगी। मैं इन वित्तीय शर्तों को
+                समझकर चयनित फर्म से कार्य कराने हेतु स्वेच्छा से सहमत हूँ।
+              </div>
+              <div className="sigrow">
+                <div>
+                  कृषक के हस्ताक्षर
+                  <br />
+                  श्री सुरेश सिंह
+                </div>
+                <div>फर्म / अधिकृत डीलर प्रतिनिधि</div>
+                <div>प्रभारी, उद्यान सचल दल केंद्र कोटद्वार</div>
+              </div>
+              <div className="pgno">फर्म चयन</div>
+            </article>
+
+            {/* PAGE 5: INVOICE */}
+            <article className="sheet pmksy-company-bill avani-pdf-invoice">
+              <table className="avani-head">
+                <tbody>
+                  <tr className="head-row">
+                    <td>GSTIN No.: 05COWPD8094K1Z6</td>
+                    <td className="invoice-title">TAX INVOICE / BILL</td>
+                    <td className="right">Mob.: 9536462212</td>
+                  </tr>
+                  <tr>
+                    <td className="company-name" colSpan="3">
+                      AVANI ENTERPRISES
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="dealer-name" colSpan="3">
+                      Authorised Dealer — भारत ड्रिप इरिगेशन एंड एग्रो
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="company-address" colSpan="3">
+                      Lakhera Bhawan, Vill. Shibonagar, Near Nayan Gaon,
+                      Kotdwar, Garhwal (Uttarakhand) - 246155
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <table className="avani-billing">
+                <tbody>
+                  <tr className="section-blue">
+                    <td colSpan="3">BILL TO / FARMER DETAILS</td>
+                    <td colSpan="3">INVOICE DETAILS</td>
+                  </tr>
+                  <tr>
+                    <td className="lbl">Farmer / M/s Name:</td>
+                    <td colSpan="2">श्री सुरेश सिंह</td>
+                    <td className="lbl">Invoice No.:</td>
+                    <td colSpan="2">
+                      <b>DEMO-APPLE-0001</b>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="lbl">Village / Centre:</td>
+                    <td colSpan="2">शिबूनगर / कोटद्वार</td>
+                    <td className="lbl">Date:</td>
+                    <td colSpan="2">
+                      <b>20/9/2026</b>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="lbl">Khasra No.:</td>
+                    <td colSpan="2">—</td>
+                    <td className="lbl">System Proposed:</td>
+                    <td colSpan="2">ड्रिप</td>
+                  </tr>
+                  <tr>
+                    <td className="lbl">Spacing:</td>
+                    <td colSpan="2">
+                      <b>2x2</b>
+                    </td>
+                    <td className="lbl">Area (Hectare):</td>
+                    <td colSpan="2">
+                      <b>0.2 हे०</b>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="lbl">Crop:</td>
+                    <td colSpan="2">सेब</td>
+                    <td className="lbl">Date of Installation:</td>
+                    <td colSpan="2">
+                      <b>18/9/2026</b>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="lbl">Work / Reference No.:</td>
+                    <td colSpan="5">PMKSY-DEMO-APPLE-0001</td>
+                  </tr>
+                </tbody>
+              </table>
+              <table className="avani-items">
+                <colgroup>
+                  <col style={{ width: "6%" }} />
+                  <col style={{ width: "28%" }} />
+                  <col style={{ width: "25%" }} />
+                  <col style={{ width: "9%" }} />
+                  <col style={{ width: "8%" }} />
+                  <col style={{ width: "11%" }} />
+                  <col style={{ width: "13%" }} />
+                </colgroup>
+                <thead>
+                  <tr className="item-head">
+                    <th>S.No</th>
+                    <th>Description of Goods</th>
+                    <th>BIS / Standard</th>
+                    <th>Qty</th>
+                    <th>Unit</th>
+                    <th>
+                      Rate/Unit
+                      <br />
+                      (₹)
+                    </th>
+                    <th>
+                      Taxable Value
+                      <br />
+                      (₹)
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="center">1</td>
+                    <td className="desc">
+                      Screen Filter 10 m3/hr / Disc Filter
+                    </td>
+                    <td className="std">IS 12785:1994</td>
+                    <td className="center">1</td>
+                    <td className="center">Nos</td>
+                    <td className="num">3,615</td>
+                    <td className="num">3,615</td>
+                  </tr>
+                  <tr>
+                    <td className="center">2</td>
+                    <td className="desc">Venturi & Manifold (1.5 in)</td>
+                    <td className="std">IS 14483 (Part 1):1997</td>
+                    <td className="center">1</td>
+                    <td className="center">Nos</td>
+                    <td className="num">1,735</td>
+                    <td className="num">1,735</td>
+                  </tr>
+                  <tr>
+                    <td className="center">3</td>
+                    <td className="desc">Air Release Valve 1 in</td>
+                    <td className="std">Mfr. Assured Quality (Para 15.7)</td>
+                    <td className="center">1</td>
+                    <td className="center">Nos</td>
+                    <td className="num">434</td>
+                    <td className="num">434</td>
+                  </tr>
+                  <tr>
+                    <td className="center">4</td>
+                    <td className="desc">Non Return Valve 1.5 in</td>
+                    <td className="std">Mfr. Assured Quality (Para 15.7)</td>
+                    <td className="center">1</td>
+                    <td className="center">Nos</td>
+                    <td className="num">579</td>
+                    <td className="num">579</td>
+                  </tr>
+                  <tr>
+                    <td className="center">5</td>
+                    <td className="desc">By-Pass Assembly 1.5x1.5 in</td>
+                    <td className="std">Mfr. Assured Quality (Para 15.7)</td>
+                    <td className="center">1</td>
+                    <td className="center">Nos</td>
+                    <td className="num">723</td>
+                    <td className="num">723</td>
+                  </tr>
+                  <tr>
+                    <td className="center">6</td>
+                    <td className="desc">HDPE Pipe 50 mm; 4 kg/cm2</td>
+                    <td className="std">IS 4984:2016</td>
+                    <td className="center">54</td>
+                    <td className="center">Meter</td>
+                    <td className="num">116</td>
+                    <td className="num">6,270</td>
+                  </tr>
+                  <tr>
+                    <td className="center">7</td>
+                    <td className="desc">
+                      Lateral 12 mm, Class II; 2.5 kg/cm2
+                    </td>
+                    <td className="std">IS 12786:1989</td>
+                    <td className="center">1010</td>
+                    <td className="center">Meter</td>
+                    <td className="num">11</td>
+                    <td className="num">11,221</td>
+                  </tr>
+                  <tr>
+                    <td className="center">8</td>
+                    <td className="desc">
+                      Pressure Regulating Emitter/Dripper 2/4/8 lph
+                    </td>
+                    <td className="std">IS 13487:1992</td>
+                    <td className="center">1020</td>
+                    <td className="center">Nos</td>
+                    <td className="num">3</td>
+                    <td className="num">3,091</td>
+                  </tr>
+                  <tr>
+                    <td className="center">9</td>
+                    <td className="desc">Control Valve 50 mm</td>
+                    <td className="std">IS 18286:2023</td>
+                    <td className="center">1</td>
+                    <td className="center">Nos</td>
+                    <td className="num">579</td>
+                    <td className="num">579</td>
+                  </tr>
+                  <tr>
+                    <td className="center">10</td>
+                    <td className="desc">Control Valve 63 mm</td>
+                    <td className="std">IS 18286:2023</td>
+                    <td className="center">1</td>
+                    <td className="center">Nos</td>
+                    <td className="num">867</td>
+                    <td className="num">867</td>
+                  </tr>
+                  <tr>
+                    <td className="center">11</td>
+                    <td className="desc">Flush Valve 50 mm</td>
+                    <td className="std">IS 18286:2023</td>
+                    <td className="center">2</td>
+                    <td className="center">Nos</td>
+                    <td className="num">506</td>
+                    <td className="num">1,012</td>
+                  </tr>
+                  <tr>
+                    <td className="center">12</td>
+                    <td className="desc">Throttle Valve 1.5 in</td>
+                    <td className="std">IS 18286:2023</td>
+                    <td className="center">1</td>
+                    <td className="center">Nos</td>
+                    <td className="num">650</td>
+                    <td className="num">650</td>
+                  </tr>
+                  <tr className="subtotal">
+                    <td className="num" colSpan="6">
+                      <b>Sub Total</b>
+                    </td>
+                    <td className="num">
+                      <b>30,774</b>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="num" colSpan="6">
+                      Installation / Labour Charges @ <b>5%</b>
+                    </td>
+                    <td className="num">1,534</td>
+                  </tr>
+                  <tr className="grand">
+                    <td className="num" colSpan="6">
+                      <b>GRAND TOTAL (₹)</b>
+                    </td>
+                    <td className="num">
+                      <b>32,308</b>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan="2">
+                      <b>Amount in Words:</b>
+                    </td>
+                    <td colSpan="5">
+                      Thirty Two Thousand Three Hundred Eight Only
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <table className="avani-bottom">
+                <tbody>
+                  <tr className="section-blue">
+                    <td colSpan="3">BANK DETAILS FOR PAYMENT</td>
+                  </tr>
+                  <tr>
+                    <td className="bank-left">
+                      <b>Bank Name:</b> Almora Urban Co-operative Bank
+                    </td>
+                    <td className="bank-mid">
+                      <b>Account Number:</b> 025110100000143
+                    </td>
+                    <td className="bank-right">
+                      <b>IFSC Code:</b> AUCB0000026
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="bank-left">
+                      <b>Account Holder:</b> Avani Enterprises
+                    </td>
+                    <td className="bank-mid">
+                      <b>Branch:</b> Kotdwar
+                    </td>
+                    <td className="bank-right">
+                      <b>GSTIN:</b> 05COWPD8094K1Z6
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="terms" colSpan="3">
+                      <b>Terms &amp; Conditions</b>
+                      <br />
+                      1. All disputes shall be subject to Kotdwar jurisdiction.
+                      <br />
+                      2. Goods supplied as per approved BOQ / work requirement.
+                      <br />
+                      3. Quantity and rate are subject to the approved bill and
+                      applicable scheme norms.
+                      <br />
+                      4. Interest will be charged at 18% p.a. on overdue
+                      payments.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="customer-sign">Customer's Signature</td>
+                    <td className="auth-sign" colSpan="2">
+                      For Avani Enterprises
+                      <br />
+                      <br />
+                      (Authorised Signatory)
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div className="pgno">कंपनी बिल</div>
+            </article>
+
+            {/* PAGE 6: CASH RECEIPT */}
+            <article className="sheet">
+              <div className="document-spacer"></div>
+              <div className="sample-receipt">
+                <div className="receipt-top">
+                  <span>GSTIN : 05COWPD8094K1Z6</span>
+                  <span>मो० : 9536462212</span>
+                </div>
+                <h1>नकद प्राप्ति रसीद</h1>
+                <h2>Avani Enterprises</h2>
+                <div className="receipt-center">
+                  Lakhera Bhawan, Vill. Shibonagar, near Nayan Gaon, Kotdwar,
+                  Garhwal (Uttarakhand) - 246155
+                </div>
+                <div className="receipt-top receipt-date">
+                  <span>नं० 001</span>
+                  <span>दिनांक 20/9/2026</span>
+                </div>
+                <p>
+                  नाम श्री/श्रीमती <b>श्री सुरेश सिंह</b> पुत्र/पति श्री{" "}
+                  <b>पुत्र श्री मोहन सिंह</b>, ग्राम <b>शिबूनगर</b>, विकासखंड{" "}
+                  <b>नगर निगम कोटद्वार</b> से <b>ड्रिप (2x2, 0.2 हे०)</b> की
+                  स्थापना हेतु आपूर्तिकर्ता फर्म को देय{" "}
+                  <b>पूर्ण वास्तविक बिल राशि</b> के रूप में <b>32,308.00</b>{" "}
+                  (बत्तीस हज़ार तीन सौ आठ रुपये मात्र) नकद प्राप्त किया।
+                </p>
+                <div className="receipt-sign">
+                  <span>
+                    कुल बिल सं० DEMO-APPLE-0001 · कुल बिल राशि ₹32,308
+                  </span>
+                  <span>
+                    For Avani Enterprises
+                    <br />
+                    हस्ताक्षर (Authorised Signatory)
+                  </span>
+                </div>
+              </div>
+              <div className="pgno">नकद रसीद</div>
+            </article>
+
+            {/* PAGE 7: PHYSICAL VERIFICATION */}
+            <article className="sheet">
+              <header className="hdr">
+                <div className="t1">
+                  प्रधानमंत्री कृषि सिंचाई योजना (PMKSY) — प्रति बूँद अधिक फसल
+                  (PDMC)
+                </div>
+                <div className="t2">
+                  उद्यान एवं खाद्य प्रसंस्करण विभाग, उत्तराखण्ड
+                </div>
+                <div className="t2">प्रभारी उद्यान सचल दल केंद्र कोटद्वार</div>
+              </header>
+              <div className="application-title">
+                भौतिक सत्यापन रिपोर्ट (Physical Verification Report)
+              </div>
+
+              <h4 className="sec">1 — कृषक एवं भू-अभिलेख विवरण</h4>
+              <div className="fl">
+                <div className="fi">
+                  कृषक का नाम : <span className="val">श्री सुरेश सिंह</span>
+                </div>
+                <div className="fi">
+                  पिता/पति : <span className="val">पुत्र श्री मोहन सिंह</span>
+                </div>
+                <div className="fi">
+                  ग्राम व पंचायत :{" "}
+                  <span className="val">शिबूनगर / कोटद्वार</span>
+                </div>
+                <div className="fi">
+                  विकासखंड / जिला :{" "}
+                  <span className="val">नगर निगम कोटद्वार / पौड़ी गढ़वाल</span>
+                </div>
+                <div className="fi">
+                  उद्यान सचल दल केंद्र : <span className="val">कोटद्वार</span>
+                </div>
+                <div className="fi">
+                  खाता / खसरा सं० : <span className="val">00056 / 125/2</span>
+                </div>
+                <div className="fi">
+                  मोबाइल : <span className="val">9876543210</span>
+                </div>
+                <div className="fi">
+                  आधार सं० : <span className="val">XXXX-XXXX-1234</span>
+                </div>
+                <div className="fi full">
+                  कृषक श्रेणी (Land) :{" "}
+                  <span className="val lg">
+                    सीमांत (&lt;1 हे०) ☑ &nbsp; लघु (1-2 हे०) ☐ &nbsp; अन्य
+                    (&gt;2 हे०) ☐
+                  </span>
+                </div>
+                <div className="fi full">
+                  सामाजिक श्रेणी :{" "}
+                  <span className="val lg">
+                    सामान्य ☑ &nbsp; अ.जा. (SC) ☐ &nbsp; अ.ज.जा. (ST) ☐ &nbsp;
+                    अ.प.व. (OBC) ☐ &nbsp; महिला कृषक ☐
+                  </span>
+                </div>
+              </div>
+
+              <h4 className="sec">2 — आपूर्तिकर्ता फर्म व प्रणाली विशेषताएँ</h4>
+              <div className="fl">
+                <div className="fi full">
+                  अधिकृत फर्म :{" "}
+                  <span className="val lg">
+                    Avani Enterprises — भारत ड्रिप इरिगेशन एंड एग्रो (Garhwal
+                    (Uttarakhand) - 246155)
+                  </span>
+                </div>
+                <div className="fi">
+                  GSTIN : <span className="val">05COWPD8094K1Z6</span>
+                </div>
+                <div className="fi full">
+                  स्थापित प्रणाली :{" "}
+                  <span className="val lg">
+                    ड्रिप ☑ &nbsp; माइक्रो स्प्रिंकलर ☐ &nbsp; मिनी स्प्रिंकलर ☐
+                    &nbsp; पोर्टेबल स्प्रिंकलर ☐ &nbsp; सेमी-परमानेंट ☐ &nbsp;
+                    रेनगन ☐
+                  </span>
+                </div>
+                <div className="fi">
+                  QR Code / Unique ID :{" "}
+                  <span className="val">PMKSY-DEMO-APPLE-0001</span>
+                </div>
+                <div className="fi">
+                  स्थापना एवं Trial Run : <span className="val"></span>
+                </div>
+                <div className="fi">
+                  फिल्टर प्रकार : <span className="val">स्क्रीन फिल्टर</span>
+                </div>
+                <div className="fi">
+                  फर्टिगेशन उपकरण : <span className="val">वेंचुरी</span>
+                </div>
+                <div className="fi full">
+                  वारंटी कार्ड / संचालन पुस्तिका :{" "}
+                  <span className="val lg">उपलब्ध कराया गया (3 वर्ष) ☑</span>
+                </div>
+              </div>
+
+              <h4 className="sec">3 — मौके पर तकनीकी एवं भौतिक माप सत्यापन</h4>
+              <table className="pf">
+                <thead>
+                  <tr>
+                    <th>घटक / विवरण</th>
+                    <th>स्वीकृत मापदंड</th>
+                    <th>मौके पर मापा गया</th>
+                    <th>सत्यापन परिणाम</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>प्रणाली (Laterals / Pipes / Nozzles / Emitters)</td>
+                    <td>2x2 · 0.20 हे०</td>
+                    <td>0.20 हे०</td>
+                    <td>सन्तोषजनक ☑ &nbsp; असन्तोषजनक ☐</td>
+                  </tr>
+                  <tr>
+                    <td>जल स्रोत एवं पम्प / फिल्टर · HP</td>
+                    <td>स्क्रीन फिल्टर</td>
+                    <td>कार्यरत स्थिति में</td>
+                    <td>☑</td>
+                  </tr>
+                </tbody>
+              </table>
+              <table className="pf">
+                <thead>
+                  <tr>
+                    <th>क्र.</th>
+                    <th>BIS मानक / जाँच बिंदु</th>
+                    <th>अनुपालन</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1</td>
+                    <td>IS 12786 — लेटरल</td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>2</td>
+                    <td>IS 13488 — एमिटिंग पाइप</td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>3</td>
+                    <td>IS 12785 — फिल्टर</td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>4</td>
+                    <td>IS 17425 — क्विक कप्ल्ड HDPE पाइप (स्प्रिंकलर)</td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>5</td>
+                    <td>IS 14483 — वेंचुरी / फर्टिगेशन</td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>6</td>
+                    <td>IS 18286 — कंट्रोल / फ्लश वाल्व</td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>7</td>
+                    <td>QR कोड / यूनिक ID अंकित एवं सत्यापित</td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>8</td>
+                    <td>वारंटी कार्ड एवं संचालन पुस्तिका उपलब्ध कराइ गई है</td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                  <tr>
+                    <td>9</td>
+                    <td>जियो-टैगिंग (कृषि मैपर) पूर्ण</td>
+                    <td>☑ हाँ &nbsp; ☐ नहीं</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <h4 className="sec">4 — वित्तीय सत्यापन एवं अनुदान गणना</h4>
+              <table className="pf">
+                <thead>
+                  <tr>
+                    <th>विवरण</th>
+                    <th>धनराशि (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>मानक इकाई लागत (PDMC — NEH, 25% वृद्धि सहित)</td>
+                    <td>29,915</td>
+                  </tr>
+                  <tr>
+                    <td>वास्तविक बिल राशि</td>
+                    <td>32,308</td>
+                  </tr>
+                  <tr>
+                    <td>अनुदान गणना का आधार (जो कम हो)</td>
+                    <td>29,915</td>
+                  </tr>
+                  <tr>
+                    <td>भारत सरकार अंश (कुल अंश का 90%)</td>
+                    <td>14,808</td>
+                  </tr>
+                  <tr>
+                    <td>राज्यांश (कुल अंश का 10%)</td>
+                    <td>1,645</td>
+                  </tr>
+                  <tr>
+                    <td>राज्य टॉप-अप 25%</td>
+                    <td>7,479</td>
+                  </tr>
+                  <tr className="tot">
+                    <td>कुल देय अनुदान (80%)</td>
+                    <td>23,932</td>
+                  </tr>
+                  <tr>
+                    <td>कृषक द्वारा फर्म को किया गया पूर्ण वास्तविक भुगतान</td>
+                    <td>32,308</td>
+                  </tr>
+                  <tr>
+                    <td>DBT के बाद कृषक की प्रभावी स्वयं वहन लागत</td>
+                    <td>8,376</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <h4 className="sec">5 — सत्यापन प्रमाण-पत्र एवं संस्तुति</h4>
+              <div className="box">
+                मैंने दिनांक ………………… को उक्त कृषक श्री सुरेश सिंह के प्रक्षेत्र
+                पर स्वयं उपस्थित होकर ड्रिप प्रणाली, क्षेत्रफल 0.20 हे०, का
+                भौतिक स्थलीय निरीक्षण एवं सत्यापन किया। स्थापना कार्य को मैंने
+                स्वीकृत तकनीकी मानदंडों, जियो-टैगिंग एवं निर्धारित BIS मानकों के
+                अनुरूप सन्तोषजनक पाया। मैं प्रमाणित करता/करती हूँ कि उपरोक्त
+                समस्त विवरण मेरे द्वारा स्वयं मौके पर जाँचकर तैयार किया गया है।
+                <br />
+                <br />
+                <b>संस्तुति :</b> अतः मैं, श्री अनिल कुमार, प्रभारी, प्रभारी,
+                उद्यान सचल दल केंद्र कोटद्वार, लाभार्थी को देय सब्सडी धनराशि
+                ₹23,932 डायरेक्ट बेनेफिट ट्रांसफर (DBT) के माध्यम से कृषक के
+                बैंक खाते (123456789012, SBIN0001234) में भुगतान किए जाने हेतु
+                संस्तुत करता/करती हूँ।
+              </div>
+              <div className="sigrow">
+                <div>
+                  लाभार्थी कृषक के हस्ताक्षर
+                  <br />
+                  दिनांक : …………………
+                </div>
+                <div>श्री अनिल कुमार, प्रभारी</div>
+                <div>प्रभारी (हस्ताक्षर एवं विभागीय मोहर)</div>
+              </div>
+              <div className="pgno">भौतिक सत्यापन</div>
+            </article>
+          </>
+        )}
       </div>
     </>
   );
