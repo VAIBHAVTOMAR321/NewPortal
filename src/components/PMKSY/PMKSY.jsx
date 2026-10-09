@@ -1320,6 +1320,7 @@ export default function PMKSY() {
           </section>
         )}
 
+
         <div className="ledger">
           <div className="row ledger-row-style">
             <div className="amt">
@@ -1327,6 +1328,7 @@ export default function PMKSY() {
               <span className="v mono" id="L_cost">
                 ₹0
               </span>
+
             </div>
             <div className="amt big">
               <span className="k">देय अनुदान</span>
@@ -1339,6 +1341,7 @@ export default function PMKSY() {
               <span className="v mono" id="L_far">
                 ₹0
               </span>
+              
             </div>
             <div className="amt">
               <span className="k">दर</span>
