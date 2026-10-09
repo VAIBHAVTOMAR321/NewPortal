@@ -1454,7 +1454,11 @@ export default function MushroomDocumentTemplateManager({
         throw new Error("Please choose a template type.");
       }
 
-      if (!editorForm.doc_name.trim()) {
+      if (
+        editorForm.document_type !== "verification_report" &&
+        editorForm.document_type !== "supplier_certificate" &&
+        !editorForm.doc_name.trim()
+      ) {
         throw new Error("Document name is required.");
       }
 
@@ -1668,35 +1672,41 @@ export default function MushroomDocumentTemplateManager({
               />
             </label>
 
-            <label className="template-field">
-              <span>To (सेवा में)</span>
-              <textarea
-                rows={2}
-                value={editorForm.content.to || ""}
-                onChange={(event) => updateContentField("to", event.target.value)}
-                placeholder="सेवा में,&#10;   उद्यान विशेषज्ञ..."
-              />
-            </label>
+            {editorForm.document_type !== "supplier_certificate" && (
+              <label className="template-field">
+                <span>To (सेवा में)</span>
+                <textarea
+                  rows={2}
+                  value={editorForm.content.to || ""}
+                  onChange={(event) => updateContentField("to", event.target.value)}
+                  placeholder="सेवा में,&#10;   उद्यान विशेषज्ञ..."
+                />
+              </label>
+            )}
 
-            <label className="template-field">
-              <span>Through (द्वारा)</span>
-              <input
-                type="text"
-                value={editorForm.content.through || ""}
-                onChange={(event) => updateContentField("through", event.target.value)}
-                placeholder="द्वारा: प्रभारी, उद्यान सचल दल केन्द्र..."
-              />
-            </label>
+            {editorForm.document_type !== "supplier_certificate" && (
+              <label className="template-field">
+                <span>Through (द्वारा)</span>
+                <input
+                  type="text"
+                  value={editorForm.content.through || ""}
+                  onChange={(event) => updateContentField("through", event.target.value)}
+                  placeholder="द्वारा: प्रभारी, उद्यान सचल दल केन्द्र..."
+                />
+              </label>
+            )}
 
-            <label className="template-field">
-              <span>Subject (विषय)</span>
-              <input
-                type="text"
-                value={editorForm.content.subject || ""}
-                onChange={(event) => updateContentField("subject", event.target.value)}
-                placeholder="विषय: ..."
-              />
-            </label>
+            {editorForm.document_type !== "supplier_certificate" && (
+              <label className="template-field">
+                <span>Subject (विषय)</span>
+                <input
+                  type="text"
+                  value={editorForm.content.subject || ""}
+                  onChange={(event) => updateContentField("subject", event.target.value)}
+                  placeholder="विषय: ..."
+                />
+              </label>
+            )}
 
             <label className="template-field">
               <span>Salutation (महोदय)</span>
@@ -1720,88 +1730,104 @@ export default function MushroomDocumentTemplateManager({
               </label>
             )}
 
-            <label className="template-field">
-              <span>Paragraphs (एक प्रति पंक्ति)</span>
-              <textarea
-                rows={6}
-                value={(editorForm.content.paragraphs || []).join("\n")}
-                onChange={(event) => updateContentListField("paragraphs", event.target.value)}
-                placeholder="पहला पैराग्राफ़&#10;दूसरा पैराग्राफ़"
-              />
-            </label>
+            {editorForm.document_type !== "supplier_certificate" && (
+              <label className="template-field">
+                <span>Paragraphs (एक प्रति पंक्ति)</span>
+                <textarea
+                  rows={6}
+                  value={(editorForm.content.paragraphs || []).join("\n")}
+                  onChange={(event) => updateContentListField("paragraphs", event.target.value)}
+                  placeholder="पहला पैराग्राफ़&#10;दूसरा पैराग्राफ़"
+                />
+              </label>
+            )}
 
             {editorForm.document_type !== "demand_patra" && (
-              <>
-                <label className="template-field">
-                  <span>Payment Request</span>
-                  <textarea
-                    rows={3}
-                    value={editorForm.content.payment_request || ""}
-                    onChange={(event) => updateContentField("payment_request", event.target.value)}
-                    placeholder="भुगतान हेतु अनुरोध..."
-                  />
-                </label>
+              <label className="template-field">
+                <span>Payment Request</span>
+                <textarea
+                  rows={3}
+                  value={editorForm.content.payment_request || ""}
+                  onChange={(event) => updateContentField("payment_request", event.target.value)}
+                  placeholder="भुगतान हेतु अनुरोध..."
+                />
+              </label>
+            )}
 
-                <label className="template-field">
-                  <span>Recommendation Heading</span>
-                  <input
-                    type="text"
-                    value={editorForm.content.recommendation_heading || ""}
-                    onChange={(event) => updateContentField("recommendation_heading", event.target.value)}
-                    placeholder="प्रभारी की संस्तुति..."
-                  />
-                </label>
+            {editorForm.document_type !== "demand_patra" && (
+              <label className="template-field">
+                <span>Recommendation Heading</span>
+                <input
+                  type="text"
+                  value={editorForm.content.recommendation_heading || ""}
+                  onChange={(event) => updateContentField("recommendation_heading", event.target.value)}
+                  placeholder="प्रभारी की संस्तुति..."
+                />
+              </label>
+            )}
 
-                <label className="template-field">
-                  <span>Recommendation Body</span>
-                  <textarea
-                    rows={3}
-                    value={editorForm.content.recommendation_body || ""}
-                    onChange={(event) => updateContentField("recommendation_body", event.target.value)}
-                    placeholder="सम्बन्धित कृषकों के अनुरोध..."
-                  />
-                </label>
+            {editorForm.document_type !== "demand_patra" &&
+              editorForm.document_type !== "supplier_certificate" && (
+              <label className="template-field">
+                <span>Recommendation Body</span>
+                <textarea
+                  rows={3}
+                  value={editorForm.content.recommendation_body || ""}
+                  onChange={(event) => updateContentField("recommendation_body", event.target.value)}
+                  placeholder="सम्बन्धित कृषकों के अनुरोध..."
+                />
+              </label>
+            )}
 
-                <label className="template-field">
-                  <span>Attachments Heading</span>
-                  <input
-                    type="text"
-                    value={editorForm.content.attachments_heading || ""}
-                    onChange={(event) => updateContentField("attachments_heading", event.target.value)}
-                    placeholder="संलग्नक:"
-                  />
-                </label>
+            {editorForm.document_type !== "demand_patra" &&
+              editorForm.document_type !== "supplier_certificate" && (
+              <label className="template-field">
+                <span>Attachments Heading</span>
+                <input
+                  type="text"
+                  value={editorForm.content.attachments_heading || ""}
+                  onChange={(event) => updateContentField("attachments_heading", event.target.value)}
+                  placeholder="संलग्नक:"
+                />
+              </label>
+            )}
 
-                <label className="template-field">
-                  <span>Attachments (एक प्रति पंक्ति)</span>
-                  <textarea
-                    rows={3}
-                    value={(editorForm.content.attachments || []).join("\n")}
-                    onChange={(event) => updateContentListField("attachments", event.target.value)}
-                    placeholder="संलग्नक 1&#10;संलग्नक 2"
-                  />
-                </label>
+            {editorForm.document_type !== "demand_patra" &&
+              editorForm.document_type !== "supplier_certificate" && (
+              <label className="template-field">
+                <span>Attachments (एक प्रति पंक्ति)</span>
+                <textarea
+                  rows={3}
+                  value={(editorForm.content.attachments || []).join("\n")}
+                  onChange={(event) => updateContentListField("attachments", event.target.value)}
+                  placeholder="संलग्नक 1&#10;संलग्नक 2"
+                />
+              </label>
+            )}
 
-                <label className="template-field">
-                  <span>Payment Mode</span>
-                  <input
-                    type="text"
-                    value={editorForm.content.payment_mode || ""}
-                    onChange={(event) => updateContentField("payment_mode", event.target.value)}
-                    placeholder="e-Payment के माध्यम से"
-                  />
-                </label>
+            {editorForm.document_type !== "demand_patra" &&
+              editorForm.document_type !== "supplier_certificate" && (
+              <label className="template-field">
+                <span>Payment Mode</span>
+                <input
+                  type="text"
+                  value={editorForm.content.payment_mode || ""}
+                  onChange={(event) => updateContentField("payment_mode", event.target.value)}
+                  placeholder="e-Payment के माध्यम से"
+                />
+              </label>
+            )}
 
-                <label className="template-field">
-                  <span>Signature Label</span>
-                  <input
-                    type="text"
-                    value={editorForm.content.signature_label || ""}
-                    onChange={(event) => updateContentField("signature_label", event.target.value)}
-                    placeholder="हस्ताक्षर प्रभारी: ______"
-                  />
-                </label>
-              </>
+            {editorForm.document_type !== "demand_patra" && (
+              <label className="template-field">
+                <span>Signature Label</span>
+                <input
+                  type="text"
+                  value={editorForm.content.signature_label || ""}
+                  onChange={(event) => updateContentField("signature_label", event.target.value)}
+                  placeholder="हस्ताक्षर प्रभारी: ______"
+                />
+              </label>
             )}
           </div>
 
@@ -1821,29 +1847,33 @@ export default function MushroomDocumentTemplateManager({
               </select>
             </label>
 
-            <label className="template-field">
-              <span>Document Name</span>
-              <input
-                type="text"
-                name="doc_name"
-                value={editorForm.doc_name}
-                onChange={handleEditorChange}
-                placeholder="जैसे सत्यापन आख्या"
-              />
-            </label>
-
-            <label className="template-field template-toggle-field">
-              <span>Status</span>
-              <div className="template-toggle-wrap">
+            {editorForm.document_type !== "supplier_certificate" && (
+              <label className="template-field">
+                <span>Document Name</span>
                 <input
-                  type="checkbox"
-                  name="is_active"
-                  checked={editorForm.is_active}
+                  type="text"
+                  name="doc_name"
+                  value={editorForm.doc_name}
                   onChange={handleEditorChange}
+                  placeholder="जैसे सत्यापन आख्या"
                 />
-                <span>{editorForm.is_active ? "Active" : "Inactive"}</span>
-              </div>
-            </label>
+              </label>
+            )}
+
+            {editorForm.document_type !== "supplier_certificate" && (
+              <label className="template-field template-toggle-field">
+                <span>Status</span>
+                <div className="template-toggle-wrap">
+                  <input
+                    type="checkbox"
+                    name="is_active"
+                    checked={editorForm.is_active}
+                    onChange={handleEditorChange}
+                  />
+                  <span>{editorForm.is_active ? "Active" : "Inactive"}</span>
+                </div>
+              </label>
+            )}
           </div>
 
           <div className="template-save-bar">
