@@ -19,7 +19,7 @@ export default function PMKSY() {
   ];
 
   return (
-    <div className="noprint">
+    <div className="pmksy-app noprint">
       <header className="mast">
         <div className="crest">उ</div>
         <div>
@@ -277,8 +277,8 @@ export default function PMKSY() {
                 — भले वह किसी भी फर्म के अंतर्गत सहेजा गया हो।
               </div>
               <div
-                className="grid"
-                style={{ gridTemplateColumns: "1fr 2fr", marginBottom: "10px" }}
+                className="grid all-record-filters"
+                style={{ marginBottom: "10px" }}
               >
                 <div className="f">
                   <label>फर्म अनुसार फ़िल्टर</label>
@@ -573,7 +573,7 @@ export default function PMKSY() {
                   अपनी भूमि कम पड़े तो नीचे रक्त-संबंधी सह-खाताधारक जोड़ें — यही
                   तालिका शपथ पत्र में छपेगी।
                 </div>
-                <div style={{ overflowX: "auto" }}>
+                <div className="table-scroll">
                   <table className="dt landtbl" id="landTable"></table>
                 </div>
                 <div className="btnrow" style={{ marginTop: "8px" }}>
@@ -827,7 +827,7 @@ export default function PMKSY() {
                 <span className="en">auto</span>
               </h2>
               <div className="body">
-                <div style={{ overflowX: "auto" }}>
+                <div className="table-scroll">
                   <table className="dt" id="afMoney"></table>
                 </div>
               </div>
@@ -1100,7 +1100,7 @@ export default function PMKSY() {
                   </span>
                 </div>
                 <div id="blFlags"></div>
-                <div style={{ overflowX: "auto" }}>
+                <div className="table-scroll">
                   <table className="dt" id="blTable"></table>
                 </div>
                 <div className="btnrow" style={{ marginTop: "10px" }}>
@@ -1131,7 +1131,7 @@ export default function PMKSY() {
                   ड्रिप में ₹29,915 × 1.08 = <b>₹32,308</b> (राउंडेड) बेस कंपनी
                   बिल बनेगा; GST यदि अलग से चुना गया है तो वह इसके ऊपर दिखेगा।
                 </div>
-                <div style={{ overflowX: "auto" }}>
+                <div className="table-scroll">
                   <table className="dt" id="pkgTable"></table>
                 </div>
               </div>
@@ -1284,7 +1284,7 @@ export default function PMKSY() {
                   className="hint"
                   style={{ marginBottom: "8px" }}
                 ></div>
-                <div style={{ overflowX: "auto" }}>
+                <div className="table-scroll">
                   <table className="dt" id="rateTable"></table>
                 </div>
 
@@ -1312,7 +1312,7 @@ export default function PMKSY() {
                     style={{ marginLeft: "auto" }}
                   ></span>
                 </div>
-                <div style={{ overflowX: "auto" }}>
+                <div className="table-scroll">
                   <table className="dt" id="markupTable"></table>
                 </div>
               </div>
@@ -1321,7 +1321,7 @@ export default function PMKSY() {
         )}
 
         <div className="ledger">
-          <div className="row">
+          <div className="row ledger-row-style">
             <div className="amt">
               <span className="k">कुल परियोजना लागत</span>
               <span className="v mono" id="L_cost">
@@ -1353,7 +1353,7 @@ export default function PMKSY() {
               </span>
             </div>
             <div style={{ flex: "1" }}></div>
-            <div className="btnrow">
+            <div className="btnrow" style={{ flex: "0 0 auto" }}>
               <button className="btn ghost sm" id="btnSave">
                 अभी सहेजें
               </button>

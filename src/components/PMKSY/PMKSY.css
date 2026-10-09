@@ -1,4 +1,4 @@
-:root {
+.pmksy-app {
   --ink: #132029;
   --ink2: #4a6572;
   --mist: #eef3f4;
@@ -23,40 +23,63 @@
   --sh-3: 0 8px 24px -8px rgba(19, 32, 41, 0.35);
   --dur: 0.16s;
 }
-* {
+.pmksy-app table.dt th {
+  white-space: nowrap;
+}
+.pmksy-app,
+.pmksy-app * {
   box-sizing: border-box;
 }
-html,
-body {
+.pmksy-app {
   margin: 0;
 }
-body {
+.pmksy-app {
   font-family: "Noto Sans Devanagari", system-ui, sans-serif;
   background: var(--mist);
   color: var(--ink);
+  color-scheme: light;
   font-size: 15px;
   line-height: 1.6;
+  text-align: left;
   -webkit-font-smoothing: antialiased;
+  width: 100%;
+  min-width: 0;
 }
-.mono {
+.amt big{
+  width: 0px !important;
+}
+.ledger-row-style {
+  width: 100% !important;
+}
+.ledger-row-style .amt {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.ledger-row-style .btnrow {
+  flex: 0 0 auto;
+}
+.ledger-row-style .amt .v {
+  white-space: nowrap;
+}
+.pmksy-app .mono {
   font-family: "IBM Plex Mono", monospace;
   font-variant-numeric: tabular-nums;
 }
-::selection {
+.pmksy-app ::selection {
   background: var(--water);
   color: #fff;
 }
-a {
+.pmksy-app a {
   color: var(--water);
 }
-:focus-visible {
+.pmksy-app :focus-visible {
   outline: 2.5px solid var(--water);
   outline-offset: 2px;
   border-radius: 3px;
 }
 
 /* ══ शीर्ष पट्टी ══ */
-header.mast {
+.pmksy-app header.mast {
   background: linear-gradient(155deg, #0f1c24, var(--ink) 65%);
   color: #fff;
   padding: 14px 22px;
@@ -67,19 +90,23 @@ header.mast {
   border-bottom: 3px solid var(--water);
   box-shadow: var(--sh-2);
 }
-.mast h1 {
+.pmksy-app .mast > .crest + div {
+  flex: 1 1 380px;
+  min-width: 0;
+}
+.pmksy-app .mast h1 {
   font-size: 16.5px;
   margin: 0;
   font-weight: 700;
   letter-spacing: 0.1px;
 }
-.mast .sub {
+.pmksy-app .mast .sub {
   font-size: 11.5px;
   opacity: 0.72;
   margin-top: 2px;
   line-height: 1.45;
 }
-.crest {
+.pmksy-app .crest {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -93,43 +120,52 @@ header.mast {
     inset 0 0 0 2px rgba(255, 255, 255, 0.4),
     0 2px 8px rgba(0, 0, 0, 0.3);
 }
-.mast .sp {
-  flex: 1;
+.pmksy-app .mast .sp {
+  display: none;
 }
-.wrap {
-  max-width: 1200px;
+.pmksy-app .wrap {
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 18px 16px 100px;
+  padding: 22px clamp(16px, 2.4vw, 32px) 40px;
 }
 
 /* ══ फर्म-स्विचर व प्रबंधन पैनल ══ */
-.firmswitch {
+.pmksy-app .firmswitch {
+  flex: 1 1 600px;
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
   background: rgba(255, 255, 255, 0.08);
   padding: 6px 10px;
   border-radius: 20px;
 }
-.firmswitch label {
+.pmksy-app .firmswitch label {
   color: #cfe3e6;
   font-size: 10.5px;
   font-weight: 700;
   margin: 0;
   white-space: nowrap;
 }
-.firmswitch select {
+.pmksy-app .firmswitch select {
   width: auto;
+  flex: 1 1 180px;
   max-width: 230px;
+  min-width: 0;
   padding: 5px 8px;
   font-size: 12.5px;
   border-radius: 20px;
   border-color: transparent;
 }
-.firmswitch .btn {
+.pmksy-app .firmswitch .btn {
   white-space: nowrap;
 }
-.firmpanel-backdrop {
+.pmksy-app .mast > .btnrow {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.pmksy-app .firmpanel-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(10, 20, 26, 0.55);
@@ -140,15 +176,19 @@ header.mast {
   padding: 5vh 16px;
   overflow-y: auto;
 }
-.firmpanel {
+.pmksy-app .firmpanel {
+  display: flex;
+  flex-direction: column;
   background: var(--paper);
   border-radius: var(--r-lg);
   box-shadow: var(--sh-3);
   width: 100%;
   max-width: 760px;
+  max-height: 90vh;
+  min-height: 0;
   overflow: hidden;
 }
-.firmpanel-head {
+.pmksy-app .firmpanel-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -157,17 +197,26 @@ header.mast {
   background: var(--ink);
   color: #fff;
 }
-.firmpanel-head h2 {
+.pmksy-app .firmpanel-head h2 {
   font-size: 14.5px;
   margin: 0;
   font-weight: 700;
 }
-.firmpanel-body {
+.pmksy-app .firmpanel-body {
   padding: 16px 18px;
-  max-height: 78vh;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
-.firmrow {
+.pmksy-app #allRecTable {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.pmksy-app #allRecTable table {
+  min-width: 720px;
+}
+.pmksy-app .firmrow {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -175,27 +224,27 @@ header.mast {
   border-bottom: 1px solid var(--line);
   font-size: 13px;
 }
-.firmrow:last-child {
+.pmksy-app .firmrow:last-child {
   border-bottom: none;
 }
-.firmrow:hover {
+.pmksy-app .firmrow:hover {
   background: var(--grain);
 }
-.firmrow .fr-name {
+.pmksy-app .firmrow .fr-name {
   font-weight: 700;
   flex: 1;
   min-width: 0;
 }
-.firmrow .fr-sub {
+.pmksy-app .firmrow .fr-sub {
   font-size: 11px;
   color: var(--ink2);
   opacity: 0.8;
   font-weight: 400;
 }
-.firmrow.active {
+.pmksy-app .firmrow.active {
   background: var(--waterlt);
 }
-.firmrow .fr-badge {
+.pmksy-app .firmrow .fr-badge {
   font-size: 9.5px;
   background: var(--ok);
   color: #fff;
@@ -205,17 +254,20 @@ header.mast {
 }
 
 /* ══ चरण-पट्टी ══ */
-.steps {
+.pmksy-app .steps {
   display: flex;
   gap: 0;
   margin-bottom: 20px;
   overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   box-shadow: var(--sh-2);
 }
-.step {
+.pmksy-app .step {
   flex: 1 0 auto;
   min-width: 150px;
   padding: 11px 14px 11px 27px;
@@ -231,37 +283,37 @@ header.mast {
     background var(--dur),
     color var(--dur);
 }
-.step:hover {
+.pmksy-app .step:hover {
   background: var(--waterlt);
 }
-.step:last-child {
+.pmksy-app .step:last-child {
   border-right: none;
 }
-.step .no {
+.pmksy-app .step .no {
   font-family: "IBM Plex Mono", monospace;
   font-size: 10.5px;
   letter-spacing: 1px;
   display: block;
   opacity: 0.62;
 }
-.step .nm {
+.pmksy-app .step .nm {
   font-weight: 600;
   font-size: 13.5px;
   display: block;
   margin-top: 2px;
 }
-.step[aria-selected="true"] {
+.pmksy-app .step[aria-selected="true"] {
   background: var(--ink);
   color: #fff;
 }
-.step[aria-selected="true"]:hover {
+.pmksy-app .step[aria-selected="true"]:hover {
   background: var(--ink);
 }
-.step[aria-selected="true"] .no {
+.pmksy-app .step[aria-selected="true"] .no {
   color: #7fd6dc;
   opacity: 1;
 }
-.step[aria-selected="true"]::after {
+.pmksy-app .step[aria-selected="true"]::after {
   content: "";
   position: absolute;
   left: 0;
@@ -270,7 +322,7 @@ header.mast {
   height: 2.5px;
   background: var(--water);
 }
-.step.done::before {
+.pmksy-app .step.done::before {
   content: "✓";
   position: absolute;
   left: 10px;
@@ -279,25 +331,26 @@ header.mast {
   color: var(--ok);
   font-weight: 700;
 }
-.step[aria-selected="true"].done::before {
+.pmksy-app .step[aria-selected="true"].done::before {
   color: #7fd6dc;
 }
 
 /* ══ कार्ड ══ */
-.card {
+.pmksy-app .card {
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   box-shadow: var(--sh-1);
   margin-bottom: 16px;
   overflow: hidden;
+  display: block;
   transition: box-shadow var(--dur);
 }
-.card:has(.body:hover),
-.card:focus-within {
+.pmksy-app .card:has(.body:hover),
+.pmksy-app .card:focus-within {
   box-shadow: var(--sh-2);
 }
-.card > h2 {
+.pmksy-app .card > h2 {
   margin: 0;
   font-size: 12.5px;
   font-weight: 700;
@@ -307,9 +360,11 @@ header.mast {
   border-bottom: 1px solid var(--line);
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 9px;
+  line-height: 1.5;
 }
-.card > h2 .kh {
+.pmksy-app .card > h2 .kh {
   width: 22px;
   height: 22px;
   border-radius: 6px;
@@ -320,32 +375,35 @@ header.mast {
   font-size: 11.5px;
   flex: none;
 }
-.card > h2 .en {
+.pmksy-app .card > h2 .en {
   font-weight: 400;
   opacity: 0.55;
   font-size: 11px;
   letter-spacing: 0;
 }
-.card .body {
+.pmksy-app .card .body {
   padding: 16px;
 }
 
 /* ══ फ़ॉर्म फ़ील्ड ══ */
-.grid {
+.pmksy-app .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
   gap: 13px 14px;
 }
-.f {
+.pmksy-app .all-record-filters {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+}
+.pmksy-app .f {
   display: flex;
   flex-direction: column;
   gap: 5px;
   min-width: 0;
 }
-.f.wide {
+.pmksy-app .f.wide {
   grid-column: 1/-1;
 }
-label {
+.pmksy-app label {
   font-size: 11.5px;
   font-weight: 600;
   color: var(--ink2);
@@ -354,14 +412,14 @@ label {
   align-items: baseline;
   flex-wrap: wrap;
 }
-label .n {
+.pmksy-app label .n {
   font-family: "IBM Plex Mono", monospace;
   color: var(--water);
   font-size: 10.5px;
 }
-input,
-select,
-textarea {
+.pmksy-app input,
+.pmksy-app select,
+.pmksy-app textarea {
   font-family: inherit;
   font-size: 14.5px;
   padding: 8.5px 10px;
@@ -374,55 +432,55 @@ textarea {
     border-color var(--dur),
     box-shadow var(--dur);
 }
-input:hover,
-select:hover,
-textarea:hover {
+.pmksy-app input:hover,
+.pmksy-app select:hover,
+.pmksy-app textarea:hover {
   border-color: #a9c0c4;
 }
-input:focus,
-select:focus,
-textarea:focus {
+.pmksy-app input:focus,
+.pmksy-app select:focus,
+.pmksy-app textarea:focus {
   outline: none;
   border-color: var(--water);
   box-shadow: 0 0 0 3.5px var(--waterlt);
 }
-select {
+.pmksy-app select {
   cursor: pointer;
   background: var(--grain);
 }
-input[readonly],
-.auto {
+.pmksy-app input[readonly],
+.pmksy-app .auto {
   background: var(--waterlt);
   border-color: #a3ced1;
   font-weight: 600;
 }
-.hint {
+.pmksy-app .hint {
   font-size: 11.5px;
   color: var(--ink2);
   opacity: 0.85;
 }
-.bad {
+.pmksy-app .bad {
   border-color: var(--alert) !important;
   background: var(--alertlt);
 }
-.errtxt {
+.pmksy-app .errtxt {
   font-size: 11.5px;
   color: var(--alert);
   font-weight: 600;
 }
 
-.chips {
+.pmksy-app .chips {
   display: flex;
   gap: 7px;
   flex-wrap: wrap;
 }
-.chips input {
+.pmksy-app .chips input {
   position: absolute;
   opacity: 0;
   width: 0;
   height: 0;
 }
-.chips label {
+.pmksy-app .chips label {
   padding: 7px 13px;
   border: 1.3px solid var(--line);
   border-radius: 20px;
@@ -433,22 +491,22 @@ input[readonly],
   color: var(--ink2);
   transition: all var(--dur);
 }
-.chips label:hover {
+.pmksy-app .chips label:hover {
   border-color: var(--water);
   color: var(--water);
 }
-.chips input:checked + label {
+.pmksy-app .chips input:checked + label {
   background: var(--ink);
   color: #fff;
   border-color: var(--ink);
 }
-.chips input:focus-visible + label {
+.pmksy-app .chips input:focus-visible + label {
   outline: 2.5px solid var(--water);
   outline-offset: 2px;
 }
 
 /* ══ नीचे चिपका सारांश-पट्टा ══ */
-.ledger {
+.pmksy-app .ledger {
   background: linear-gradient(155deg, #0f1c24, var(--ink) 70%);
   color: #fff;
   border-radius: var(--r-md);
@@ -458,35 +516,37 @@ input[readonly],
   box-shadow: var(--sh-3);
   z-index: 5;
 }
-.ledger .row {
+.pmksy-app .ledger .row {
   display: flex;
   gap: 22px;
   flex-wrap: wrap;
   align-items: flex-end;
+  margin-right: 0;
+  margin-left: 0;
 }
-.amt {
+.pmksy-app .amt {
   display: flex;
   flex-direction: column;
 }
-.amt .k {
+.pmksy-app .amt .k {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.8px;
   opacity: 0.62;
 }
-.amt .v {
+.pmksy-app .amt .v {
   font-family: "IBM Plex Mono", monospace;
   font-size: 18px;
   font-weight: 600;
 }
-.amt.big .v {
+.pmksy-app .amt.big .v {
   font-size: 26px;
   color: #6fdfe6;
 }
-.amt.far .v {
+.pmksy-app .amt.far .v {
   color: #f0c46a;
 }
-.bar {
+.pmksy-app .bar {
   display: flex;
   height: 11px;
   border-radius: 6px;
@@ -494,10 +554,10 @@ input[readonly],
   margin-top: 12px;
   background: #0a1720;
 }
-.bar span {
+.pmksy-app .bar span {
   transition: flex-grow 0.35s ease;
 }
-.legend {
+.pmksy-app .legend {
   display: flex;
   gap: 15px;
   flex-wrap: wrap;
@@ -505,7 +565,7 @@ input[readonly],
   font-size: 11.5px;
   opacity: 0.88;
 }
-.legend i {
+.pmksy-app .legend i {
   width: 9px;
   height: 9px;
   border-radius: 2px;
@@ -514,64 +574,73 @@ input[readonly],
 }
 
 /* ══ तालिकाएँ ══ */
-table.dt {
+.pmksy-app .table-scroll {
   width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--r-sm);
+}
+.pmksy-app table.dt {
+  width: 100%;
+  min-width: 600px;
   border-collapse: collapse;
   font-size: 13px;
 }
-table.dt th,
-table.dt td {
+.pmksy-app table.dt th,
+.pmksy-app table.dt td {
   border: 1px solid var(--line);
   padding: 7px 9px;
   text-align: left;
 }
-table.dt th {
+.pmksy-app table.dt th {
   background: var(--grain);
   font-size: 11px;
   font-weight: 700;
   color: var(--ink2);
 }
-table.dt td.num {
+.pmksy-app table.dt td.num {
   text-align: right;
   font-family: "IBM Plex Mono", monospace;
 }
-table.dt tr:nth-child(even) td {
+.pmksy-app table.dt tr:nth-child(even) td {
   background: #fafcfd;
 }
-table.dt tr:hover td {
+.pmksy-app table.dt tr:hover td {
   background: var(--waterlt);
 }
-table.dt input {
+.pmksy-app table.dt input {
   padding: 4px 6px;
   font-size: 12.5px;
   border-radius: 4px;
 }
-table.dt tfoot td {
+.pmksy-app table.dt tfoot td {
   background: var(--grain) !important;
   font-weight: 700;
 }
-table.dt thead th {
+.pmksy-app table.dt thead th {
   position: sticky;
   top: 0;
 }
-.landtbl td {
+.pmksy-app .landtbl td {
   vertical-align: middle;
 }
-.landtbl .auto-cell {
+.pmksy-app .landtbl .auto-cell {
   background: var(--waterlt);
   font-weight: 600;
   font-size: 12.5px;
 }
-.landtbl #selfRow td {
+.pmksy-app .landtbl #selfRow td {
   background: var(--oklt);
 }
-.landtbl #selfRow .auto-cell {
+.pmksy-app .landtbl #selfRow .auto-cell {
   background: #dcf0e3;
 }
-.landtbl input {
+.pmksy-app .landtbl input {
   width: 100%;
 }
-h4.subh {
+.pmksy-app h4.subh {
   font-size: 11.5px;
   letter-spacing: 0.4px;
   color: var(--ink2);
@@ -581,7 +650,7 @@ h4.subh {
   font-weight: 700;
 }
 
-.chk {
+.pmksy-app .chk {
   display: flex;
   align-items: flex-start;
   gap: 10px;
@@ -590,20 +659,20 @@ h4.subh {
   border-radius: 5px;
   transition: background var(--dur);
 }
-.chk:hover {
+.pmksy-app .chk:hover {
   background: var(--grain);
 }
-.chk:last-child {
+.pmksy-app .chk:last-child {
   border-bottom: none;
 }
-.chk input {
+.pmksy-app .chk input {
   width: 17px;
   height: 17px;
   flex: none;
   margin-top: 2px;
   accent-color: var(--water);
 }
-.tag {
+.pmksy-app .tag {
   font-size: 9.5px;
   background: var(--waterlt);
   color: var(--water-dk);
@@ -615,7 +684,7 @@ h4.subh {
 }
 
 /* ══ बटन ══ */
-.btn {
+.pmksy-app .btn {
   font: inherit;
   font-size: 13.5px;
   font-weight: 600;
@@ -631,68 +700,68 @@ h4.subh {
     background var(--dur),
     border-color var(--dur);
 }
-.btn:hover {
+.pmksy-app .btn:hover {
   background: #1e343f;
   border-color: #1e343f;
   box-shadow: var(--sh-1);
 }
-.btn:active {
+.pmksy-app .btn:active {
   transform: translateY(1px);
 }
-.btn.ghost {
+.pmksy-app .btn.ghost {
   background: var(--paper);
   color: var(--ink);
 }
-.btn.ghost:hover {
+.pmksy-app .btn.ghost:hover {
   background: var(--grain);
   border-color: #a9c0c4;
 }
-.btn.water {
+.pmksy-app .btn.water {
   background: var(--water);
   border-color: var(--water);
 }
-.btn.water:hover {
+.pmksy-app .btn.water:hover {
   background: var(--water-dk);
   border-color: var(--water-dk);
 }
-.btn.sm {
+.pmksy-app .btn.sm {
   padding: 6px 11px;
   font-size: 12px;
 }
-.btn.danger {
+.pmksy-app .btn.danger {
   background: var(--paper);
   color: var(--alert);
   border-color: var(--alert);
 }
-.btn.danger:hover {
+.pmksy-app .btn.danger:hover {
   background: var(--alertlt);
 }
-.btn:disabled {
+.pmksy-app .btn:disabled {
   opacity: 0.42;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
 }
-.btnrow {
+.pmksy-app .btnrow {
   display: flex;
   gap: 9px;
   flex-wrap: wrap;
   align-items: center;
 }
-.savemsg {
+.pmksy-app .savemsg {
   font-size: 11.5px;
   opacity: 0.8;
   min-width: 96px;
 }
-.savemsg.ok {
+.pmksy-app .savemsg.ok {
   color: #7fe0a8;
   opacity: 1;
 }
-.savemsg.warn {
+.pmksy-app .savemsg.warn {
   color: #f0c46a;
   opacity: 1;
 }
-.stamp-options {
+.pmksy-app .stamp-options {
   display: flex;
   align-items: center;
   gap: 15px;
@@ -703,13 +772,13 @@ h4.subh {
   border-radius: var(--r-sm);
   background: #fafcfd;
 }
-.stamp-options-title {
+.pmksy-app .stamp-options-title {
   font-weight: 700;
   color: var(--ink);
   width: 100%;
   font-size: 12.5px;
 }
-.stamp-options label {
+.pmksy-app .stamp-options label {
   font-size: 12px;
   font-weight: 600;
   display: flex;
@@ -717,13 +786,13 @@ h4.subh {
   gap: 6px;
   cursor: pointer;
 }
-.stamp-options input {
+.pmksy-app .stamp-options input {
   accent-color: #1428c7;
   width: 16px;
   height: 16px;
 }
 
-.flag {
+.pmksy-app .flag {
   padding: 10px 13px;
   border-radius: var(--r-sm);
   font-size: 12.5px;
@@ -731,37 +800,37 @@ h4.subh {
   margin-bottom: 11px;
   border-left: 4px solid;
 }
-.flag.warn {
+.pmksy-app .flag.warn {
   background: var(--goldlt);
   border-color: var(--gold);
   color: #7a5c10;
 }
-.flag.err {
+.pmksy-app .flag.err {
   background: var(--alertlt);
   border-color: var(--alert);
   color: #7d1f1f;
 }
-.flag.ok {
+.pmksy-app .flag.ok {
   background: var(--oklt);
   border-color: var(--ok);
   color: #1a5c34;
 }
-.flag.info {
+.pmksy-app .flag.info {
   background: var(--waterlt);
   border-color: var(--water);
   color: #0a555c;
 }
-.empty {
+.pmksy-app .empty {
   padding: 36px 16px;
   text-align: center;
   color: var(--ink2);
   font-size: 13.5px;
 }
 /* ══ प्रिंट शीट ══ */
-#printArea {
+.pmksy-app #printArea {
   display: none;
 }
-.sheet {
+.pmksy-app .sheet {
   width: 210mm;
   min-height: 296mm;
   padding: 11mm 12mm;
@@ -774,26 +843,26 @@ h4.subh {
   box-shadow: var(--sh);
   position: relative;
 }
-.sheet .hdr {
+.pmksy-app .sheet .hdr {
   text-align: center;
   border-bottom: 1.6pt double #000;
   padding-bottom: 5px;
   margin-bottom: 8px;
 }
-.sheet .hdr .t1 {
+.pmksy-app .sheet .hdr .t1 {
   font-size: 11.5pt;
   font-weight: 700;
 }
-.sheet .hdr .t2 {
+.pmksy-app .sheet .hdr .t2 {
   font-size: 10pt;
   font-weight: 600;
   margin-top: 1px;
 }
-.sheet .hdr .t3 {
+.pmksy-app .sheet .hdr .t3 {
   font-size: 8.4pt;
   font-style: italic;
 }
-.photobox {
+.pmksy-app .photobox {
   position: absolute;
   top: 11mm;
   right: 12mm;
@@ -807,71 +876,71 @@ h4.subh {
   padding: 3px;
   line-height: 1.25;
 }
-.sheet h3.part {
+.pmksy-app .sheet h3.part {
   background: #000;
   color: #fff;
   font-size: 9.8pt;
   padding: 3px 7px;
   margin: 9px 0 6px;
 }
-.sheet h4.sec {
+.pmksy-app .sheet h4.sec {
   font-size: 9.4pt;
   font-weight: 700;
   border-bottom: 0.8pt solid #000;
   margin: 8px 0 4px;
   padding-bottom: 2px;
 }
-.sheet .fl {
+.pmksy-app .sheet .fl {
   display: flex;
   flex-wrap: wrap;
   gap: 2px 14px;
 }
-.sheet .fi {
+.pmksy-app .sheet .fi {
   flex: 1 1 47%;
   min-width: 0;
   padding: 1.3px 0;
 }
-.sheet .fi.full {
+.pmksy-app .sheet .fi.full {
   flex: 1 1 100%;
 }
-.sheet .val {
+.pmksy-app .sheet .val {
   border-bottom: 0.7pt dotted #000;
   padding: 0 3px;
   font-weight: 700;
   display: inline-block;
   min-width: 38mm;
 }
-.sheet .val.sm {
+.pmksy-app .sheet .val.sm {
   min-width: 20mm;
 }
-.sheet .val.lg {
+.pmksy-app .sheet .val.lg {
   min-width: 70mm;
 }
-.sheet table.pf {
+.pmksy-app .sheet table.pf {
   width: 100%;
   border-collapse: collapse;
   font-size: 8.6pt;
   margin-top: 4px;
 }
-.sheet table.pf th,
-.sheet table.pf td {
+.pmksy-app .sheet table.pf th,
+.pmksy-app .sheet table.pf td {
   border: 0.7pt solid #000;
   padding: 2.4px 4px;
 }
-.sheet table.pf th {
+.pmksy-app .sheet table.pf th {
   background: #e8e8e8;
   font-weight: 700;
   text-align: center;
 }
-.sheet table.pf td.n {
+.pmksy-app .sheet table.pf td.n {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
-.sheet table.pf tr.tot td {
+.pmksy-app .sheet table.pf tr.tot td {
   background: #efefef;
   font-weight: 700;
 }
-.sheet .box {
+.pmksy-app .sheet .box {
   font-size: 8.4pt;
   text-align: justify;
   line-height: 1.45;
@@ -879,21 +948,21 @@ h4.subh {
   padding: 5px 7px;
   margin-top: 4px;
 }
-.sheet .note {
+.pmksy-app .sheet .note {
   font-size: 8pt;
   font-style: italic;
   margin-top: 4px;
 }
-.sheet ul.decl {
+.pmksy-app .sheet ul.decl {
   font-size: 8.6pt;
   text-align: justify;
   padding-left: 14px;
   margin: 5px 0;
 }
-.sheet ul.decl li {
+.pmksy-app .sheet ul.decl li {
   margin-bottom: 3.5px;
 }
-.sheet .sigrow {
+.pmksy-app .sheet .sigrow {
   display: flex;
   justify-content: space-between;
   margin-top: 14mm;
@@ -901,32 +970,32 @@ h4.subh {
   text-align: center;
   gap: 10px;
 }
-.sheet .sigrow div {
+.pmksy-app .sheet .sigrow div {
   flex: 1;
   border-top: 0.7pt solid #000;
   padding-top: 3px;
 }
-.sheet .pgno {
+.pmksy-app .sheet .pgno {
   position: absolute;
   bottom: 6mm;
   right: 12mm;
   font-size: 8pt;
 }
-.sheet .stamp {
+.pmksy-app .sheet .stamp {
   position: absolute;
   bottom: 6mm;
   left: 12mm;
   font-size: 7.4pt;
   opacity: 0.75;
 }
-.pmksy-stamps {
+.pmksy-app .pmksy-stamps {
   display: flex;
   gap: 8mm;
   align-items: stretch;
   margin-top: 9mm;
   page-break-inside: avoid;
 }
-.pmksy-stamp {
+.pmksy-app .pmksy-stamp {
   flex: 1;
   border: 2.2pt solid #1428c7;
   outline: 1pt solid #1428c7;
@@ -945,46 +1014,49 @@ h4.subh {
   flex-direction: column;
   justify-content: center;
 }
-.pmksy-stamp .amount {
+.pmksy-app .pmksy-stamp .amount {
   font-size: 10.5pt;
   white-space: nowrap;
 }
-.pmksy-stamp .line {
+.pmksy-app .pmksy-stamp .line {
   display: inline-block;
   min-width: 38mm;
   border-bottom: 1.2pt solid #1428c7;
   height: 1.1em;
   vertical-align: bottom;
 }
-.pmksy-stamp .sign {
+.pmksy-app .pmksy-stamp .sign {
   margin-top: 5mm;
   text-align: left;
   padding-left: 2mm;
 }
-.pmksy-stamp.officer .sign {
+.pmksy-app .pmksy-stamp.officer .sign {
   text-align: right;
   padding-right: 2mm;
 }
 @media print {
-  .pmksy-stamps {
+  .pmksy-app .pmksy-stamps {
     break-inside: avoid;
   }
 }
-.tick {
+.pmksy-app .tick {
   font-weight: 700;
 }
 
 @media print {
-  body {
+  .pmksy-app {
     background: #fff;
   }
-  .noprint {
+  .pmksy-app.noprint {
+    display: contents !important;
+  }
+  .pmksy-app.noprint > :not(#printArea) {
     display: none !important;
   }
-  #printArea {
+  .pmksy-app #printArea {
     display: block !important;
   }
-  .sheet {
+  .pmksy-app .sheet {
     box-shadow: none;
     margin: 0;
     width: auto;
@@ -992,7 +1064,7 @@ h4.subh {
     page-break-after: always;
     padding: 9mm 11mm;
   }
-  .sheet:last-child {
+  .pmksy-app .sheet:last-child {
     page-break-after: auto;
   }
   @page {
@@ -1001,49 +1073,163 @@ h4.subh {
   }
 }
 @media (max-width: 760px) {
-  .xgrid {
+  .pmksy-app .xgrid {
     grid-template-columns: 1fr !important;
   }
 }
-@media (max-width: 640px) {
-  .wrap {
-    padding: 10px 9px 88px;
+@media (max-width: 900px) {
+  .pmksy-app header.mast > .firmswitch,
+  .pmksy-app header.mast > .btnrow {
+    flex-basis: 100%;
   }
-  .amt .v {
+  .pmksy-app .wrap {
+    padding-bottom: 24px;
+  }
+  .pmksy-app .ledger {
+    position: static;
+    bottom: auto;
+    margin-top: 16px;
+  }
+  .pmksy-app .ledger .row {
+    gap: 12px;
+    align-items: stretch;
+  }
+  .pmksy-app .ledger .amt {
+    flex: 1 1 125px;
+  }
+  .pmksy-app .ledger .row > .btnrow {
+    flex: 1 1 100%;
+  }
+  .pmksy-app .ledger .row > .btnrow .btn {
+    flex: 1 1 150px;
+  }
+  .pmksy-app .firmpanel-backdrop {
+    padding: 3vh 12px;
+  }
+}
+@media (min-width: 641px) and (max-width: 900px) {
+  .pmksy-app .wrap {
+    padding: 16px 16px 24px;
+  }
+  .pmksy-app .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pmksy-app .all-record-filters {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  }
+}
+@media (max-width: 640px) {
+  .pmksy-app .wrap {
+    padding: 12px 10px 20px;
+  }
+  .pmksy-app .amt .v {
     font-size: 15px;
   }
-  .amt.big .v {
+  .pmksy-app .amt.big .v {
     font-size: 20px;
   }
-  header.mast {
+  .pmksy-app header.mast {
     padding: 11px 14px;
   }
-  .mast h1 {
+  .pmksy-app .mast > .firmswitch {
+    border-radius: var(--r-md);
+  }
+  .pmksy-app .firmswitch {
+    padding: 10px;
+  }
+  .pmksy-app .firmswitch label {
+    flex: 0 0 100%;
+  }
+  .pmksy-app .firmswitch select {
+    flex: 1 1 100%;
+    max-width: none;
+    border-radius: var(--r-sm);
+  }
+  .pmksy-app .mast .firmswitch .btn,
+  .pmksy-app .mast > .btnrow .btn {
+    flex: 1 1 145px;
+    min-height: 40px;
+  }
+  .pmksy-app .mast #quickFarmer {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0 !important;
+  }
+  .pmksy-app .mast h1 {
     font-size: 14.5px;
   }
-  .card > h2 {
+  .pmksy-app .card > h2 {
     padding: 10px 13px;
+    gap: 7px;
   }
-  .card .body {
+  .pmksy-app .card .body {
     padding: 13px;
   }
-  .btn {
+  .pmksy-app .grid,
+  .pmksy-app .all-record-filters {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 11px;
+  }
+  .pmksy-app .btn {
     padding: 9px 14px;
   }
-  .ledger {
-    bottom: 0;
-    border-radius: var(--r-md) var(--r-md) 0 0;
+  .pmksy-app .steps {
+    margin: 0 -10px 14px;
+    border-radius: 0;
+    border-right: 0;
+    border-left: 0;
+  }
+  .pmksy-app .step {
+    min-width: 132px;
+    padding: 9px 11px 9px 25px;
+  }
+  .pmksy-app .step .nm {
+    font-size: 12.5px;
+  }
+  .pmksy-app .ledger {
     padding: 13px 15px;
+  }
+  .pmksy-app .ledger .row {
+    gap: 12px 8px;
+  }
+  .pmksy-app .ledger .amt {
+    flex: 1 1 calc(50% - 8px);
+  }
+  .pmksy-app .ledger .row > .btnrow .btn {
+    flex: 1 1 100%;
+  }
+  .pmksy-app .firmpanel-backdrop {
+    padding: 10px;
+  }
+  .pmksy-app .firmpanel {
+    max-height: calc(100vh - 20px);
+    border-radius: var(--r-md);
+  }
+  .pmksy-app .firmpanel-head {
+    align-items: flex-start;
+    padding: 12px;
+  }
+  .pmksy-app .firmpanel-head h2 {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .pmksy-app .firmpanel-body {
+    padding: 13px;
+  }
+  .pmksy-app .all-record-filters {
+    grid-template-columns: 1fr;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  * {
+  .pmksy-app,
+.pmksy-app * {
     transition: none !important;
   }
 }
 
 /* ===== COMPANY BILL — AVANI PDF TYPING / WORDING STYLE ONLY ===== */
-.pmksy-company-bill.avani-pdf-invoice {
+.pmksy-app .pmksy-company-bill.avani-pdf-invoice {
   font-family: Arial, "Noto Sans Devanagari", sans-serif;
   font-size: 8pt;
   color: #111;
@@ -1053,35 +1239,35 @@ h4.subh {
   min-height: 277mm;
   width: 100%;
 }
-.avani-pdf-invoice table {
+.pmksy-app .avani-pdf-invoice table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
 }
-.avani-pdf-invoice td,
-.avani-pdf-invoice th {
+.pmksy-app .avani-pdf-invoice td,
+.pmksy-app .avani-pdf-invoice th {
   border: 1px solid #111;
   padding: 1.45mm 1.8mm;
   vertical-align: middle;
 }
-.avani-head .head-row td {
+.pmksy-app .avani-head .head-row td {
   font-weight: 400;
   font-size: 8pt;
   height: 6mm;
   border: 0;
   padding: 0 0 1mm;
 }
-.avani-head .invoice-title {
+.pmksy-app .avani-head .invoice-title {
   text-align: center;
   font-size: 13pt;
   font-weight: 900;
   text-decoration: underline;
   letter-spacing: 0.2px;
 }
-.avani-head .right {
+.pmksy-app .avani-head .right {
   text-align: right;
 }
-.avani-head .company-name {
+.pmksy-app .avani-head .company-name {
   text-align: center;
   font-size: 17pt;
   font-weight: 900;
@@ -1090,7 +1276,7 @@ h4.subh {
   border: 0;
   padding: 0;
 }
-.avani-head .dealer-name {
+.pmksy-app .avani-head .dealer-name {
   text-align: center;
   font-size: 8.5pt;
   font-weight: 700;
@@ -1099,7 +1285,7 @@ h4.subh {
   border: 0;
   padding: 0.6mm 0;
 }
-.avani-head .company-address {
+.pmksy-app .avani-head .company-address {
   text-align: center;
   font-size: 7.7pt;
   color: #111;
@@ -1107,31 +1293,31 @@ h4.subh {
   border: 0;
   padding: 0 0 2.5mm;
 }
-.avani-billing {
+.pmksy-app .avani-billing {
   border: 1px solid #111;
 }
-.avani-billing td {
+.pmksy-app .avani-billing td {
   height: 5.7mm;
 }
-.avani-billing .section-blue {
+.pmksy-app .avani-billing .section-blue {
   background: #fff;
   color: #111;
   font-weight: 900;
   text-align: left;
   font-size: 8.5pt;
 }
-.avani-billing .section-blue td {
+.pmksy-app .avani-billing .section-blue td {
   border-color: #111;
 }
-.avani-billing .lbl {
+.pmksy-app .avani-billing .lbl {
   font-weight: 700;
   white-space: nowrap;
   width: 17%;
 }
-.avani-items {
+.pmksy-app .avani-items {
   margin-top: 0;
 }
-.avani-items .item-head th {
+.pmksy-app .avani-items .item-head th {
   background: #fff;
   color: #111;
   text-align: center;
@@ -1140,30 +1326,30 @@ h4.subh {
   line-height: 1.1;
   border-color: #111;
 }
-.avani-items td {
+.pmksy-app .avani-items td {
   font-size: 7.15pt;
   height: 5.5mm;
   line-height: 1.12;
 }
-.avani-items .desc,
-.avani-items .std {
+.pmksy-app .avani-items .desc,
+.pmksy-app .avani-items .std {
   word-break: normal;
 }
-.avani-items .num {
+.pmksy-app .avani-items .num {
   text-align: right;
   white-space: nowrap;
 }
-.avani-items .subtotal td {
+.pmksy-app .avani-items .subtotal td {
   background: #fff;
 }
-.avani-items .grand td {
+.pmksy-app .avani-items .grand td {
   background: #fff;
   color: #111;
   font-weight: 900;
   font-size: 8.5pt;
   border-color: #111;
 }
-.avani-stamp-zone {
+.pmksy-app .avani-stamp-zone {
   position: relative;
   min-height: 28mm;
   display: block;
@@ -1175,7 +1361,7 @@ h4.subh {
   break-inside: avoid;
   overflow: visible;
 }
-.avani-stamp-zone .stamp-zone {
+.pmksy-app .avani-stamp-zone .stamp-zone {
   position: relative;
   width: 100%;
   height: 28mm;
@@ -1185,7 +1371,7 @@ h4.subh {
   gap: 7mm;
   pointer-events: none;
 }
-.avani-stamp-zone .stamp-wrap {
+.pmksy-app .avani-stamp-zone .stamp-wrap {
   position: relative;
   width: 42%;
   max-width: 82mm;
@@ -1197,7 +1383,7 @@ h4.subh {
   mix-blend-mode: multiply;
   filter: saturate(0.95);
 }
-.avani-stamp-zone .stamp-wrap img {
+.pmksy-app .avani-stamp-zone .stamp-wrap img {
   width: 100%;
   max-width: 100%;
   height: auto;
@@ -1205,7 +1391,7 @@ h4.subh {
   margin: auto;
   object-fit: contain;
 }
-.avani-stamp-zone .stamp-fill {
+.pmksy-app .avani-stamp-zone .stamp-fill {
   position: absolute;
   z-index: 2;
   display: block;
@@ -1219,99 +1405,99 @@ h4.subh {
   transform: translateX(-50%);
   letter-spacing: 0.1px;
 }
-.avani-stamp-zone .farmer-fill {
+.pmksy-app .avani-stamp-zone .farmer-fill {
   top: 29.5%;
   left: 58%;
   width: 33%;
 }
-.avani-stamp-zone .officer-fill {
+.pmksy-app .avani-stamp-zone .officer-fill {
   top: 17.5%;
   left: 61%;
   width: 31%;
 }
-.avani-stamp-zone.tight {
+.pmksy-app .avani-stamp-zone.tight {
   min-height: 24mm;
 }
-.avani-stamp-zone.tight .stamp-zone {
+.pmksy-app .avani-stamp-zone.tight .stamp-zone {
   height: 24mm;
   gap: 5mm;
 }
-.avani-stamp-zone.tight .stamp-wrap {
+.pmksy-app .avani-stamp-zone.tight .stamp-wrap {
   width: 39%;
   max-width: 75mm;
 }
-.avani-stamp-zone.compact {
+.pmksy-app .avani-stamp-zone.compact {
   min-height: 19mm;
 }
-.avani-stamp-zone.compact .stamp-zone {
+.pmksy-app .avani-stamp-zone.compact .stamp-zone {
   height: 19mm;
   gap: 4mm;
 }
-.avani-stamp-zone.compact .stamp-wrap {
+.pmksy-app .avani-stamp-zone.compact .stamp-wrap {
   width: 35%;
   max-width: 67mm;
 }
-.avani-stamp-zone.compact .stamp-fill {
+.pmksy-app .avani-stamp-zone.compact .stamp-fill {
   font-size: 6.8pt;
 }
-.avani-bottom {
+.pmksy-app .avani-bottom {
   margin-top: 0;
 }
-.avani-bottom td {
+.pmksy-app .avani-bottom td {
   font-size: 7.4pt;
   line-height: 1.2;
 }
-.avani-bottom .bank-left,
-.avani-bottom .bank-mid,
-.avani-bottom .bank-right {
+.pmksy-app .avani-bottom .bank-left,
+.pmksy-app .avani-bottom .bank-mid,
+.pmksy-app .avani-bottom .bank-right {
   background: #fff;
 }
-.avani-bottom .section-blue {
+.pmksy-app .avani-bottom .section-blue {
   background: #fff;
   color: #111;
   text-align: left;
   font-weight: 900;
 }
-.avani-bottom .terms {
+.pmksy-app .avani-bottom .terms {
   height: 22mm;
   vertical-align: top;
 }
-.avani-bottom .customer-sign,
-.avani-bottom .auth-sign {
+.pmksy-app .avani-bottom .customer-sign,
+.pmksy-app .avani-bottom .auth-sign {
   height: 21mm;
   vertical-align: bottom;
   text-align: center;
   font-weight: 700;
 }
 @media print {
-  .pmksy-company-bill.avani-pdf-invoice {
+  .pmksy-app .pmksy-company-bill.avani-pdf-invoice {
     page-break-after: always;
     break-after: page;
   }
-  .avani-pdf-invoice .avani-head,
-  .avani-pdf-invoice .avani-billing,
-  .avani-pdf-invoice .avani-items,
-  .avani-pdf-invoice .avani-stamp-zone,
-  .avani-pdf-invoice .avani-bottom {
+  .pmksy-app .avani-pdf-invoice .avani-head,
+.pmksy-app .avani-pdf-invoice .avani-billing,
+.pmksy-app .avani-pdf-invoice .avani-items,
+.pmksy-app .avani-pdf-invoice .avani-stamp-zone,
+.pmksy-app .avani-pdf-invoice .avani-bottom {
     break-inside: avoid;
     page-break-inside: avoid;
   }
-  .avani-pdf-invoice .avani-stamp-zone,
-  .avani-pdf-invoice .stamp-zone,
-  .avani-pdf-invoice .stamp-wrap {
+  .pmksy-app .avani-pdf-invoice .avani-stamp-zone,
+.pmksy-app .avani-pdf-invoice .stamp-zone,
+.pmksy-app .avani-pdf-invoice .stamp-wrap {
     break-inside: avoid;
     page-break-inside: avoid;
   }
-  .avani-pdf-invoice .stamp-fill {
+  .pmksy-app .avani-pdf-invoice .stamp-fill {
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
-  .avani-pdf-invoice img {
+  .pmksy-app .avani-pdf-invoice img {
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
-  .sheet:not(.pmksy-company-bill) .stamp-zone,
-  .sheet:not(.pmksy-company-bill) .stamp-wrap {
+  .pmksy-app .sheet:not(.pmksy-company-bill) .stamp-zone,
+.pmksy-app .sheet:not(.pmksy-company-bill) .stamp-wrap {
     display: none !important;
   }
 }
