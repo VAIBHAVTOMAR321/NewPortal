@@ -55,7 +55,6 @@ a {
   border-radius: 3px;
 }
 
-/* ══ शीर्ष पट्टी ══ */
 header.mast {
   background: linear-gradient(155deg, #0f1c24, var(--ink) 65%);
   color: #fff;
@@ -101,10 +100,8 @@ header.mast {
   max-width: 1200px;
   margin: 0 auto;
   padding: 18px 16px 120px;
-  box-sizing: border-box;
 }
 
-/* ══ फर्म-स्विचर व प्रबंधन पैनल ══ */
 .firmswitch {
   display: flex;
   align-items: center;
@@ -131,6 +128,7 @@ header.mast {
 .firmswitch .btn {
   white-space: nowrap;
 }
+
 .firmpanel-backdrop {
   position: fixed;
   inset: 0;
@@ -211,7 +209,6 @@ header.mast {
   font-weight: 700;
 }
 
-/* ══ चरण-पट्टी ══ */
 .steps {
   display: flex;
   gap: 0;
@@ -290,7 +287,6 @@ header.mast {
   color: #7fd6dc;
 }
 
-/* ══ कार्ड ══ */
 .card {
   background: var(--paper);
   border: 1px solid var(--line);
@@ -337,7 +333,6 @@ header.mast {
   padding: 16px;
 }
 
-/* ══ फ़ॉर्म फ़ील्ड ══ */
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
@@ -449,12 +444,7 @@ input[readonly],
   color: #fff;
   border-color: var(--ink);
 }
-.chips input:focus-visible + label {
-  outline: 2.5px solid var(--water);
-  outline-offset: 2px;
-}
 
-/* ══ नीचे चिपका सारांश-पट्टा ══ */
 .ledger {
   background: linear-gradient(155deg, #0f1c24, var(--ink) 70%);
   color: #fff;
@@ -508,34 +498,7 @@ input[readonly],
 .amt.far .v {
   color: #f0c46a;
 }
-.bar {
-  display: flex;
-  height: 11px;
-  border-radius: 6px;
-  overflow: hidden;
-  margin-top: 12px;
-  background: #0a1720;
-}
-.bar span {
-  transition: flex-grow 0.35s ease;
-}
-.legend {
-  display: flex;
-  gap: 15px;
-  flex-wrap: wrap;
-  margin-top: 8px;
-  font-size: 11.5px;
-  opacity: 0.88;
-}
-.legend i {
-  width: 9px;
-  height: 9px;
-  border-radius: 2px;
-  display: inline-block;
-  margin-right: 5px;
-}
 
-/* ══ तालिकाएँ ══ */
 table.dt {
   width: 100%;
   border-collapse: collapse;
@@ -576,23 +539,7 @@ table.dt thead th {
   position: sticky;
   top: 0;
 }
-.landtbl td {
-  vertical-align: middle;
-}
-.landtbl .auto-cell {
-  background: var(--waterlt);
-  font-weight: 600;
-  font-size: 12.5px;
-}
-.landtbl #selfRow td {
-  background: var(--oklt);
-}
-.landtbl #selfRow .auto-cell {
-  background: #dcf0e3;
-}
-.landtbl input {
-  width: 100%;
-}
+
 h4.subh {
   font-size: 11.5px;
   letter-spacing: 0.4px;
@@ -602,7 +549,6 @@ h4.subh {
   padding-top: 14px;
   font-weight: 700;
 }
-
 .chk {
   display: flex;
   align-items: flex-start;
@@ -636,7 +582,6 @@ h4.subh {
   white-space: nowrap;
 }
 
-/* ══ बटन ══ */
 .btn {
   font: inherit;
   font-size: 13.5px;
@@ -701,19 +646,7 @@ h4.subh {
   flex-wrap: wrap;
   align-items: center;
 }
-.savemsg {
-  font-size: 11.5px;
-  opacity: 0.8;
-  min-width: 96px;
-}
-.savemsg.ok {
-  color: #7fe0a8;
-  opacity: 1;
-}
-.savemsg.warn {
-  color: #f0c46a;
-  opacity: 1;
-}
+
 .stamp-options {
   display: flex;
   align-items: center;
@@ -780,207 +713,16 @@ h4.subh {
   font-size: 13.5px;
 }
 
-/* ══ सुझाव एवं अनुभव रिपोर्ट ══ */
-.feedback-button {
-  position: fixed;
-  right: 16px;
-  bottom: 120px;
-  z-index: 60;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 10px 16px;
-  border: 0;
-  border-radius: 24px;
-  background: var(--ink);
-  color: #fff;
-  box-shadow: 0 6px 20px -6px rgba(20, 35, 44, 0.55);
-  cursor: pointer;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-}
-.feedback-button:hover {
-  background: #1c3a4a;
-}
-.feedback-button:focus-visible {
-  outline: 2px solid var(--water);
-  outline-offset: 2px;
-}
-.feedback-dot {
-  padding: 0 6px;
-  border-radius: 9px;
-  background: var(--alert);
-  color: #fff;
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 10.5px;
-}
-.feedback-panel {
-  position: fixed;
-  right: 16px;
-  bottom: 120px;
-  z-index: 61;
-  display: none;
-  flex-direction: column;
-  width: min(430px, calc(100vw - 32px));
-  max-height: min(74vh, 620px);
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: var(--paper);
-  box-shadow: 0 18px 46px -14px rgba(20, 35, 44, 0.5);
-}
-.feedback-panel.on {
-  display: flex;
-}
-.feedback-panel > h3 {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  margin: 0;
-  padding: 11px 14px;
-  background: var(--ink);
-  color: #fff;
-  font-size: 13px;
-}
-.feedback-subtitle {
-  opacity: 0.6;
-  font-size: 11px;
-  font-weight: 400;
-}
-.feedback-panel > h3 button {
-  margin-left: auto;
-  padding: 0 3px;
-  border: 0;
-  background: none;
-  color: #fff;
-  cursor: pointer;
-  font-size: 19px;
-  line-height: 1;
-}
-.feedback-tabs {
-  display: flex;
-  gap: 2px;
-  padding: 0 14px;
-  background: var(--ink);
-}
-.feedback-tab {
-  flex: 1;
-  padding: 7px 4px;
-  border: 0;
-  border-radius: 5px 5px 0 0;
-  background: #26424f;
-  color: #cfe3e8;
-  cursor: pointer;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-}
-.feedback-tab[aria-selected="true"] {
-  background: var(--paper);
-  color: var(--ink);
-}
-.feedback-count {
-  margin-left: 4px;
-  opacity: 0.7;
-}
-.feedback-content {
-  overflow-y: auto;
-  padding: 12px 14px;
-}
-.feedback-content[hidden] {
-  display: none;
-}
-.feedback-field {
-  margin-bottom: 9px;
-}
-.feedback-kinds {
-  gap: 6px;
-}
-.feedback-kinds label {
-  padding: 5px 10px;
-  font-size: 11.5px;
-}
-.feedback-hint {
-  margin-top: 6px;
-}
-.feedback-list {
-  min-height: 150px;
-}
-.feedback-note {
-  margin-bottom: 8px;
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--water);
-  border-radius: 5px;
-  font-size: 12.5px;
-  overflow-wrap: anywhere;
-}
-.feedback-note.bug {
-  border-left-color: var(--alert);
-}
-.feedback-note.idea {
-  border-left-color: var(--gold);
-}
-.feedback-note-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 4px;
-  color: var(--ink2);
-  font-size: 10.5px;
-  flex-wrap: wrap;
-}
-.feedback-note-meta button {
-  margin-left: auto;
-  border: 0;
-  background: none;
-  color: var(--alert);
-  cursor: pointer;
-  font-size: 14px;
-}
-.feedback-logline {
-  display: flex;
-  gap: 8px;
-  padding: 3px 0;
-  border-bottom: 1px dashed var(--line);
-  font-size: 11.5px;
-}
-.feedback-logline time {
-  flex: none;
-  color: var(--ink2);
-  font-size: 10.5px;
-}
-.feedback-log-kind {
-  flex: none;
-  height: 15px;
-  padding: 0 5px;
-  border-radius: 8px;
-  background: var(--waterlt);
-  color: var(--water);
-  font-size: 10px;
-  line-height: 15px;
-}
-.feedback-log-kind.kind-नोट {
-  background: #fdf7e8;
-  color: var(--gold);
-}
-.feedback-footer {
-  padding: 10px 14px;
-  border-top: 1px solid var(--line);
-  background: var(--grain);
-}
-.feedback-footer .btnrow {
-  gap: 6px;
-}
-.feedback-message {
-  margin-left: auto;
-}
-
 /* ══ प्रिंट शीट ══ */
 #printArea {
   display: none;
+  margin: 18px auto 120px;
+  padding: 0 8px;
 }
+#printArea.show {
+  display: block;
+}
+
 .sheet {
   width: 210mm;
   min-height: 296mm;
@@ -990,9 +732,16 @@ h4.subh {
   font-family: "Noto Sans Devanagari", serif;
   font-size: 10pt;
   line-height: 1.4;
-  margin: 0 auto 8mm;
+  margin: 0 auto 16mm;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
   position: relative;
+  page-break-after: always;
+  break-after: page;
+}
+.sheet:last-child {
+  margin-bottom: 0;
+  page-break-after: auto;
+  break-after: auto;
 }
 .sheet .hdr {
   text-align: center;
@@ -1154,13 +903,11 @@ h4.subh {
   border-radius: 5px;
   padding: 6mm 5mm 5mm;
   color: #1428c7;
-  font-family: "Noto Sans Devanagari", sans-serif;
   font-weight: 700;
   text-align: center;
   line-height: 1.48;
   font-size: 8.4pt;
   min-height: 48mm;
-  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -1181,15 +928,10 @@ h4.subh {
   text-align: left;
   padding-left: 2mm;
 }
-.pmksy-stamp.officer .sign {
-  text-align: right;
-  padding-right: 2mm;
-}
 .tick {
   font-weight: 700;
 }
 
-/* React Component Specific Print Styles */
 .sheet .application-title,
 .sheet .document-title {
   text-align: center;
@@ -1270,29 +1012,173 @@ h4.subh {
   line-height: 1.4;
 }
 
+/* AVANI PDF Invoice */
+.pmksy-company-bill.avani-pdf-invoice {
+  font-family: Arial, "Noto Sans Devanagari", sans-serif;
+  font-size: 8pt;
+  color: #111;
+  background: #fff;
+  padding: 7mm 9mm;
+  box-sizing: border-box;
+  min-height: 277mm;
+  width: 100%;
+}
+.avani-pdf-invoice table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.avani-pdf-invoice td,
+.avani-pdf-invoice th {
+  border: 1px solid #111;
+  padding: 1.45mm 1.8mm;
+  vertical-align: middle;
+}
+.avani-head .head-row td {
+  font-weight: 400;
+  font-size: 8pt;
+  height: 6mm;
+  border: 0;
+  padding: 0 0 1mm;
+}
+.avani-head .invoice-title {
+  text-align: center;
+  font-size: 13pt;
+  font-weight: 900;
+  text-decoration: underline;
+}
+.avani-head .right {
+  text-align: right;
+}
+.avani-head .company-name {
+  text-align: center;
+  font-size: 17pt;
+  font-weight: 900;
+  border: 0;
+  padding: 0;
+}
+.avani-head .dealer-name {
+  text-align: center;
+  font-size: 8.5pt;
+  font-weight: 700;
+  border: 0;
+  padding: 0.6mm 0;
+}
+.avani-head .company-address {
+  text-align: center;
+  font-size: 7.7pt;
+  border: 0;
+  padding: 0 0 2.5mm;
+}
+.avani-billing {
+  border: 1px solid #111;
+}
+.avani-billing td {
+  height: 5.7mm;
+}
+.avani-billing .section-blue {
+  background: #fff;
+  color: #111;
+  font-weight: 900;
+  text-align: left;
+  font-size: 8.5pt;
+}
+.avani-billing .lbl {
+  font-weight: 700;
+  white-space: nowrap;
+  width: 17%;
+}
+.avani-items .item-head th {
+  background: #fff;
+  color: #111;
+  text-align: center;
+  font-weight: 800;
+  font-size: 7.5pt;
+  line-height: 1.1;
+}
+.avani-items td {
+  font-size: 7.15pt;
+  height: 5.5mm;
+  line-height: 1.12;
+}
+.avani-items .num {
+  text-align: right;
+  white-space: nowrap;
+}
+.avani-items .grand td {
+  background: #fff;
+  color: #111;
+  font-weight: 900;
+  font-size: 8.5pt;
+}
+.avani-bottom td {
+  font-size: 7.4pt;
+  line-height: 1.2;
+}
+.avani-bottom .terms {
+  height: 22mm;
+  vertical-align: top;
+}
+.avani-bottom .customer-sign,
+.avani-bottom .auth-sign {
+  height: 21mm;
+  vertical-align: bottom;
+  text-align: center;
+  font-weight: 700;
+}
+
 @media print {
+  html,
   body {
-    background: #fff;
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
   .noprint {
     display: none !important;
   }
   #printArea {
     display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
   .sheet {
-    box-shadow: none;
-    margin: 0;
-    width: auto;
-    min-height: auto;
+    box-shadow: none !important;
+    margin: 0 !important;
+    width: 210mm !important;
+    min-height: 0 !important; /* allow it to grow or shrink */
+    padding: 10mm 12mm !important;
     page-break-after: always;
-    padding: 9mm 11mm;
+    break-after: page;
+    position: relative;
+    display: block;
+    background: #fff !important;
   }
   .sheet:last-child {
     page-break-after: auto;
+    break-after: auto;
   }
   .pmksy-stamps {
     break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .sigrow {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .photobox {
+    top: 10mm;
+    right: 12mm;
+  }
+  .pgno {
+    bottom: 6mm;
+    right: 12mm;
+  }
+  .stamp {
+    bottom: 6mm;
+    left: 12mm;
   }
   @page {
     size: A4;
@@ -1347,7 +1233,6 @@ h4.subh {
     border-radius: 0;
     flex-wrap: wrap;
     gap: 8px;
-    justify-content: flex-start;
   }
   .firmswitch label {
     width: 100%;
@@ -1355,12 +1240,6 @@ h4.subh {
   }
   .firmswitch select {
     max-width: none;
-    width: 100%;
-  }
-  .firmswitch .btnrow {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
     width: 100%;
   }
   .btnrow {
@@ -1379,155 +1258,4 @@ h4.subh {
   * {
     transition: none !important;
   }
-}
-
-/* ===== COMPANY BILL — AVANI PDF TYPING / WORDING STYLE ONLY ===== */
-.pmksy-company-bill.avani-pdf-invoice {
-  font-family: Arial, "Noto Sans Devanagari", sans-serif;
-  font-size: 8pt;
-  color: #111;
-  background: #fff;
-  padding: 7mm 9mm;
-  box-sizing: border-box;
-  min-height: 277mm;
-  width: 100%;
-}
-.avani-pdf-invoice table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-}
-.avani-pdf-invoice td,
-.avani-pdf-invoice th {
-  border: 1px solid #111;
-  padding: 1.45mm 1.8mm;
-  vertical-align: middle;
-}
-.avani-head .head-row td {
-  font-weight: 400;
-  font-size: 8pt;
-  height: 6mm;
-  border: 0;
-  padding: 0 0 1mm;
-}
-.avani-head .invoice-title {
-  text-align: center;
-  font-size: 13pt;
-  font-weight: 900;
-  text-decoration: underline;
-  letter-spacing: 0.2px;
-}
-.avani-head .right {
-  text-align: right;
-}
-.avani-head .company-name {
-  text-align: center;
-  font-size: 17pt;
-  font-weight: 900;
-  background: #fff;
-  color: #111;
-  border: 0;
-  padding: 0;
-}
-.avani-head .dealer-name {
-  text-align: center;
-  font-size: 8.5pt;
-  font-weight: 700;
-  background: #fff;
-  color: #111;
-  border: 0;
-  padding: 0.6mm 0;
-}
-.avani-head .company-address {
-  text-align: center;
-  font-size: 7.7pt;
-  color: #111;
-  background: #fff;
-  border: 0;
-  padding: 0 0 2.5mm;
-}
-.avani-billing {
-  border: 1px solid #111;
-}
-.avani-billing td {
-  height: 5.7mm;
-}
-.avani-billing .section-blue {
-  background: #fff;
-  color: #111;
-  font-weight: 900;
-  text-align: left;
-  font-size: 8.5pt;
-}
-.avani-billing .section-blue td {
-  border-color: #111;
-}
-.avani-billing .lbl {
-  font-weight: 700;
-  white-space: nowrap;
-  width: 17%;
-}
-.avani-items {
-  margin-top: 0;
-}
-.avani-items .item-head th {
-  background: #fff;
-  color: #111;
-  text-align: center;
-  font-weight: 800;
-  font-size: 7.5pt;
-  line-height: 1.1;
-  border-color: #111;
-}
-.avani-items td {
-  font-size: 7.15pt;
-  height: 5.5mm;
-  line-height: 1.12;
-}
-.avani-items .desc,
-.avani-items .std {
-  word-break: normal;
-}
-.avani-items .num {
-  text-align: right;
-  white-space: nowrap;
-}
-.avani-items .subtotal td {
-  background: #fff;
-}
-.avani-items .grand td {
-  background: #fff;
-  color: #111;
-  font-weight: 900;
-  font-size: 8.5pt;
-  border-color: #111;
-}
-.avani-bottom {
-  margin-top: 0;
-}
-.avani-bottom td {
-  font-size: 7.4pt;
-  line-height: 1.2;
-}
-.avani-bottom .bank-left,
-.avani-bottom .bank-mid,
-.avani-bottom .bank-right {
-  background: #fff;
-}
-.avani-bottom .section-blue {
-  background: #fff;
-  color: #111;
-  text-align: left;
-  font-weight: 900;
-}
-.avani-bottom .terms {
-  height: 22mm;
-  vertical-align: top;
-}
-.avani-bottom .customer-sign,
-.avani-bottom .auth-sign {
-  height: 21mm;
-  vertical-align: bottom;
-  text-align: center;
-  font-weight: 700;
 }
