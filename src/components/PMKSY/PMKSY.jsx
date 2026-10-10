@@ -31,8 +31,12 @@ const PMKSY = () => {
     village: "",
     tenure: "स्वयं",
     lease: "",
+    ownKhata: "",
+    ownKhasra: "",
+    ownArea: "",
     prevsub: "नहीं",
     source: "कुआँ",
+    sourceOther: "",
     company: "",
     lat: "",
     lon: "",
@@ -57,6 +61,24 @@ const PMKSY = () => {
       farmer: 5983,
     },
   ]);
+  const [coOwners, setCoOwners] = useState([]);
+  const [checklistValues, setChecklistValues] = useState([
+    true,
+    true,
+    true,
+    true,
+    true,
+    false,
+    true,
+    true,
+    false,
+    true,
+  ]);
+  const [recommendation, setRecommendation] = useState({
+    verdict: "संस्तुत",
+    applicationDate: "",
+    remark: "",
+  });
 
   const [bill, setBill] = useState({
     bl_no: "",
@@ -124,8 +146,12 @@ const PMKSY = () => {
       village: "शिबूनगर",
       tenure: "स्वयं",
       lease: "",
+      ownKhata: "00056",
+      ownKhasra: "125/2",
+      ownArea: "0.20",
       prevsub: "नहीं",
       source: "कुआँ",
+      sourceOther: "",
       company: "Avani Enterprises",
       lat: "29.7560",
       lon: "78.5320",
@@ -254,6 +280,13 @@ const PMKSY = () => {
   const subtotal = boqItems.reduce((s, i) => s + i.val, 0);
   const installChg = Math.round(subtotal * 0.05);
   const grandTotal = subtotal + installChg;
+  const ownArea = Number.parseFloat(farmer.ownArea) || 0;
+  const coOwnerArea = coOwners.reduce(
+    (total, owner) => total + (Number.parseFloat(owner.area) || 0),
+    0,
+  );
+  const landAreaTotal = ownArea + coOwnerArea;
+  const proposedArea = systemRows.reduce((total, row) => total + row.area, 0);
 
   const enclosures = [
     "आधार कार्ड की प्रति (eKYC सत्यापित)",
@@ -360,6 +393,24 @@ const PMKSY = () => {
               type="button"
               onClick={() => {
                 setFarmer({});
+                setCoOwners([]);
+                setChecklistValues([
+                  true,
+                  true,
+                  true,
+                  true,
+                  true,
+                  false,
+                  true,
+                  true,
+                  false,
+                  true,
+                ]);
+                setRecommendation({
+                  verdict: "संस्तुत",
+                  applicationDate: "",
+                  remark: "",
+                });
                 setSystemRows([
                   {
                     sys: "ड्रिप",
@@ -1071,6 +1122,131 @@ const PMKSY = () => {
                     </button>
                   </div>
 
+                  <h4 className="subh">भूमि अभिलेख एवं क्षेत्रफल विवरण</h4>
+                  <div className="grid">
+                    <div className="f">
+                      <label>स्वयं की खाता संख्या</label>
+                      <input
+                        value={farmer.ownKhata || ""}
+                        onChange={(e) =>
+                          handleFarmerChange("ownKhata", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="f">
+                      <label>स्वयं की खसरा संख्या</label>
+                      <input
+                        value={farmer.ownKhasra || ""}
+                        onChange={(e) =>
+                          handleFarmerChange("ownKhasra", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="f">
+                      <label>स्वयं की भूमि (हे०)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={farmer.ownArea || ""}
+                        onChange={(e) =>
+                          handleFarmerChange("ownArea", e.target.value)
+                        }
+                      />
+                    </div>
+                  </div>
+                  <h4 className="subh">सह-खाताधारक की भूमि (यदि लागू हो)</h4>
+                  <div style={{ overflowX: "auto" }}>
+                    <table className="dt">
+                      <thead>
+                        <tr>
+                          <th>नाम</th>
+                          <th>पिता / पति</th>
+                          <th>संबंध</th>
+                          <th>खाता सं०</th>
+                          <th>खसरा सं०</th>
+                          <th>क्षेत्रफल (हे०)</th>
+                          <th>ग्राम</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {coOwners.map((owner, index) => (
+                          <tr key={index}>
+                            {[
+                              ["name", "नाम"],
+                              ["relative", "पिता / पति"],
+                              ["relation", "संबंध"],
+                              ["khata", "खाता सं०"],
+                              ["khasra", "खसरा सं०"],
+                              ["area", "क्षेत्रफल"],
+                              ["village", "ग्राम"],
+                            ].map(([field, label]) => (
+                              <td key={field}>
+                                <input
+                                  aria-label={label}
+                                  type={field === "area" ? "number" : "text"}
+                                  min={field === "area" ? "0" : undefined}
+                                  step={field === "area" ? "0.01" : undefined}
+                                  value={owner[field] || ""}
+                                  onChange={(e) =>
+                                    setCoOwners((current) =>
+                                      current.map((item, itemIndex) =>
+                                        itemIndex === index
+                                          ? {
+                                              ...item,
+                                              [field]: e.target.value,
+                                            }
+                                          : item,
+                                      ),
+                                    )
+                                  }
+                                />
+                              </td>
+                            ))}
+                            <td>
+                              <button
+                                className="btn danger sm"
+                                type="button"
+                                aria-label={`सह-खाताधारक ${index + 1} हटाएँ`}
+                                onClick={() =>
+                                  setCoOwners((current) =>
+                                    current.filter(
+                                      (_, itemIndex) => itemIndex !== index,
+                                    ),
+                                  )
+                                }
+                              >
+                                हटाएँ
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="btnrow" style={{ margin: "8px 0 14px" }}>
+                    <button
+                      className="btn ghost sm"
+                      type="button"
+                      onClick={() =>
+                        setCoOwners((current) => [
+                          ...current,
+                          {
+                            name: "",
+                            relative: "",
+                            relation: "",
+                            khata: "",
+                            khasra: "",
+                            area: "",
+                            village: "",
+                          },
+                        ])
+                      }
+                    >
+                      + सह-खाताधारक जोड़ें
+                    </button>
+                  </div>
                   <h4 className="subh">भूमि स्वामित्व, जल स्रोत एवं फर्म</h4>
                   <div className="grid">
                     <div className="f">
@@ -1147,6 +1323,17 @@ const PMKSY = () => {
                         <option>अन्य</option>
                       </select>
                     </div>
+                    {farmer.source === "अन्य" && (
+                      <div className="f">
+                        <label>अन्य जल स्रोत का विवरण</label>
+                        <input
+                          value={farmer.sourceOther || ""}
+                          onChange={(e) =>
+                            handleFarmerChange("sourceOther", e.target.value)
+                          }
+                        />
+                      </div>
+                    )}
                     <div className="f wide">
                       <label>
                         <span className="n">11</span>चयनित / अधिकृत डीलर
@@ -1380,7 +1567,14 @@ const PMKSY = () => {
                       <input
                         type="checkbox"
                         id={`chk${i}`}
-                        defaultChecked={i !== 5 && i !== 8}
+                        checked={checklistValues[i]}
+                        onChange={(e) =>
+                          setChecklistValues((current) =>
+                            current.map((checked, index) =>
+                              index === i ? e.target.checked : checked,
+                            ),
+                          )
+                        }
                       />
                       <label
                         htmlFor={`chk${i}`}
@@ -1405,19 +1599,43 @@ const PMKSY = () => {
                   <div className="grid">
                     <div className="f">
                       <label>प्रकरण</label>
-                      <select>
+                      <select
+                        value={recommendation.verdict}
+                        onChange={(e) =>
+                          setRecommendation((current) => ({
+                            ...current,
+                            verdict: e.target.value,
+                          }))
+                        }
+                      >
                         <option>संस्तुत</option>
                         <option>असंस्तुत</option>
                       </select>
                     </div>
                     <div className="f">
                       <label>आवेदन दिनांक</label>
-                      <input type="date" />
+                      <input
+                        type="date"
+                        value={recommendation.applicationDate}
+                        onChange={(e) =>
+                          setRecommendation((current) => ({
+                            ...current,
+                            applicationDate: e.target.value,
+                          }))
+                        }
+                      />
                     </div>
                     <div className="f wide">
                       <label>संस्तुति / टिप्पणी</label>
                       <textarea
                         rows={2}
+                        value={recommendation.remark}
+                        onChange={(e) =>
+                          setRecommendation((current) => ({
+                            ...current,
+                            remark: e.target.value,
+                          }))
+                        }
                         placeholder="स्थल निरीक्षण एवं अभिलेखों के आधार पर प्रकरण संस्तुत योग्य है।"
                       />
                     </div>
@@ -2209,22 +2427,49 @@ const PMKSY = () => {
               <h4 className="sec">ग — भूमि, जल स्रोत एवं प्रस्तावित प्रणाली</h4>
               <div className="fl">
                 <div className="fi">
-                  2. प्रस्तावित भूमि (हे०) :{" "}
-                  <span className="val">{systemRows[0]?.area || "—"}</span>
+                  1. खाता सं० :{" "}
+                  <span className="val sm">{farmer.ownKhata || "—"}</span>
+                </div>
+                <div className="fi">
+                  खसरा सं० :{" "}
+                  <span className="val sm">{farmer.ownKhasra || "—"}</span>
+                </div>
+                <div className="fi">
+                  2. स्वयं की भूमि (हे०) :{" "}
+                  <span className="val sm">{ownArea.toFixed(2)}</span>
+                </div>
+                <div className="fi">
+                  3. प्रस्तावित क्षेत्र (हे०) :{" "}
+                  <span className="val sm">{proposedArea.toFixed(2)}</span>
                 </div>
                 <div className="fi">
                   4. भूमि स्वामित्व :{" "}
                   <span className="val">
-                    {farmer.tenure === "स्वयं" ? "स्वयं ☑" : "स्वयं ☐"} पट्टा ☐
+                    {farmer.tenure === "स्वयं" ? "स्वयं ☑" : "स्वयं ☐"}{" "}
+                    {farmer.tenure === "पट्टा / अनुबंध"
+                      ? "पट्टा / अनुबंध ☑"
+                      : "पट्टा / अनुबंध ☐"}
                   </span>
                 </div>
                 <div className="fi">
+                  5. पट्टा अवधि (न्यूनतम 07 वर्ष) :{" "}
+                  <span className="val sm">{farmer.lease || "—"}</span>
+                </div>
+                <div className="fi">
                   6. मुख्य फसल :{" "}
-                  <span className="val">{systemRows[0]?.crop || "—"}</span>
+                  <span className="val">
+                    {systemRows.map((row) => row.crop).filter(Boolean).join(", ") ||
+                      "—"}
+                  </span>
                 </div>
                 <div className="fi">
                   7. रोपण दूरी / स्पेसिंग :{" "}
-                  <span className="val">{systemRows[0]?.spacing || "—"}</span>
+                  <span className="val">
+                    {systemRows
+                      .map((row) => row.spacing)
+                      .filter(Boolean)
+                      .join(", ") || "—"}
+                  </span>
                 </div>
                 <div className="fi">
                   8. गत 07 वर्षों में पूर्व अनुदान ?{" "}
@@ -2236,7 +2481,11 @@ const PMKSY = () => {
                 </div>
                 <div className="fi">
                   9. जल स्रोत :{" "}
-                  <span className="val">{farmer.source || "—"}</span>
+                  <span className="val">
+                    {farmer.source === "अन्य"
+                      ? `अन्य — ${farmer.sourceOther || "—"}`
+                      : farmer.source || "—"}
+                  </span>
                 </div>
                 <div className="fi full">
                   10. प्रणाली का प्रकार :{" "}
@@ -2250,6 +2499,55 @@ const PMKSY = () => {
                   <span className="val lg">{farmer.company || "—"}</span>
                 </div>
               </div>
+              {coOwners.length > 0 && (
+                <table className="pf">
+                  <thead>
+                    <tr>
+                      <th colSpan={7}>प्रस्तावित भूमि का स्रोत विवरण</th>
+                    </tr>
+                    <tr>
+                      <th>क्र.</th>
+                      <th>भू-स्वामी</th>
+                      <th>संबंध</th>
+                      <th>खाता सं०</th>
+                      <th>खसरा सं०</th>
+                      <th>क्षेत्रफल (हे०)</th>
+                      <th>ग्राम</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>1</td>
+                      <td>{farmer.fname || "—"} (स्वयं)</td>
+                      <td>—</td>
+                      <td>{farmer.ownKhata || "—"}</td>
+                      <td>{farmer.ownKhasra || "—"}</td>
+                      <td>{ownArea.toFixed(2)}</td>
+                      <td>{farmer.village || "—"}</td>
+                    </tr>
+                    {coOwners.map((owner, index) => (
+                      <tr key={index}>
+                        <td>{index + 2}</td>
+                        <td>
+                          {owner.name || "—"}
+                          {owner.relative ? `, पिता/पति ${owner.relative}` : ""}
+                        </td>
+                        <td>{owner.relation || "—"}</td>
+                        <td>{owner.khata || "—"}</td>
+                        <td>{owner.khasra || "—"}</td>
+                        <td>
+                          {(Number.parseFloat(owner.area) || 0).toFixed(2)}
+                        </td>
+                        <td>{owner.village || "—"}</td>
+                      </tr>
+                    ))}
+                    <tr className="tot">
+                      <td colSpan={6}>प्रस्तावित भूमि का क्षेत्रफल (कुल योग)</td>
+                      <td>{landAreaTotal.toFixed(2)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              )}
               <h4 className="sec">घ — संलग्न दस्तावेज़ की सूची</h4>
               <table className="pf">
                 <thead>
@@ -2278,7 +2576,7 @@ const PMKSY = () => {
             </article>
 
             {/* PAGE 2: APPLICATION PART 2 */}
-            <article className="sheet">
+            <article className="sheet application-page">
               <h4 className="sec">ङ — लाभार्थी की घोषणा</h4>
               <div className="box">
                 मैं, {farmer.fname || "—"}, सत्यनिष्ठा से घोषित करता हूँ कि —
@@ -2298,7 +2596,15 @@ const PMKSY = () => {
                   नाम : <span className="val">{farmer.fname || "—"}</span>
                 </div>
                 <div className="fi">
-                  दिनांक : <span className="val">10/9/2026</span>
+                  दिनांक :{" "}
+                  <span className="val">
+                    {recommendation.applicationDate
+                      ? recommendation.applicationDate
+                          .split("-")
+                          .reverse()
+                          .join("/")
+                      : "—"}
+                  </span>
                 </div>
               </div>
               <div className="sigrow">
@@ -2413,18 +2719,45 @@ const PMKSY = () => {
                 </tbody>
               </table>
 
+              <h4 className="sec">ज — पात्रता एवं स्थल परीक्षण जाँच सूची</h4>
+              <table className="pf">
+                <thead>
+                  <tr>
+                    <th>क्र.</th>
+                    <th>परीक्षण बिंदु</th>
+                    <th>हाँ / नहीं</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {checklist.map((item, index) => (
+                    <tr key={item}>
+                      <td>{index + 1}</td>
+                      <td>{item}</td>
+                      <td>{checklistValues[index] ? "☑ हाँ  ☐ नहीं" : "☐ हाँ  ☑ नहीं"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
               <h4 className="sec">झ — प्रमाणीकरण एवं संस्तुति</h4>
               <div className="box">
                 प्रमाणित किया जाता है कि उपरोक्त प्रक्षेत्र का संयुक्त रूप से
                 स्थलीय निरीक्षण किया गया, अभिलेखों का परीक्षण किया गया तथा
-                लाभार्थी दिशा-निर्देशों के अनुसार पात्र पाया गया। प्रकरण संस्तुत
-                ☑ / असंस्तुत ☐ किया जाता है।
+                लाभार्थी दिशा-निर्देशों के अनुसार पात्र पाया गया। प्रकरण{" "}
+                {recommendation.verdict} किया जाता है।
+              </div>
+              <div className="fi full">
+                <b>संस्तुति / टिप्पणी :</b>{" "}
+                {recommendation.remark || "—"}
               </div>
               <div className="sigrow">
                 <div>फर्म / अधिकृत डीलर प्रतिनिधि</div>
                 <div>प्रभारी, उद्यान सचल दल केंद्र कोटद्वार</div>
               </div>
               <h3 className="part">भाग – 3 : कार्यालय प्रयोगार्थ</h3>
+              <div className="fi full">
+                परीक्षणोपरांत — स्वीकृत ☐ / अस्वीकृत ☐
+              </div>
               <div className="sigrow">
                 <div>उद्यान विशेषज्ञ, कोटद्वार गढ़वाल</div>
               </div>
@@ -2452,11 +2785,16 @@ const PMKSY = () => {
               <ul className="decl">
                 <li>
                   1. यह कि मेरी स्वयं के स्वामित्व एवं कब्जे की भूमि का विवरण —
-                  खाता संख्या 00056, खसरा संख्या 125/2, कुल क्षेत्रफल{" "}
-                  {systemRows[0]?.area || 0} हे०, फसल{" "}
-                  {systemRows[0]?.crop || "—"}, सूक्ष्म सिंचाई प्रणाली{" "}
+                  खाता संख्या {farmer.ownKhata || "—"}, खसरा संख्या{" "}
+                  {farmer.ownKhasra || "—"}, कुल क्षेत्रफल {ownArea.toFixed(2)}{" "}
+                  हे०, फसल{" "}
+                  {systemRows.map((row) => row.crop).filter(Boolean).join(", ") ||
+                    "—"}, सूक्ष्म सिंचाई प्रणाली{" "}
                   {systemRows[0]?.sys || "—"}, स्पेसिंग{" "}
-                  {systemRows[0]?.spacing || "—"}।
+                  {systemRows
+                    .map((row) => row.spacing)
+                    .filter(Boolean)
+                    .join(", ") || "—"}।
                 </li>
                 <li>
                   2. यह कि उक्त भूमि पर PMKSY-PDMC के अंतर्गत ड्रिप सूक्ष्म
@@ -2501,7 +2839,7 @@ const PMKSY = () => {
                   <tr>
                     <td>1</td>
                     <td>स्वयं के स्वामित्व की कुल भूमि</td>
-                    <td className="n">{systemRows[0]?.area || 0} हे०</td>
+                    <td className="n">{landAreaTotal.toFixed(2)} हे०</td>
                   </tr>
                   <tr>
                     <td>2</td>
@@ -2535,6 +2873,43 @@ const PMKSY = () => {
                   </tr>
                 </tbody>
               </table>
+              {coOwners.length > 0 && (
+                <>
+                  <h4 className="sec">सह-खाताधारकों का भूमि विवरण</h4>
+                  <table className="pf">
+                    <thead>
+                      <tr>
+                        <th>क्र.</th>
+                        <th>सह-खाताधारक का नाम</th>
+                        <th>पिता / पति</th>
+                        <th>खाता सं०</th>
+                        <th>संबंध</th>
+                        <th>खसरा सं०</th>
+                        <th>क्षेत्रफल (हे०)</th>
+                        <th>ग्राम</th>
+                        <th>हस्ताक्षर</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {coOwners.map((owner, index) => (
+                        <tr key={index}>
+                          <td>{index + 1}</td>
+                          <td>{owner.name || "—"}</td>
+                          <td>{owner.relative || "—"}</td>
+                          <td>{owner.khata || "—"}</td>
+                          <td>{owner.relation || "—"}</td>
+                          <td>{owner.khasra || "—"}</td>
+                          <td>
+                            {(Number.parseFloat(owner.area) || 0).toFixed(2)}
+                          </td>
+                          <td>{owner.village || "—"}</td>
+                          <td>________________</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
               <div className="sigrow">
                 <div>
                   शपथकता / कृषक

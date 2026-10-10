@@ -1259,3 +1259,315 @@ h4.subh {
     transition: none !important;
   }
 }
+
+/* Match the A4 print-sheet presentation used by the supplied PMKSY form. */
+@media print {
+  html,
+  body {
+    background: #fff !important;
+    color: #111 !important;
+    font-family: "Noto Sans Devanagari", Arial, sans-serif !important;
+  }
+
+  #printArea {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .sheet {
+    box-sizing: border-box !important;
+    width: 210mm !important;
+    min-height: 297mm !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 9mm 10mm 12mm !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    background: #fff !important;
+    color: #111 !important;
+    font-size: 9.2pt !important;
+    line-height: 1.38 !important;
+    overflow: visible !important;
+    position: relative !important;
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  .sheet:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+
+  .sheet .hdr {
+    margin: 0 0 5mm !important;
+    padding: 0 0 3mm !important;
+    border-bottom: 1.4pt solid #111 !important;
+    text-align: center !important;
+  }
+
+  .sheet .hdr .t1 {
+    font-size: 12pt !important;
+    font-weight: 800 !important;
+  }
+
+  .sheet .hdr .t2 {
+    font-size: 9.8pt !important;
+    font-weight: 700 !important;
+  }
+
+  .sheet .hdr .t3 {
+    font-size: 8pt !important;
+  }
+
+  .sheet h3.part {
+    margin: 4mm 0 2.5mm !important;
+    padding: 2.2mm 3mm !important;
+    background: #e9ecef !important;
+    color: #111 !important;
+    border: 1pt solid #222 !important;
+    border-left: 4pt solid #111 !important;
+    font-size: 9.7pt !important;
+    font-weight: 800 !important;
+  }
+
+  .sheet h4.sec {
+    margin: 3mm 0 0 !important;
+    padding: 1.7mm 2.5mm !important;
+    background: #f4f5f6 !important;
+    border: 1pt solid #555 !important;
+    border-bottom: 0 !important;
+    font-size: 9pt !important;
+    font-weight: 800 !important;
+  }
+
+  .sheet .fl {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0 !important;
+    margin: 0 !important;
+    border: 1pt solid #555 !important;
+    border-top: 0 !important;
+  }
+
+  .sheet .fi {
+    box-sizing: border-box !important;
+    min-width: 0 !important;
+    width: auto !important;
+    padding: 2.1mm 2.4mm !important;
+    margin: 0 !important;
+    border-right: 1pt solid #777 !important;
+    border-top: 1pt solid #777 !important;
+    background: #fff !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .sheet .fi:nth-child(even) {
+    border-right: 0 !important;
+  }
+
+  .sheet .fi.full {
+    grid-column: 1 / -1 !important;
+    border-right: 0 !important;
+  }
+
+  .sheet .photobox {
+    top: 9mm !important;
+    right: 10mm !important;
+    width: 27mm !important;
+    height: 34mm !important;
+    border: 1pt solid #222 !important;
+    background: #fff !important;
+  }
+
+  .sheet table.pf,
+  .sheet table.dt {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    table-layout: fixed !important;
+    margin: 2.5mm 0 !important;
+    font-size: 8.25pt !important;
+  }
+
+  .sheet table.pf th,
+  .sheet table.pf td,
+  .sheet table.dt th,
+  .sheet table.dt td {
+    border: 1pt solid #444 !important;
+    padding: 1.8mm 2mm !important;
+    vertical-align: middle !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .sheet table.pf th,
+  .sheet table.dt th {
+    background: #eceeef !important;
+    color: #111 !important;
+    font-weight: 800 !important;
+    text-align: center !important;
+  }
+
+  .sheet table.pf tr.tot td,
+  .sheet table.dt tfoot td {
+    background: #f1f2f3 !important;
+    font-weight: 800 !important;
+  }
+
+  .sheet .box {
+    border: 1pt solid #444 !important;
+    background: #fff !important;
+    padding: 3.5mm 4mm !important;
+    margin: 2.5mm 0 !important;
+    font-size: 8.35pt !important;
+    line-height: 1.52 !important;
+    text-align: justify !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .sheet ul.decl {
+    margin: 2mm 0 !important;
+    padding-left: 6mm !important;
+    font-size: 8.35pt !important;
+    line-height: 1.48 !important;
+  }
+
+  .sheet ul.decl li {
+    margin: 1.2mm 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .sheet .sigrow {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr !important;
+    gap: 7mm !important;
+    margin-top: 10mm !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .sheet .sigrow div {
+    min-height: 16mm !important;
+    padding-top: 2mm !important;
+    border-top: 1pt solid #222 !important;
+  }
+
+  .sheet .chk {
+    border: 1pt solid #777 !important;
+    padding: 2mm 2.5mm !important;
+    margin: -1px 0 0 !important;
+    background: #fff !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .sheet .amount,
+  .sheet .val {
+    font-weight: 800 !important;
+  }
+
+  .sheet table thead {
+    display: table-header-group !important;
+  }
+
+  .sheet table tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .sheet .pmksy-stamps {
+    display: flex !important;
+    gap: 7mm !important;
+    margin-top: 7mm !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .sheet .pmksy-stamp {
+    min-height: 38mm !important;
+    padding: 4mm !important;
+    font-size: 7.7pt !important;
+  }
+
+  .sheet .pgno {
+    position: absolute !important;
+    bottom: 5mm !important;
+    right: 10mm !important;
+    font-size: 7.5pt !important;
+  }
+
+  .sheet .stamp {
+    position: absolute !important;
+    bottom: 5mm !important;
+    left: 10mm !important;
+    font-size: 7pt !important;
+  }
+
+  .sheet.pmksy-company-bill.avani-pdf-invoice {
+    padding: 6mm 8mm 9mm !important;
+    font-size: 7.7pt !important;
+  }
+
+  .sheet.pmksy-company-bill.avani-pdf-invoice table {
+    table-layout: fixed !important;
+  }
+
+  .sheet.pmksy-company-bill.avani-pdf-invoice td,
+  .sheet.pmksy-company-bill.avani-pdf-invoice th {
+    padding: 1.25mm 1.5mm !important;
+    border: 1pt solid #222 !important;
+  }
+
+  .sheet .sample-receipt {
+    border: 1.5pt solid #111 !important;
+    border-radius: 0 !important;
+    padding: 7mm 8mm !important;
+  }
+
+  .sheet br + br {
+    display: none !important;
+  }
+
+  #printArea .sheet,
+  #printArea .sheet * {
+    text-align: left !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+}
+
+#printArea .sheet {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  border: 1px solid #d5dde0;
+  margin: 12px auto 18px;
+}
+
+#printArea .sheet,
+#printArea .sheet * {
+  text-align: left !important;
+}
+
+@media screen and (max-width: 760px) {
+  #printArea .sheet {
+    width: 100%;
+    min-height: auto;
+    padding: 20px !important;
+  }
+
+  #printArea .sheet .fl {
+    grid-template-columns: 1fr;
+  }
+
+  #printArea .sheet .fi {
+    border-right: 0 !important;
+  }
+
+  #printArea .sheet .sigrow {
+    grid-template-columns: 1fr;
+  }
+}
