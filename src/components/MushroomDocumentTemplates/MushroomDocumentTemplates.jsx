@@ -659,6 +659,82 @@ function renderTemplateContent(content, context, docType = "") {
   return displayedContent;
 }
 
+function renderDemandTemplateContent(content, context) {
+  const paragraphs = [
+    ...(content.body ? [content.body] : []),
+    ...(Array.isArray(content.paragraphs) ? content.paragraphs : []),
+  ].filter((paragraph) => paragraph !== null && paragraph !== undefined);
+
+  return (
+    <>
+      {content.title && (
+        <h2 className="doc">
+          <SafeDynamicText text={String(content.title)} context={context} />
+        </h2>
+      )}
+      {(content.to || content.through) && (
+        <p className="doc-lead" style={{ whiteSpace: "pre-wrap" }}>
+          {content.to && (
+            <SafeDynamicText text={String(content.to)} context={context} />
+          )}
+          {content.through && (
+            <>
+              <br />
+              &nbsp;&nbsp;
+              <SafeDynamicText
+                text={String(content.through)}
+                context={context}
+              />
+            </>
+          )}
+        </p>
+      )}
+      {content.subject && (
+        <p className="doc-subject">
+          <b style={{ fontWeight: 600 }}>
+            विषय:{" "}
+            <SafeDynamicText
+              text={String(content.subject)}
+              context={context}
+            />
+          </b>
+        </p>
+      )}
+      {(content.salutation || paragraphs.length > 0) && (
+        <>
+          <p className="doc-paragraph">
+            {content.salutation && (
+              <>
+                <SafeDynamicText
+                  text={String(content.salutation)}
+                  context={context}
+                />
+                {paragraphs.length > 0 && (
+                  <>
+                    <br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;
+                  </>
+                )}
+              </>
+            )}
+            {paragraphs[0] !== undefined && (
+              <SafeDynamicText
+                text={String(paragraphs[0])}
+                context={context}
+              />
+            )}
+          </p>
+          {paragraphs.slice(1).map((paragraph, index) => (
+            <p className="doc-paragraph" key={`demand-paragraph-${index + 1}`}>
+              <SafeDynamicText text={String(paragraph)} context={context} />
+            </p>
+          ))}
+        </>
+      )}
+    </>
+  );
+}
+
 const getDefaultDemandPatraContent = () => ({
   title: "मांग-पत्र",
   to: "सेवा में,\n   {{office_name}},",
@@ -1084,7 +1160,7 @@ export default function MushroomDocumentTemplateManager({
       const content = normalizeTemplateContent(templateRecord.content);
       if (omitTitle) content.title = "";
       if (templateRecord.document_type === "demand_patra") {
-        content.through = getDefaultDemandPatraContent().through;
+        return renderDemandTemplateContent(content, templateContext);
       }
       return renderTemplateContent(
         content,
@@ -1097,7 +1173,7 @@ export default function MushroomDocumentTemplateManager({
     }
   };
 
-  const renderDemandFarmerTable = () => {
+  const renderDemandFarmerTable = (content) => {
     const farmers = Array.isArray(currentSnapshot?.farmers)
       ? currentSnapshot.farmers.filter(
           (farmer) => (Number.parseInt(farmer?.bags, 10) || 0) > 0,
@@ -1108,7 +1184,6 @@ export default function MushroomDocumentTemplateManager({
       (sum, farmer) => sum + (Number.parseInt(farmer?.bags, 10) || 0),
       0,
     );
-    const mushroomType = templateContext.mushroom_type || "";
     const mushroomTypeHindi = templateContext.mushroom_type_hindi || "";
 
     return (
@@ -1121,20 +1196,30 @@ export default function MushroomDocumentTemplateManager({
           </p>
           <div className="template-demand-type-box">
             <b style={{ fontWeight: 600 }}>मशरूम का प्रकार:</b>
-            <span>{mushroomTypeHindi === "ऑयस्टर" ? "☑" : "☐"} ऑयस्टर</span>
-            <span>{mushroomTypeHindi === "बटन" ? "☑" : "☐"} बटन</span>
+            <span>
+              <span className="tick">
+                {mushroomTypeHindi === "ऑयस्टर" ? "✓" : ""}
+              </span>
+              ऑयस्टर
+            </span>
+            <span>
+              <span className="tick">
+                {mushroomTypeHindi === "बटन" ? "✓" : ""}
+              </span>
+              बटन
+            </span>
           </div>
         </div>
-        <table className="template-demand-farmer-table">
+        <table className="doc roster">
           <thead>
             <tr>
-              <th>क्र.सं.</th>
-              <th>कृषक का नाम</th>
-              <th>ग्राम</th>
-              <th>मोबाइल नंबर</th>
-              <th>आधार सं.</th>
-              <th>मांग (बैग)</th>
-              <th>हस्ताक्षर</th>
+              <th style={{ width: "32px" }}>क्र.सं.</th>
+              <th style={{ width: "150px" }}>कृषक का नाम</th>
+              <th style={{ width: "95px" }}>ग्राम</th>
+              <th style={{ width: "85px" }}>मोबाइल नंबर</th>
+              <th style={{ width: "100px" }}>आधार सं०</th>
+              <th style={{ width: "55px" }}>मांग (बैग)</th>
+              <th style={{ width: "115px" }}>हस्ताक्षर</th>
             </tr>
           </thead>
           <tbody>
@@ -1149,29 +1234,52 @@ export default function MushroomDocumentTemplateManager({
                 <td />
               </tr>
             ))}
-            <tr className="template-demand-total-row">
-              <td colSpan={5} />
-              <th>कुल योग</th>
-              <th>{totalBags}</th>
-            </tr>
           </tbody>
+          <tfoot>
+            <tr>
+              <td colSpan={5} className="r">
+                <b style={{ fontWeight: 600 }}>कुल योग</b>
+              </td>
+              <td className="c">
+                <b style={{ fontWeight: 600 }}>{totalBags}</b>
+              </td>
+              <td />
+            </tr>
+          </tfoot>
         </table>
-        <p className="template-demand-farmer-count">
+        <p className="doc-center" style={{ margin: "10px 0 0" }}>
           <b style={{ fontWeight: 600 }}>समस्त कृषक गण</b>
         </p>
-        <div className="template-demand-recommendation">
-          <p className="template-demand-recommendation-heading">
-            <b style={{ fontWeight: 600 }}>प्रभारी की संस्तुति एवं अग्रसारण</b>
-          </p>
-          <p>
-            सम्बन्धित कृषकों के अनुरोध के क्रम में, उक्त {mushroomTypeHindi}{" "}
-            मशरूम की खेती हेतु बिजाई युक्त कम्पोस्ट बैग की मांग संस्तुति सहित
-            सादर अग्रसारित है। कृपया कृषकों को उक्त बैग क्रय किए जाने की
-            स्वीकृति प्रदान करने की कृपा कीजियेगा।
-          </p>
-          <p className="template-demand-signature">
+        <div style={{ marginTop: "8px" }}>
+          <p className="doc-center" style={{ margin: "0 0 4px" }}>
             <b style={{ fontWeight: 600 }}>
-              हस्ताक्षर प्रभारी: _____________________
+              <SafeDynamicText
+                text={
+                  content.recommendation_heading ||
+                  "प्रभारी की संस्तुति एवं अग्रसारण"
+                }
+                context={templateContext}
+              />
+            </b>
+          </p>
+          <p className="doc-paragraph" style={{ margin: 0 }}>
+            <SafeDynamicText
+              text={
+                content.recommendation_body ||
+                `सम्बन्धित कृषकों के अनुरोध के क्रम में, उक्त ${mushroomTypeHindi} मशरूम की खेती हेतु बिजाई युक्त कम्पोस्ट बैग की मांग संस्तुति सहित सादर अग्रसारित है। कृपया कृषकों को उक्त बैग क्रय किए जाने की स्वीकृति प्रदान करने की कृपा कीजियेगा।`
+              }
+              context={templateContext}
+            />
+          </p>
+          <p className="doc-sign">
+            <b style={{ fontWeight: 600 }}>
+              <SafeDynamicText
+                text={
+                  content.signature_label ||
+                  "हस्ताक्षर प्रभारी: _____________________"
+                }
+                context={templateContext}
+              />
             </b>
           </p>
         </div>
@@ -1486,12 +1594,14 @@ export default function MushroomDocumentTemplateManager({
       templateRecord.document_type === "verification_report";
     const isSupplierCertificate =
       templateRecord.document_type === "supplier_certificate";
+    const isDemandPatra = templateRecord.document_type === "demand_patra";
     let hasCustomTitle = false;
     let hasCustomSignature = false;
+    let templateContent = {};
     try {
-      const content = normalizeTemplateContent(templateRecord.content);
-      hasCustomTitle = Boolean(content.title);
-      hasCustomSignature = Boolean(content.signature_label);
+      templateContent = normalizeTemplateContent(templateRecord.content);
+      hasCustomTitle = Boolean(templateContent.title);
+      hasCustomSignature = Boolean(templateContent.signature_label);
     } catch {
       hasCustomTitle = false;
       hasCustomSignature = false;
@@ -1499,7 +1609,7 @@ export default function MushroomDocumentTemplateManager({
 
     return (
       <div
-        className={`template-document-sheet${isSupplierCertificate ? " template-supplier-document" : ""}`}
+        className={`template-document-sheet${isSupplierCertificate ? " template-supplier-document" : ""}${isDemandPatra ? " sheet template-demand-document" : ""}`}
       >
         {isSupplierCertificate && (
           <header className="template-supplier-header">
@@ -1542,7 +1652,7 @@ export default function MushroomDocumentTemplateManager({
         ) : (
           !hasCustomTitle &&
           !isSupplierCertificate && (
-            <h2 className="template-document-title">
+            <h2 className={isDemandPatra ? "doc" : "template-document-title"}>
               {option?.label ||
                 templateRecord.doc_name ||
                 templateRecord.document_type}
@@ -1566,8 +1676,8 @@ export default function MushroomDocumentTemplateManager({
             <span>Authorised Signatory / विक्रेता के हस्ताक्षर व मुहर</span>
           </div>
         )}
-        {templateRecord.document_type === "demand_patra"
-          ? renderDemandFarmerTable()
+        {isDemandPatra
+          ? renderDemandFarmerTable(templateContent)
           : isVerificationReport || isSupplierCertificate
             ? null
             : renderDocumentDetails(templateRecord)}
