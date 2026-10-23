@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import "./MushroomForm.css";
+import MushroomDocumentTemplateManager from "../MushroomDocumentTemplates/MushroomDocumentTemplates";
 
 let mushroomFormLogicInitialized = false;
 
@@ -3731,7 +3732,6 @@ export default function MushroomForm() {
                   <span className="print-desc">Print All 6 Documents</span>
                 </div>
               </div>
-
             </div>
 
             {/* Form Submission Bar */}
@@ -3844,6 +3844,7 @@ export default function MushroomForm() {
                 </table>
               </div>
             </div>
+            <MushroomDocumentTemplateManager previewOnly />
           </div>
         )}
 
@@ -4004,7 +4005,9 @@ export default function MushroomForm() {
               }}
             >
               <p className="doc-subject" style={{ margin: "0" }}>
-                <b style={{ fontWeight: 600 }}>इच्छुक कृषकों की मांग का विवरण निम्नलिखित है:</b>
+                <b style={{ fontWeight: 600 }}>
+                  इच्छुक कृषकों की मांग का विवरण निम्नलिखित है:
+                </b>
               </p>
               <div
                 style={{
@@ -4045,7 +4048,9 @@ export default function MushroomForm() {
                     <b style={{ fontWeight: 600 }}>कुल योग</b>
                   </td>
                   <td className="c">
-                    <b id="d_total" style={{ fontWeight: 600 }}>0</b>
+                    <b id="d_total" style={{ fontWeight: 600 }}>
+                      0
+                    </b>
                   </td>
                   <td></td>
                 </tr>
@@ -4068,7 +4073,9 @@ export default function MushroomForm() {
                 कीजियेगा।
               </p>
               <p className="doc-sign">
-                <b style={{ fontWeight: 600 }}>हस्ताक्षर प्रभारी: _____________________</b>
+                <b style={{ fontWeight: 600 }}>
+                  हस्ताक्षर प्रभारी: _____________________
+                </b>
               </p>
             </div>
           </div>
