@@ -1,7 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 import "./MushroomForm.css";
-import MushroomDocumentTemplateManager from "../MushroomDocumentTemplates/MushroomDocumentTemplates";
 
 let mushroomFormLogicInitialized = false;
 
@@ -3845,7 +3844,6 @@ export default function MushroomForm() {
                 </table>
               </div>
             </div>
-            <MushroomDocumentTemplateManager previewOnly />
           </div>
         )}
 
