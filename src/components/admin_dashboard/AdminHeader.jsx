@@ -13,7 +13,7 @@ function AdminHeader() {
   };
   const navItems = [
     { path: '/MushroomForm', label: 'Mushroom Form', icon: 'mushroom' },
-    // { path: '/MushroomDocumentTemplates', label: 'Mushroom Templates', icon: 'document' },
+    { path: '/MushroomDocumentTemplates', label: 'Mushroom Templates', icon: 'document' },
     { path: '/BaagwaniMission', label: 'Baagwani Mission', icon: 'leaf' },
     { path: '/PMKSY', label: 'PMKSY', icon: 'water' },
   ];

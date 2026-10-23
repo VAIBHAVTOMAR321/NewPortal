@@ -1649,16 +1649,7 @@ export default function MushroomDocumentTemplateManager({
       {!previewOnly && (
         <div className="template-editor-panel">
           <div className="template-editor-header">
-            <div className="template-editor-actions">
-              <button type="button" className="template-btn secondary" onClick={() => resetEditorForm(selectedDocumentTypes[0])}>
-                New
-              </button>
-              {editorForm.id && (
-                <button type="button" className="template-btn danger" onClick={handleDeleteTemplate}>
-                  Delete
-                </button>
-              )}
-            </div>
+          
           </div>
 
           <div className="template-form-grid">
