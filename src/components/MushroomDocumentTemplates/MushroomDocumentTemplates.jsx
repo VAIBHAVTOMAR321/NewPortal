@@ -177,10 +177,17 @@ function normalizeTemplateContent(content, docType = "") {
     attachments_heading: "",
     attachments: [],
     payment_request: "",
-    recommendation_heading: "प्रभारी की संस्तुति एवं अग्रसारण",
     recommendation_body: "",
     payment_mode: "",
-    signature_label: "हस्ताक्षर प्रभारी: _____________________",
+    signature_label: "",
+    ...(docType === "demand_patra"
+      ? {
+          recommendation_heading: "प्रभारी की संस्तुति एवं अग्रसारण",
+          recommendation_body:
+            "सम्बन्धित कृषकों के अनुरोध के क्रम में, उक्त {{mushroom_type_hindi}} मशरूम की खेती हेतु बिजाई युक्त कम्पोस्ट बैग की मांग संस्तुति सहित सादर अग्रसारित है। कृपया कृषकों को उक्त बैग क्रय किए जाने की स्वीकृति प्रदान करने की कृपा कीजियेगा।",
+          signature_label: "हस्ताक्षर प्रभारी: _____________________",
+        }
+      : {}),
     ...parsedContent,
   };
 }
@@ -536,6 +543,13 @@ function renderTemplateContent(content, context, docType = "") {
         (typeof value === "string" && value.trim() === "")
       )
         continue;
+      if (
+        (key === "recommendation_heading" ||
+          key === "recommendation_body") &&
+        docType !== "demand_patra"
+      ) {
+        continue;
+      }
 
       if (key === "title") {
         displayedContent.push(
@@ -800,9 +814,6 @@ const getDefaultCombinedReceiptContent = () => ({
   attachments_heading: "",
   attachments: [],
   payment_request: "",
-  recommendation_heading:
-    "लाभार्थी कृषकों का विवरण एवं हस्ताक्षर निम्नानुसार हैं —",
-  recommendation_body: "",
   payment_mode: "",
   signature_label: "समस्त कृषक गण / हस्ताक्षर: ___________________________",
 });
@@ -937,6 +948,7 @@ export default function MushroomDocumentTemplateManager({
       doc_name: "",
       content: normalizeTemplateContent(
         isDemandPatra ? getDefaultDemandPatraContent() : {},
+        nextDocumentType,
       ),
       is_active: true,
     };
@@ -951,7 +963,10 @@ export default function MushroomDocumentTemplateManager({
 
     let content;
     try {
-      content = normalizeTemplateContent(template.content || {});
+      content = normalizeTemplateContent(
+        template.content || {},
+        template.document_type,
+      );
     } catch (contentError) {
       console.error("Invalid mushroom template content:", contentError);
       setError(contentError.message);
@@ -1157,7 +1172,10 @@ export default function MushroomDocumentTemplateManager({
 
   const renderSingleTemplate = (templateRecord, { omitTitle = false } = {}) => {
     try {
-      const content = normalizeTemplateContent(templateRecord.content);
+      const content = normalizeTemplateContent(
+        templateRecord.content,
+        templateRecord.document_type,
+      );
       if (omitTitle) content.title = "";
       if (templateRecord.document_type === "demand_patra") {
         return renderDemandTemplateContent(content, templateContext);
@@ -1250,39 +1268,42 @@ export default function MushroomDocumentTemplateManager({
         <p className="doc-center" style={{ margin: "10px 0 0" }}>
           <b style={{ fontWeight: 600 }}>समस्त कृषक गण</b>
         </p>
-        <div style={{ marginTop: "8px" }}>
-          <p className="doc-center" style={{ margin: "0 0 4px" }}>
-            <b style={{ fontWeight: 600 }}>
-              <SafeDynamicText
-                text={
-                  content.recommendation_heading ||
-                  "प्रभारी की संस्तुति एवं अग्रसारण"
-                }
-                context={templateContext}
-              />
-            </b>
-          </p>
-          <p className="doc-paragraph" style={{ margin: 0 }}>
-            <SafeDynamicText
-              text={
-                content.recommendation_body ||
-                `सम्बन्धित कृषकों के अनुरोध के क्रम में, उक्त ${mushroomTypeHindi} मशरूम की खेती हेतु बिजाई युक्त कम्पोस्ट बैग की मांग संस्तुति सहित सादर अग्रसारित है। कृपया कृषकों को उक्त बैग क्रय किए जाने की स्वीकृति प्रदान करने की कृपा कीजियेगा।`
-              }
-              context={templateContext}
-            />
-          </p>
-          <p className="doc-sign">
-            <b style={{ fontWeight: 600 }}>
-              <SafeDynamicText
-                text={
-                  content.signature_label ||
-                  "हस्ताक्षर प्रभारी: _____________________"
-                }
-                context={templateContext}
-              />
-            </b>
-          </p>
-        </div>
+        {[
+          content.recommendation_heading,
+          content.recommendation_body,
+          content.signature_label,
+        ].some((value) => String(value || "").trim()) && (
+          <div style={{ marginTop: "8px" }}>
+            {content.recommendation_heading && (
+              <p className="doc-center" style={{ margin: "0 0 4px" }}>
+                <b style={{ fontWeight: 600 }}>
+                  <SafeDynamicText
+                    text={content.recommendation_heading}
+                    context={templateContext}
+                  />
+                </b>
+              </p>
+            )}
+            {content.recommendation_body && (
+              <p className="doc-paragraph" style={{ margin: 0 }}>
+                <SafeDynamicText
+                  text={content.recommendation_body}
+                  context={templateContext}
+                />
+              </p>
+            )}
+            {content.signature_label && (
+              <p className="doc-sign">
+                <b style={{ fontWeight: 600 }}>
+                  <SafeDynamicText
+                    text={content.signature_label}
+                    context={templateContext}
+                  />
+                </b>
+              </p>
+            )}
+          </div>
+        )}
       </>
     );
   };
@@ -1599,7 +1620,10 @@ export default function MushroomDocumentTemplateManager({
     let hasCustomSignature = false;
     let templateContent = {};
     try {
-      templateContent = normalizeTemplateContent(templateRecord.content);
+      templateContent = normalizeTemplateContent(
+        templateRecord.content,
+        templateRecord.document_type,
+      );
       hasCustomTitle = Boolean(templateContent.title);
       hasCustomSignature = Boolean(templateContent.signature_label);
     } catch {
@@ -1737,7 +1761,10 @@ export default function MushroomDocumentTemplateManager({
 
   const handleSaveTemplate = async () => {
     try {
-      const parsedContent = normalizeTemplateContent(editorForm.content);
+      const parsedContent = normalizeTemplateContent(
+        editorForm.content,
+        editorForm.document_type,
+      );
 
       if (!editorForm.document_type) {
         throw new Error("Please choose a template type.");
@@ -1799,6 +1826,7 @@ export default function MushroomDocumentTemplateManager({
       try {
         savedContent = normalizeTemplateContent(
           savedRecord.content || parsedContent,
+          savedRecord.document_type || editorForm.document_type,
         );
       } catch (contentError) {
         console.error("Invalid saved mushroom template content:", contentError);
@@ -2079,7 +2107,7 @@ export default function MushroomDocumentTemplateManager({
               </label>
             )}
 
-            {editorForm.document_type !== "demand_patra" && (
+            {editorForm.document_type === "demand_patra" && (
               <label className="template-field">
                 <span>Recommendation Heading</span>
                 <input
@@ -2096,23 +2124,22 @@ export default function MushroomDocumentTemplateManager({
               </label>
             )}
 
-            {editorForm.document_type !== "demand_patra" &&
-              editorForm.document_type !== "supplier_certificate" && (
-                <label className="template-field">
-                  <span>Recommendation Body</span>
-                  <textarea
-                    rows={3}
-                    value={editorForm.content.recommendation_body || ""}
-                    onChange={(event) =>
-                      updateContentField(
-                        "recommendation_body",
-                        event.target.value,
-                      )
-                    }
-                    placeholder="सम्बन्धित कृषकों के अनुरोध..."
-                  />
-                </label>
-              )}
+            {editorForm.document_type === "demand_patra" && (
+              <label className="template-field">
+                <span>Recommendation Body</span>
+                <textarea
+                  rows={3}
+                  value={editorForm.content.recommendation_body || ""}
+                  onChange={(event) =>
+                    updateContentField(
+                      "recommendation_body",
+                      event.target.value,
+                    )
+                  }
+                  placeholder="सम्बन्धित कृषकों के अनुरोध..."
+                />
+              </label>
+            )}
 
             {editorForm.document_type !== "demand_patra" &&
               editorForm.document_type !== "supplier_certificate" && (
@@ -2162,7 +2189,7 @@ export default function MushroomDocumentTemplateManager({
                 </label>
               )}
 
-            {editorForm.document_type !== "demand_patra" && (
+            {editorForm.document_type !== "supplier_certificate" && (
               <label className="template-field">
                 <span>Signature Label</span>
                 <input
